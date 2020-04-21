@@ -1,0 +1,151 @@
+The goal of this chapter is to present the first contribution of the thesis:
+An abstraction of a query processing operator that enables constructing query
+engines by composing instances of this abstraction.
+
+\begin{tcolorbox}
+Note:
+
+The goals of the structure of this chapter are
+\begin{enumerate}
+  \item Give the reader a clear understanding of what a QPU is.
+  It can be frustrating to go into too much detail in something quite vague and
+  abstract as the ``QPU abstraction'', without showing how it is actually used.
+  \item Explain \textbf{why} we came up with it (Themis has already pointed out
+  that this was not clear to him).
+  My solution is to try to do a ``step-by-step walkthrough'' of the design:
+  ``This is what we are trying to achieve (objective, requirements)'', ``this
+  is why'', ``these are the observations that guide our design'', and, finally,
+  ``here is what we came up with and why it works''.
+
+  It is probably a good idea to have ``toy examples'' of QPU usage here to make
+  things more clear.
+\end{enumerate}
+\end{tcolorbox}
+
+We need to start by motivating the contribution:
+Building on the trade-off discussion of the previous chapter, argue that query
+processing systems need to be able to be adjusted to the characteristics and
+requirements of different applications.
+
+\section{Query processing as a composition of modular operators}
+Point out the inherent characteristics of query processing that make the QPU
+approach possible.
+\begin{itemize}
+  \item Query processing can be broken down to primitive (cannot be broken down
+  any more) self-contained tasks.
+  \item These tasks can fit in categories/class (there can be many
+  different indexes but they all be expressed as specializations of a general
+  ``indexing'' task).
+  \item Task classes are composable and their interaction has certain
+  characteristics.
+  \begin{itemize}
+    \item They all expose a similar ``query'' interface.
+    \item Describe how data and control message flow among them.
+  \end{itemize}
+\end{itemize}
+
+\subsection{Designing a query processing component abstraction}
+Present the objective: design a query processing operator abstraction ...
+
+Requirements:
+\begin{itemize}
+  \item Generic and Expressive. Must to be able to express multiple different
+  query processing operators (it is probably better to have explicitly listed
+  them by this point in the text).
+  \item Extensible. Must be able to express other operators, or enable
+  additional functionality.
+  \item Modularity, Composition. Must enable composition/interoperability.
+  \item Encapsulation(?). Example: A ``partitioned index'' might be a
+  complicated sub-graph of QPUs.
+  Higher-level QPUs don't need to know the details, just interface with the
+  QPU(s) at the root of the sub-graph.
+\end{itemize}
+
+\section{The QPU abstraction}
+The goal of this section is to do a clean presentation of the QPU abstraction.
+
+\begin{tcolorbox}
+Note:
+
+Not sure how to transition from the ``step-by-step'' approach of the
+previous section to a ``definitions'' approach for this section.
+\end{tcolorbox}
+
+Note: Mostly keeping the outline for the rest of this chapter short as it has
+been written in various paper drafts and LightKone deliverables.
+
+\subsection{Query API}
+Define the ``query'' API method (arguments, streaming semantics).
+
+\subsection{QPU State}
+Describe the different parts of the QPU state and their indented functionality.
+
+\subsubsection{Query processing state}
+This is the main part of the state (implements index and cache data structures).
+It is read to process queries, and is updated using stream records from other
+QPUs.
+\subsubsection{Configuration state}
+This is the part of the state that defines the QPU's behavior.
+Passed as argument during initialization.
+
+\subsubsection{Local graph view state}
+This is the part of the state that describes the QPU's knowledge/view of the
+sub-graphs it is connected to.
+It is initialized using the ``getConfig'' API method.
+
+\subsection{Behavior}
+Describe the generic behavior pattern of the QPU abstraction.
+
+In short, each QPU defines two ``functions'':
+\begin{itemize}
+  \item A ``query processing'' function that is invoked each time the QPU's
+  ``query'' API is called.
+  \item A ``callback'' function that is invoked each time the QPU receives
+  a stream record.
+\end{itemize}
+Describe how these functions interact with the QPU state and the incoming stream
+records to implement the QPUs query processing task.
+
+Each QPU class (Section~\ref{sec:qpu_classes}) defines different ``query processing''
+and ``callback'' function, as well as different state implementation.
+
+\section{QPU classes (overview)}
+\label{sec:qpu_classes}
+For each class, summarize the intended functionality, and link with previous
+by defining the state and two functions.
+
+
+\begin{itemize}
+  \item \textbf{Datastore driver}
+  \item \textbf{Filter}
+  \item \textbf{Index}
+  \item \textbf{Cache}
+\end{itemize}
+
+\section{QPU Composition: Constructing QPU-based query engines}
+Here, describe how query engines are constructed using instances of QPU classes.
+
+A query engine is a directed acyclic graph (why?) with QPUs as nodes.
+
+Describe the QPU-specific topology properties that the graph must satisfy in
+order to be functional:
+\begin{itemize}
+  \item All leaves must be QPUs of the datastore driver class.
+  Also, datastore driver QPUs cannot be nodes other than leaves.
+  \item TODO
+\end{itemize}
+
+\section{Computation Model}
+Describe the bidirectional dataflow computation.
+\begin{itemize}
+  \item Control messages (queries) flow downwards.
+  \item Responses flow upwards through the sub-graph defined by the control
+  (each query establishes a sub-graph - actually a tree - to be used by that
+  particular query);
+  \item Updates (independently) also flow upwards.
+\end{itemize}
+
+
+\section{The consistency guarantees of QPU-based query engines}
+TODO: What mechanism are needed so that QPUs can guarantee internal consistency?
+What about session consistency guarantees?

@@ -1,0 +1,82 @@
+The goal of this chapter is to present Proteus, a framework for facilitating
+the construction and deployment of QPU-based query processing systems.
+
+This includes:
+\begin{itemize}
+  \item Presenting the library of QPU implementations offered by Proteus.
+  \item Describing the additional mechanism offered by Proteus for deploying and
+  connecting.
+  \item Reporting on subjects including rules of QPU composition (incompatible
+  topologies), (steps towards automatic cost-model based deployment plans for
+  QPU graphs)*, and implementation details.
+\end{itemize}
+
+\section{QPU Library}
+Describe the implementation-specific details, assumptions, and limitations of
+the QPU classes provided by Proteus.
+
+\subsection{Datastore driver}
+\subsubsection{Backend data stores}
+
+\subsection{Filter}
+
+\subsection{Index}
+
+\subsection{Cache}
+
+
+\section{Constructing QPU-based query engines}
+Demonstrate the use of the QPU classes described above for constructing query
+engines.
+
+\subsection{QPU graph topology rules}
+Summarize the rules that apply to the construction of QPU graphs.
+This includes:
+\begin{itemize}
+  \item Components (caches, filters) that do not have multiplexing logic and can
+  only be put on top of one QPU.
+  \item How the QPU graph is connected with the data storage tier via data store
+  driver QPUs.
+\end{itemize}
+
+In this chapter, include rules that are not inherent to the QPU design, but
+rather are due to the implementation choices.
+
+Rules that are inherent to all QPU graphs, should be stated in
+Chapter~\ref{ch:design_pattern}.
+
+
+\subsection{Reference QPU architecture patterns}
+Demonstrate in detail how Proteus can be used to build a number of query engine
+architectures.
+
+Reference architectures can be categorized by two characteristics: (1) the query
+processing components they use (filter-only, filter-and-cache, index-base, ..),
+and (2) the storage tier architecture they target (single database instance,
+sharded database, replication, federation)
+
+For (2) we will take a ''zooming out'' approach: each reference architecture
+building on top of the previous one.
+
+\subsubsection{Partitioned index}
+
+
+\section{Self-config}
+
+
+\section{Fault tolerance}
+Describe the mechanisms provided by Proteus for tolerating faults during query
+processing.
+\begin{itemize}
+  \item Lost or re-ordered stream records.
+  \item Mid-query QPU crash.
+  \item Partitions.
+\end{itemize}
+
+\section{Implementation}
+Report on the implementation of different components of Proteus, including:
+\begin{itemize}
+  \item The framework used for communication between QPUs.
+  \item How streams are implemented.
+  \item ...
+\end{itemize}

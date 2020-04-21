@@ -1,0 +1,114 @@
+The goal of this chapter is to prepare the ground so that the reader has the
+mental framework needed to understand the rest of this document.
+
+This includes:
+\begin{itemize}
+  \item Implicitly establishing a terminology to be used throughout the
+  document.
+  \item Establishing a ''world view'' by describing the system and data model
+  that we consider, and the assumptions that we make
+  \item Establishing concepts that will guide our design decisions in the
+  following chapters (see Section~\ref{sec:requirements}).
+  \item Introducing technical background that will be needed for the following
+  chapters.
+\end{itemize}
+
+\section{Models}
+\subsection{System model}
+We consider a data serving system with a two-tiered architecture: a data
+storage tier and a query processing tier.
+
+
+\subsubsection{Data storage tier}
+The data storage tier has the role of storing data (we term the data stored by
+the data storage tier as the corpus). \\
+
+\textbf{Data (corpus) model} \\
+In short, the corpus is a collection of records grouped in tables.
+Each record is identified by a unique key (can be a composite key).
+Each record also has associated attributes. An attribute is a key-value pair.
+Schema can be pre-defined or not.
+
+Argue that this data model can express a variety of data models (relational,
+wide-column, object storage. \\
+
+Logically, we consider this tier as a component that may expose some of the
+following APIs:
+\begin{itemize}
+  \item An API for iterating over the corpus data.
+  \item An API for subscribing to notification for changes to the corpus data.
+  \item An API for querying the corpus data.
+\end{itemize}
+This component can be implementing by an actual storage system that stores the
+corpus data (in that case it might provide all three APIs), or by an event
+stream providing only the subscription API.
+
+We also consider this tier from a distribution point of view (how data is
+placed in a physical system infrastructure)
+We consider the data storage tier as being deployed across multiple
+geographically distant data centers.
+Therefore, the data may be distributed and/or replicated across multiple
+geographic locations.
+
+Also:
+\begin{itemize}
+  \item Describe our assumptions on the consistency guarantees of the storage
+  tier.
+  \item State that we consider this tier ''imposed''; we build on top of it.
+\end{itemize}
+
+\subsubsection{Query processing tier}
+
+\begin{itemize}
+  \item Descibe the intended functionality.
+  \item Sketch the query language.
+\end{itemize}
+
+
+\subsubsection{Consistency between corpus data and query responses}
+
+\section{Requirements}
+\label{sec:requirements}
+
+\subsection{End-user requirements}
+In this section, present the factors that affect the experience and satisfaction
+of end-users of the query processing tier.
+
+\textbf{Response time} \\
+Present evidence of the negative effects of users perceiving high response times.
+
+\textbf{Freshness}
+\begin{itemize}
+  \item Define freshness intuitively, as query results being up-to-date with the
+  corpus data.
+  \item Present evidence of use cases in which getting fresh results is
+  important.
+\end{itemize}
+
+\textbf{Correctness} \\
+  Define correctness using recall and precision.
+
+\textbf{Availability} \\
+  Present evidence of the negative effects of downtimes.
+
+\textbf{Consistency}
+
+\subsection{System provider requirements}
+In this section, we present factor that are indirectly affect end-users, but are
+important for the system operator.
+
+\textbf{Scalability} \\
+Present evidence of about the scale of internet services nowadays.
+
+\textbf{Operational Cost} \\
+The cost of operating the query processing system.
+Can split to fixed (monthly) cost, and per-query cost.
+
+
+\section{Query Processing Techniques}
+
+\subsection{Secondary indexing}
+
+\subsection{Distributed Query planning}
+
+\subsection{Caching}

@@ -1,0 +1,118 @@
+The goal of this chapter is to draw the design space of geo-distributed query processing.
+
+This includes:
+\begin{itemize}
+  \item Listing the axes of the design space, and the options for each axis.
+  \item Describing the expected performance and efficiency characteristics
+  of each point in the design space.
+  \item Describe the trade-offs that occur from the above analysis.
+  \item Discuss the additional challenges/constraints that occur from the geo-
+  distribution of data.
+  \item Present state-of-the-art approaches and their limitations.
+\end{itemize}
+
+\section{Design choices}
+Describe the design choices involved in building a geo-distributed query engine.
+For each, list the possible options and comment on their effect on the engine's
+performance and efficiency.
+
+\subsection{Query processing techniques}
+The choice between (1) performing query processing by iterating over the corpus
+(filtering, aggregation without materialized views), (2) using caches on top of
+that, or (3) maintaining derived state (indexes, materialized views) updated in
+response to changes to the corpus data.
+
+\subsection{State maintenace}
+When maintaining derived state, the choice between synchronously versus
+asynchronously updating it for each change to the corpus.
+
+State maintenance schemes have two characteristics:
+\begin{itemize}
+  \item How much of the state is materialized.
+  When maintaining an index we assume that every index entry is materialized.
+  In contrast, when maintaining a cache, only a subset of entries are
+  materialized
+  (a subtlety here is how an ''entry'' is defined, it might be different between
+  index and cache).
+  There is a finite storage area for materializing entries.
+  When it is filled, some entries are evicted to make space for new entries to
+  be materialized.
+  \item When is the state being updated.
+  The options for this can be:
+  \begin{itemize}
+    \item Update-triggered - Synchronously. When an update to the corpus
+    occurs, it is blocked until the derived state is up-to-day.
+    \item Update-triggered - Asynchronously. Updating the derived state is done
+    outside of the critical path of the corpus update.
+    \item Read-triggered. The derived state mays updated as a response to the
+    state being read (cache misses).
+    This is used in caching.
+  \end{itemize}
+\end{itemize}
+  Based on the above analysis, we can argue that caching is just another state
+  maintenance scheme, and therefore could be treated as a configuration
+  parameter when deploying a QPU.
+  (Note: this is just a way to unify and simplify things by merging caching
+  QPUs with index QPUs, materialized view QPUs etc.)
+
+\subsection{Component placement}
+There are two types of computational query processing operator can be
+involved in:
+\begin{itemize}
+  \item Update-triggered: For example, updating an index as a result to a corpus
+  update
+  \item Query-triggered: For example, index/cache lookup as a result to a query.
+\end{itemize}
+This can apply to any query processing operator, not only stateful ones.
+
+The placement determines how close (in terms of network round trip time) the
+operator is placed related to its sources of updates and queries.
+
+Deciding on placement schemes can lead to trade-offs cause by:
+\begin{itemize}
+  \item The benefits and costs of placing operators close to update sources
+  versus close to query sources.
+  \item An operator might have multiple update and/or query sources.
+\end{itemize}
+
+We can define ``levels`` of placement: on the same physical machine, on the same
+cluster, in the same DC.
+
+\section{Trade-offs}
+Summarize how the previously described design choices result to performance and
+efficiency trade-offs.
+
+Note: This may be redundant depending on how detailed those trade-offs are
+discussed in the previous section, but it is central to the thesis to make the
+argument that it is because of these trade-offs that we propose the QPU
+approach.
+
+An idea is to here focus on examples of applications that might choose different
+points in these trade-offs.
+
+\subsection{Response time vs Freshness}
+
+\subsection{Response time \& Freshness vs Cost}
+
+
+\section{Constraints of geo-distributed data}
+Discuss the implication of performing query processing on geo-distributed data,
+and of replicating the derived data used for query processing.
+
+\subsection{Implications of replicated data in derived state}
+Implication of query processing over AP storage systems:
+\begin{itemize}
+  \item If not carefully desgined, concurrent non-conflicting updates may
+  result to confliced on related state.
+  Example: write1: recordX:attributeA=1, write2: recordY:attriuteA=1.
+  This results to: index\_update1: add recordX to (attributeA, 1),
+  index\_update2: add recordY to (attributeA, 1).
+  Therefore a ''set CRDT'' behavior is needed for indexes.
+  Generalize to state other than indexes.
+  \item Conflicting updates to the corpus data.
+  Ensure that conflict resolution on corpus data is reflected on derived data.
+\end{itemize}
+
+\subsection{CAP}
+Describe how query processing performance-availability is constraint by
+CAP in the case of replicated derived state.

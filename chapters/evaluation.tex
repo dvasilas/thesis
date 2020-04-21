@@ -1,0 +1,42 @@
+\section{Navigating the design space of geo-distributed query}
+(Note: The title might be a bit too fancy. To re-think.)
+
+Question to answer:
+Can the QPU approach be used to adjust to navigate the design space
+geo-distributed query, making different trade-offs depending on the requirements
+and characteristics of specific applications.
+
+Hypothesis to validate:
+For a given pair of workload type (eg. query-heavy) and requirement (expressed
+as performance/efficiency metric) there is a query engine configuration that
+''optimizes'' the given metric.
+
+(Idea on how to visualize this: 2D matrix ''workloads - metrics'':
+for each cell, find which configuration is best for this workload and metric.
+
+High-level plan:
+\begin{itemize}
+  \item Run a set of different workloads, measuring different metrics (query
+  performance, freshness, cost)
+  \item Repeat this for a set of query system configurations.
+  \item Examine for each worload-metric pair, how changing the query engine
+  configuration affects the target metric.
+\end{itemize}
+
+\section{Application benchmark}
+(Note: I ran out of inspiration for titles)
+
+Question to answer:
+What performance gains can the QPU approach deliver to an application, and how
+it Proteus compare against state-of-the-art systems?
+
+Hypotheses to validate
+\begin{itemize}
+  \item 1. The QPU approach (Proteus) can provide the performance comparable to
+  that of state-of-the-art systems when used with a similar configuration.
+  \item 2. The QPU approach (Proteus) can improve the application's performance
+  (or improve freshness or cut cost) by enabling query engine designs (placement
+  schemes, ...) not possible with current query systems.
+\end{itemize}
+
+(This is currently being designed and implemented.)
