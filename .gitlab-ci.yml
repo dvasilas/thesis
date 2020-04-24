@@ -1,8 +1,13 @@
 image: blang/latex
 
 build:
+  before_script:
+    - apt-get update
+    - apt-get install -y curl
   script:
     - latexmk -pdf main.tex
+  after_script:
+    - curl -u $NUAGE_LIP6_U:$NUAGE_LIP6_P -T main.pdf https://nuage.lip6.fr/remote.php/dav/files/$NUAGE_LIP6_U/main.pdf
   artifacts:
     paths:
       - main.pdf
