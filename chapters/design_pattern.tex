@@ -77,6 +77,22 @@ been written in various paper drafts and LightKone deliverables.
 \subsection{Query API}
 Define the ``query'' API method (arguments, streaming semantics).
 
+The QPU defines a ``query processing'' function that is invoked each time the
+QPU receives a query.
+
+Different QPU types use different implementations of the ``query processing''
+function.
+
+\subsection{Streaming query response}
+Each invocation of a QPU's ``query'' API returns a stream handler.
+The caller uses the stream handler to get the query responses as stream records.
+
+The QPU defines a ``callback'' function that is invoked each time the QPU
+receives a stream record.
+
+Different QPU types use different implementations of the ``callback''
+function.
+
 \subsection{QPU State}
 Describe the different parts of the QPU state and their indented functionality.
 
@@ -93,33 +109,38 @@ This is the part of the state that describes the QPU's knowledge/view of the
 sub-graphs it is connected to.
 It is initialized using the ``getConfig'' API method.
 
-\subsection{Behavior}
-Describe the generic behavior pattern of the QPU abstraction.
-
-In short, each QPU defines two ``functions'':
-\begin{itemize}
-  \item A ``query processing'' function that is invoked each time the QPU's
-  ``query'' API is called.
-  \item A ``callback'' function that is invoked each time the QPU receives
-  a stream record.
-\end{itemize}
-Describe how these functions interact with the QPU state and the incoming stream
-records to implement the QPUs query processing task.
-
-Each QPU class (Section~\ref{sec:qpu_classes}) defines different ``query processing''
-and ``callback'' function, as well as different state implementation.
-
 \section{QPU classes (overview)}
 \label{sec:qpu_classes}
-For each class, summarize the intended functionality, and link with previous
-by defining the state and two functions.
 
+As described earlier, the QPU abstraction works as a ``blueprint''.
+It specifies a communication and execution protocol that QPUs must conform to.
+However, there can be different instantiations of this specification.
+We term these instantiations of the QPU abstract QPU classes.
 
+More specifically, each QPU class defines:
 \begin{itemize}
-  \item \textbf{Datastore driver}
-  \item \textbf{Filter}
-  \item \textbf{Index}
-  \item \textbf{Cache}
+  \item The query processing state of the units is this class.
+  \item Their query processing and callback functions.
+\end{itemize}
+
+We categorize QPU classes in three distinct families:
+\begin{itemize}
+  \item \textbf{Statefull QPUs}. QPU classes of this family maintain internal
+  query processing state and use it to process queries.
+  Examples include index, cache, and materialized view QPUs.
+  \item \textbf{Stateless QPUs}. QPU classes of this family do no maintain
+  internal query processing state (or maintain only intermediate state).
+  Stateless QPUs process queries by performing computation on incoming streams
+  (they initiate streams by sending queries to other QPUs.)
+  Examples include filter, join, and aggregation QPUs.
+  \item \textbf{Routing QPUs}. Stateful and stateless QPUs can only have a
+  single outgoing (child) connection in the QPU graph.
+  Routing QPUs have multiple outgoing connections.
+  They are responsible for re-writing incoming to queries to sub-queries,
+  sending them to the appropriate child QPUs, and merging the responses to a
+  single outgoing response stream.
+  Routing QPUs can be used for example to build sharded indexes by composing
+  multiple index QPUs.
 \end{itemize}
 
 \section{QPU Composition: Constructing QPU-based query engines}

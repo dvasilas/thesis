@@ -16,11 +16,20 @@ Describe the design choices involved in building a geo-distributed query engine.
 For each, list the possible options and comment on their effect on the engine's
 performance and efficiency.
 
+
 \subsection{Query processing techniques}
+
 The choice between (1) performing query processing by iterating over the corpus
 (filtering, aggregation without materialized views), (2) using caches on top of
 that, or (3) maintaining derived state (indexes, materialized views) updated in
 response to changes to the corpus data.
+
+
+\subsubsection{Secondary indexing}
+
+\subsubsection{Distributed Query planning}
+
+\subsubsection{Caching}
 
 \subsection{State maintenace}
 When maintaining derived state, the choice between synchronously versus
