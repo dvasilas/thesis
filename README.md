@@ -2,4 +2,4 @@
 
 My thesis text.
 
-Latest build is [here](https://gitlab.lip6.fr/dvasilas/thesis/-/jobs/artifacts/master/browse?job=build).
+Latest build is [here](https://nuage.lip6.fr/s/32g7o4ZdrYBct7S).
