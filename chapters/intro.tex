@@ -1,24 +1,59 @@
 The goal of this chapter is to motivate and define the research problem that
 this thesis addresses, and to introduce its contributions.
 
+Idea 1: Start by discussing the importance of design trade-offs in distributed
+systems in general.
+Almost every aspect of a distributed system faces trade-offs.
+Due to that, the design of each system needs to be informed by application/user
+requirements and workload characteristics.
+A lot of work has been done to address this.
+\begin{itemize}
+  \item One size does not fit all. Specialized database designs for specific use
+  cases.
+  \item Online database reconfiguration.
+  \item Using learned models (machine learning for various database components).
+\end{itemize}
+
+The same is true for query processing.
+There have been approaches for "tunning" query processing for the needs for different applications:
+\begin{itemize}
+  \item Selecting which indexes/materialized view to materialize in databases.
+  \item Optimizing distributed query execution (finding the best place to execute each operator).
+\end{itemize}
+
+Limitation of this state-of-the-art:
+\begin{itemize}
+  \item Current approaches do not provide flexible placement of query processing state:
+  \begin{itemize}
+    \item This is definitely the case for sharded NoSQL databases.
+    \item TODO: determine how relational dabasese hanlde index placement.
+    \item Haven't seen works considering flexible cache or materialized view placement.
+  \end{itemize}
+\end{itemize}
+
+Idea 2: An argument for our choice of separating the storage and query processing tier is that disaggregation of storage
+and query processing is actually a trend in cloud systems.
+One example to use is AWS Athena that provides queries on top of AWS S3 with a pay-per-query pricing scheme.
+
+
 \section{Problem Statement}
 
 \section{State-of-the-art}
 
-For motivating the work, we will state the relevance and timeliness of two
-application needs / market trends / ... : attribute-based data retrieval, and
-geo-distribution of data.
+% For motivating the work, we will state the relevance and timeliness of two
+% application needs / market trends / ... : attribute-based data retrieval, and
+% geo-distribution of data.
 
-Attribute-based data retrieval: \\
-Retrieving data based on descriptive attributes attached to them (as opposed to
-retrieval based on primary key or content-based retrieval).
+% Attribute-based data retrieval: \\
+% Retrieving data based on descriptive attributes attached to them (as opposed to
+% retrieval based on primary key or content-based retrieval).
 
-Data geo-distribution: \\
-At the same time, data is increasingly geo-distributed (and federated).
+% Data geo-distribution: \\
+% At the same time, data is increasingly geo-distributed (and federated).
 
-Problem definition: \\
-This thesis studies how attribute-based retrieval can be performed efficiently
-on geo-distributed data.
+% Problem definition: \\
+% This thesis studies how attribute-based retrieval can be performed efficiently
+% on geo-distributed data.
 
 
 \section{Contributions}
