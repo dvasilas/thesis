@@ -1,3 +1,4 @@
+\begin{tcolorbox}
 The goal of this chapter is to prepare the ground so that the reader has the mental framework needed to understand the
 rest of this document.
 
@@ -10,30 +11,142 @@ This includes:
   Section~\ref{sec:requirements}).
   \item Introducing technical background that will be needed for the following chapters.
 \end{itemize}
+\end{tcolorbox}
 
 \section{Models}
-\subsection{System model}
 We consider a data serving system with a two-tiered architecture: a data storage tier and a query processing tier.
 
-
-\subsubsection{Data storage tier}
-The data storage tier has the role of storing data (we term the data stored by the data storage tier as the corpus). \\
-
-\textbf{Data (corpus) model} \\
-In short, the corpus is a collection of records grouped in tables. Each record is identified by a unique key (can be a
-composite key).
-Each record also has associated attributes. An attribute is a key-value pair. Schema can be pre-defined or not.
-
-Argue that this data model can express a variety of data models (relational, wide-column, object storage). \\
-
-Logically, we consider this tier as a component that may expose some of the following APIs:
 \begin{itemize}
-  \item An API for iterating over the corpus data.
-  \item An API for subscribing to notification for changes to the corpus data.
-  \item An API for querying the corpus data.
+\item A data storage tier, responsible providing access to data.
+We use the terms \textit{storage system} or \textit{data store} for the system used for this tier, and \textit{base data}
+or \textit{corpus} for its data.
+\item The query processing tier, which is responsible for providing querying functionalities.
+We use the terms \textit{query engine} or \textit{query (processing) system} for the system that implements this tier.
 \end{itemize}
-This component can be implementing by an actual storage system that stores the corpus data (in that case it might
-provide all three APIs), or by an event stream providing only the subscription API.
+
+Disaggregating query processing from persistent storage is an approach used by various systems and storage
+services such as Amazon Athena \cite{aws:athena}, Aurora \cite{aws:aurora}, and Google BigQuery
+\cite{google:bigquery}.
+In such systems, query processing is performed by a query engine independent from the storage system.
+
+This model provides several benefits, such as:
+\begin{itemize}
+  \item Enabling independent storage and query processing scaling of resources (elasticity).
+  \item Allowing on-demand, short-lived queries on already existing data without the need to migrate data.
+  \item Enabling cloud providers to implement fine-grained pricing for querying services.
+\end{itemize}
+
+\subsection{Data storage tier}
+The data storage tier has the role of providing access to data.
+From the point of view of the query tier, the data storage tier can be models as a system that exposes (one or more of)
+the following APIs:
+\begin{itemize}
+\item An API for iterating over the corpus data. This can provided as a list and a read operation. (API1)
+\item An API for subscribing to notification for changes to the corpus data, for example triggers in traditional
+database management systems, or event notification mechanisms in cloud storage services. (API2)
+TODO: cite https://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html
+\item An API for querying the corpus data. (API2)
+\end{itemize}
+
+This means that in our model the data storage tier can be implemented by different types of systems, such as databases,
+file or object storage systems, or even streaming systems, and be compatible with the query processing tier as long as
+they provide the specifies API.
+
+However, as in this work we focus on the placement of the query engine's state and computations relative to the base data,
+we focus on a storage system with know topology and data distribution.
+characteristics:
+\begin{itemize}
+\item ...
+\end{itemize}
+
+In the following Section we present our data storage tier model.
+
+% we assume that the database system is given, and focus on the problem of deploying a query system using the database system's data distribution schemes, guarantees and functionalities as assumptions for our analysis.
+
+
+\subsubsection{System model}
+The data storage tier is responsible for storing a dataset $D$.
+It is composed of one or more independent deployments of a storage system (a database, file or object storage system).
+Each deployment is responsible for a subset of $D$, and subsets can be overlapping.
+Each deployment maintains one or more full replicas of its subset, and can also maintain partial replicas.
+Each replica is sharded: it partitions its data, in non-overlapping parts, and a shard is responsible for a part.
+
+We model the system infrastructure as a collection of \textit{sites}.
+A site is as a group of nodes (servers, user devices) located in close geographic proximity.
+It can represent a data center, a small group of servers serving as an edge Point of Presence \cite{google:infra}, of
+a group of user devices in close proximity (in the same room or building).
+A site is characterized by the following characteristics:
+\begin{itemize}
+  \item Network communication latency between nodes in different sites is significantly higher (typically an order of
+  magnitude higher) \cite{pbailis:hats} compared to communication latency within a site.
+  \item Network resources across sites are more limited and costly across sites.
+  This is reflected in the pricing for cross-region data transfer in public cloud platforms.
+  Using the AWS Pricing Calculator \cite{aws:costcalc} we see that data transfer to different AWS data centers
+  (regions) costs double the price of intra-DC data transfer (0.02 and 0.01 USD per GB respectively).
+\end{itemize}
+
+Sites can correspond to data centers or edge sites.
+We consider a system composed of data centers and edge sites.
+We assume that each edge site communicates with a single data center, that which is geographically
+closest to it.
+For the rest of the paper we consider, for the sake simplicity, a single data center and edge site.
+
+The storage tier runs in the data center, while the caching tier runs partially on servers located in the data center
+and partially on servers located on the edge site.
+Clients are located close the edge site, and perform read queries, while writes are performed directly at the data
+center.
+
+
+
+% The data storage tier is deployed on
+% It fully or partially replicates $D_i$ across different geo-locations, which we refer to as data centers.
+
+% Each data center is partitioned multiple parts, and each partition is responsible for a non-overlapping subset of $D_i$.
+% We assume that each database engine instance employs the same partitioning across all data centers, but different instances may employ different partitioning schemes.
+
+% We assume that database engines support three operations: i) a read operation that, given a primary key, returns the value and attributes of the corresponding object, ii) a write operation that updates the value and attributes of a given data item (inserting a new data item can be represented as a write operation), and iii) a delete operation which removes a given data item from $D$.
+% The unit of operation on the database engine is the transaction.
+
+% A transaction may contain multiple operations, and is terminated by an abort (writes and deletes have no effect) or a commit (writes and deletes modify the corpus).
+% When a transaction commits an update, the database system does not overwrite the data item with the result of the update, but creates a new version instead.
+% Each data item version is associated with a version timestamp $vt$, which is one of the data item's attributes.
+
+% We define as \textit{snapshot} a cut of the database's state, a state of data item state containing a version of every data item in the database.
+% Each snapshot is identified by a timestamp $ts$.
+% The snapshot $ts$ contains the version $vts$ of each data item $d$ in $D$ for which $vts \leq ts$ $\land$ $\nexists$ $vts'$: $vts \leq vts' < ts$.
+
+% We also assume that database engines provide the following mechanisms:
+
+
+% \textbf{Data (corpus) model} \\
+% In short, the corpus is a collection of records grouped in tables. Each record is identified by a unique key (can be a
+% composite key).
+% Each record also has associated attributes. An attribute is a key-value pair. Schema can be pre-defined or not.
+
+% Argue that this data model can express a variety of data models (relational, wide-column, object storage). \\
+
+% \subsection{Corpus data and system model}
+% The corpus is a data set $D$, which is a collection of \textit{data items} with the following properties:
+% \begin{itemize}
+% \item A data item $d$ in $D$ is associated with a primary key, $id$, that can be used to efficiently retrieve $d$.
+% \item A data item $d$ is composed of a value and a collection of attributes.
+% We represent this as a tuple $(V, \{Attr: AttrVal\})$, where $V$ is the data item's value, and $\{Attr: AttrVal\}$ is a map from attributes keys to attribute values.
+% Attributes can include system metadata (e.g. size), user-defined tags, or attributes computed from $V$.
+% We use the notation $Attr(d)$ to refer to the attribute value of the attribute $Attr$ of data item $d$.
+% However, $Attr(d)$ is a partial mapping: some data items may not have a value ($Null$) for $Attr$.
+% We assume that every data item has at least one attribute, a ``last-modified'' timestamp, which we describe later in this Section.
+% \end{itemize}
+% This abstraction is compatible with several different data models, including object storage, document databases, key-value stores, wide-column stores, and relational databases.
+
+
+% Logically, we consider this tier as a component that may expose some of the following APIs:
+% \begin{itemize}
+%   \item An API for iterating over the corpus data.
+%   \item An API for subscribing to notification for changes to the corpus data.
+%   \item An API for querying the corpus data.
+% \end{itemize}
+% This component can be implementing by an actual storage system that stores the corpus data (in that case it might
+% provide all three APIs), or by an event stream providing only the subscription API.
 
 We also consider this tier from a distribution point of view (how data is placed in a physical system infrastructure).
 We consider the data storage tier as being deployed across multiple geographically distant data centers.
@@ -48,7 +161,7 @@ Also:
 \subsubsection{Query processing tier}
 
 \begin{itemize}
-  \item Descibe the intended functionality.
+  \item Describe the intended functionality.
   \item Sketch the query language.
 \end{itemize}
 
@@ -58,7 +171,7 @@ Also:
 \section{Query processing tier efficiency}
 \label{sec:requirements}
 
-The goal here is to discuss the factors that determining how efficient is query processing tier.
+The goal here is to discuss the factors that determining how efficient the query processing tier is.
 We use the term efficiency to encompass performance (response time, throughput) response quality (freshness,
 correctness, consistency with the corpus), and other system characteristics such as availability, and operational cost.
 
@@ -66,8 +179,27 @@ correctness, consistency with the corpus), and other system characteristics such
 In this section, present the factors that affect the experience and satisfaction of end-users of the query processing
 tier.
 
-\textbf{Response time} \\
-Present evidence of the negative effects of users perceiving high response times.
+\subsubsection{Response time}
+Response time - the amount of between making a request and receiving the corresponding response -
+is among important metrics for the quality of user-facing service.
+
+A number of studies and experiments have been studied the effects of response time to user experience.
+Results show that response time is among factors that have the largest effect users' subjective perception of the
+quality of a system.
+Users have been shown to perceive websites that load faster as more interesting \cite{ramsay/retrievaltimesinvestigation}.
+On the other hand, long response times increase user frustration \cite{ceaparu:userfrustration} and even compromises
+user's conceptions of the security of the system \cite{bouch:qualityeyebeholder}, making users for example less likely to
+make purchases on websites with long loading times.
+
+As a result, even small increases in user-perceived response times can result in drops in web traffic and
+therefore sales, as industry reports have indicated.
+Experiments by the Google and Bing search engines have shown that loner page loading times have a significant impact on
+metrics such as time to click, repeat site usage, and queries per visit \cite{schurman:rerformanceuserimpact}.
+A study from Akamai on the impact of travel site performance on consumers showed that more than half of the users will
+wait three seconds or less before abandon the site \cite{akamai:travelsiteperformance}.
+Finally, a comparison shopping service (Shopzilla) has reported that a website re-engineering project that achieved a
+speedup in page load time from 6-6 seconds down to 1.2 seconds resulted in 25\% increase in page views and 5-12\%
+increase in revenue \cite{dixon:shopzillasiteredo}
 
 \textbf{Freshness}
 \begin{itemize}
@@ -84,10 +216,13 @@ Present evidence of the negative effects of users perceiving high response times
 \textbf{Consistency}
 
 \subsection{System provider requirements}
-In this section, we present factor that are indirectly affect end-users, but are important for the system operator.
+In this section, we present factors that are indirectly affect end-users, but are important for the system operator.
 
 \textbf{Scalability} \\
 Present evidence of about the scale of internet services nowadays.
 
 \textbf{Operational Cost} \\
 The cost of operating the query processing system. Can split to fixed (monthly) cost, and per-query cost.
+
+\bibliographystyle{unsrt}
+\bibliography{refs}

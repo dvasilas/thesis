@@ -16,8 +16,8 @@ show: $(DOC).pdf
 	make $(DOC).pdf
 	open $(DOC).pdf
 
-$(DOC).pdf: $(DOC).tex
-	latexmk -recorder -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make -g $(DOC).tex
+$(DOC).pdf: $(DOC).tex refs.bib
+	latexmk -bibtex -recorder -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make -g $(DOC).tex
 
 clean:
 	latexmk -CA
