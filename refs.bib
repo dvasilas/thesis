@@ -115,3 +115,46 @@ series = {CHI ’00}
   howpublished = {\url{https://www.akamai.com/us/en/about/news/press/2010-press/new-study-reveals-the-impact-of-travel-site-performance-on-consumers.jsp}},
   year = {2010 (accessed June 2020)}
 }
+
+@book{buttcher:informationretrieval,
+  author = {B\"{u}ttcher, Stefan and Clarke, Charles and Cormack, Gordon V.},
+  title = {Information Retrieval: Implementing and Evaluating Search Engines},
+  year = {2010},
+  isbn = {0262026511},
+  publisher = {The MIT Press}
+}
+
+@inproceedings{tan:diffindex,
+  title = "Diff-index: Differentiated index in distributed log-structured data stores",
+  abstract = "Log-Structured-Merge (LSM) Tree gains much attention recently because of its superior performance in write-intensive workloads. LSM Tree uses an append-only structure in memory to achieve low write latency; at memory capacity, in-memory data are flushed to other storage media (e.g. disk). Consequently, read access is slower comparing to write. These specific features of LSM, including no in-place update and asymmetric read/write performance raise unique challenges in index maintenance for LSM. The structural difference between LSM and B-Tree also prevents mature B-Tree based approaches from being directly applied. To address the issues of index maintenance for LSM, we propose Diff-Index to support a spectrum of index maintenance schemes to suit different objectives in index consistency and performance. The schemes consist of sync-full, sync-insert, async-simple and async-session. Experiments on our HBase implementation quantitatively demonstrate that Diff-Index offers various performance/consistency balance and satisfactory scalability while avoiding global coordination. Syncinsert and async-simple can reduce 60%-80% of the overall index update latency when compared to the baseline syncfull; async-simple can achieve superior index update performance with an acceptable inconsistency. Diff-Index exploits LSM features such as versioning and the flush-compact process to achieve goals of concurrency control and failure recovery with low complexity and overhead. Diff-Index is included in IBM InfoSphere BigInsights, an IBM big data offering.",
+  keywords = "Cap theorem, Distributed databases, Failure recovery, Log-Structured Merge (LSM) tree, Secondary index",
+  author = "Wei Tan and Sandeep Tata and Liana Fong and Yuzhe Tang",
+  year = "2014",
+  doi = "10.5441/002/edbt.2014.76",
+  language = "English (US)",
+  pages = "700--711",
+  booktitle = "Advances in Database Technology - EDBT 2014: 17th International Conference on Extending Database Technology, Proceedings",
+  publisher = "OpenProceedings.org, University of Konstanz, University Library",
+  note = "17th International Conference on Extending Database Technology, EDBT 2014 ; Conference date: 24-03-2014 Through 28-03-2014",
+}
+
+@inproceedings{qi:secondaryindexconsistencyanalysis,
+  author={ {Houliang Qi} and  {Xu Chang} and  {Xingwu Liu} and  {Li Zha}},
+  booktitle={2017 IEEE International Parallel and Distributed Processing Symposium Workshops (IPDPSW)}, 
+  title={The consistency analysis of secondary index on distributed ordered tables}, 
+  year={2017},
+  volume={},
+  number={},
+  pages={1058-1067},
+}
+
+@inproceedings{shukla:schemaagnostic,
+  author = {Shukla, Dharma and Thota, Shireesh and Raman, Karthik and Gajendran, Madhan and Shah, Ankur and Ziuzin,  Sergii and Sundaram, Krishnan and Guajardo, Miguel Gonzalez and Wawrzyniak, Anna and Boshra, Samer and Ferreira, Renato and Nassar, Mohamed and Koltachev, Michael and Huang, Ji and Sengupta, Sudipta and Levandoski, Justin and Lomet, David},
+  title = {Schema-Agnostic Indexing with Azure DocumentDB},
+  booktitle = {Proceedings of the VLDB Endowment},
+  year = {2015},
+  month = {September},
+  abstract = {Azure DocumentDB is Microsoftâs multi-tenant distributed database service for managing JSON documents at Internet scale. DocumentDB is now generally available to Azure developers. In this paper, we describe the DocumentDB indexing subsystem. DocumentDB indexing enables automatic indexing of documents without requiring a schema or secondary indices. Uniquely, DocumentDB provides real-time consistent queries in the face of very high rates of document updates. As a multi-tenant service, DocumentDB is designed to operate within extremely frugal resource budgets while providing predictable performance and robust resource isolation to its tenants. This paper describes the DocumentDB capabilities, including document representation, query language, document indexing approach, core index support, and early production experiences.},
+  url = {https://www.microsoft.com/en-us/research/publication/schema-agnostic-indexing-azure-documentdb/},
+  edition = {Proceedings of the VLDB Endowment},
+}
