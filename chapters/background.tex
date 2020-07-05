@@ -1,48 +1,52 @@
-\begin{tcolorbox}
-The goal of this chapter is to prepare the ground so that the reader has the mental framework needed to understand the
-rest of this document.
+% \begin{tcolorbox}
+% The goal of this chapter is to prepare the ground so that the reader has the mental framework needed to understand the
+% rest of this document.
 
-This includes:
-\begin{itemize}
-  \item Implicitly establishing a terminology to be used throughout the document.
-  \item Establishing a ''world view'' by describing the system and data model that we consider, and the assumptions that
-  we make
-  \item Establishing concepts that will guide our design decisions in the following chapters (see
-  Section~\ref{sec:requirements}).
-  \item Introducing technical background that will be needed for the following chapters.
-\end{itemize}
-\end{tcolorbox}
+% This includes:
+% \begin{itemize}
+%   \item Implicitly establishing a terminology to be used throughout the document.
+%   \item Establishing a ''world view'' by describing the system and data model that we consider, and the assumptions that
+%   we make
+%   \item Establishing concepts that will guide our design decisions in the following chapters (see
+%   Section~\ref{sec:requirements}).
+%   \item Introducing technical background that will be needed for the following chapters.
+% \end{itemize}
+% \end{tcolorbox}
 
 \section{Models}
 We consider a data serving system with a two-tiered architecture: a data storage tier and a query processing tier.
 
 \begin{itemize}
-\item A data storage tier, responsible providing access to data.
-We use the terms \textit{storage system} or \textit{data store} for the system used for this tier, and \textit{base data}
-or \textit{corpus} for its data.
-\item The query processing tier, which is responsible for providing querying functionalities.
+\item The data storage tier is responsible for providing access to data.
+We use the terms \textit{storage system} or \textit{data store} for the system that implement this tier, and the terms
+\textit{base data} or \textit{corpus} for its data.
+\item The query processing tier is responsible for providing the functionality to identify and retrieve data using
+queries on secondary attributes (Section~\ref{subsec:query_prcessing_tier}).
+
 We use the terms \textit{query engine} or \textit{query (processing) system} for the system that implements this tier.
 \end{itemize}
 
-Disaggregating query processing from persistent storage is an approach used by various systems and storage
+Disaggregating query processing from the storage engine is an approach used by various systems and cloud
 services such as Amazon Athena \cite{aws:athena}, Aurora \cite{aws:aurora}, and Google BigQuery
 \cite{google:bigquery}.
-In such systems, query processing is performed by a query engine independent from the storage system.
+In these systems, query processing is performed by a query engine independent from the storage system.
 
-This model provides several benefits, such as:
+This model provides several benefits:
 \begin{itemize}
-  \item Enabling independent storage and query processing scaling of resources (elasticity).
-  \item Allowing on-demand, short-lived queries on already existing data without the need to migrate data.
-  \item Enabling cloud providers to implement fine-grained pricing for querying services.
+  \item Storage and query processing resources can scale independently (elasticity).
+  \item It enables on-demand, short-lived queries on already existing data without the need to migrate data.
+  \item It enabling cloud providers to implement fine-grained pricing for querying services.
 \end{itemize}
 
-In this work, we consider the data storage tier as ``imposed'' and focus on the design of the query processing tier:
-We use the data storage tier's functionalities, guarantees, as well as data distribution schemes as input parameters
-in our design process.
+In this work, we focus on the design of the query processing tier and consider the data storage tier as ``imposed'':
+we consider the data storage tier's functionalities, guarantees, and data distribution schemes as input parameters in
+our design.
 
-In addition, one of our aims is that the query processing tier is agnostic of the data storage tier, and a query
-system can interoperate with multiple different data storage tier implementations.
-To achieve that, we specify the interconnection between the two tiers as a set of well-defined APIs, which we describe
+One of our design goals
+(TODO: link to design goals in the next chapter)
+is that the query processing tier should be agnostic of the data storage tier.
+A query system should be able to interoperate with multiple different data storage tier implementations.
+To achieve that, we model the interconnection between tiers as a set of well-defined APIs, which we describe
 in detail in the following section.
 
 \subsection{Data storage tier}
@@ -232,6 +236,7 @@ $List$ can be implemented as an explicit API method This can provided as a list 
 % \end{itemize}
 
 \subsection{Query processing tier}
+\label{subsec:query_prcessing_tier}
 The query processing tier is responsible for providing the functionality of attribute-based data retrieval.
 In more detail, given a query expressed as a predicate on attributes and a table, the query processing tier is
 responsible for providing the primary keys and attributes of all data items in the given table that match the given
