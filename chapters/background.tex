@@ -49,35 +49,35 @@ A query system should be able to interoperate with multiple different data stora
 To achieve that, we model the interconnection between tiers as a set of well-defined APIs, which we describe
 in detail in the following section.
 
-\subsection{Data storage tier}
-The data storage tier is responsible for providing access to base data.
-As described above, the tier can be implemented by different types of systems as long as it exposes the APIs expected by
-the query processing tier, described later in this section.
-Examples of systems implementing the data storage tier can be databases, file systems, cloud object storage systems,
-or even streaming systems.
 
-However, as in this work we study the design decisions related to the placement of the query engine's state and
-computations relative to the base data, we consider a more specific data storage tier model, so that we can reason about
-its properties and data distribution scheme.
-More specifically, we consider a data storage tier implemented by a federation of geo-replicated storage systems
-In the following Section we present in detail our data storage tier model.
+\subsection{Data storage tier}
+
+TODO: [...] or even streaming systems.
+
+The data storage tier is a broad abstraction that can include any system that can be used to store and retrieve data.
+This can include databases, file systems, cloud object storage systems.
+
+As described above, in this work we view this tier as an external, underlying system that our design can build upon.
+However, any efficient query processing tier design needs to take into account the properties and characteristics of the
+data storage tier, most importantly its data distribution scheme.
+To address that, we adopt a less broad data storage tier definition.
+More specifically, we model a data storage tier as a federation of geo-replicated storage systems.
+In the following Section, we present in detail our data storage tier model.
+
 
 \subsubsection{System model}
-The data storage tier is implemented by a storage system (a database, file or cloud storage system) or a federation of
-multiple, potentially heterogeneous storage system.
+The data storage tier is implemented by a storage system (a database, file system or cloud storage system) or a
+federation of multiple, potentially heterogeneous storage systems.
 Each system is responsible for storing a dataset $D$.
 In a federated system, the dataset of each storage system is independent, but the application logic may implement
 replication across different systems (for example an application that replicates data across multiple cloud providers).
-In addition, storage systems implement replication: each maintains one or more full replicas of its dataset, and may also
-maintain partial replicas.
+In addition, storage systems implement replication:
+each storage system maintains one or more full replicas of its dataset, and may also maintain partial replicas.
 Finally, replicas are sharded: each replica partitions its data in non-overlapping parts, and a shard is responsible
 for a part of the data.
 
-We model the system infrastructure as a collection of \textit{sites}.
-A site is as a group of nodes (servers, user devices) located in close geographic proximity.
-It can represent a data center, a small group of servers serving as an edge Point of Presence \cite{google:infra}, of
-a group of user devices in close proximity (in the same room or building).
-A site is characterized by the following characteristics:
+We model the infrastructure on which the data storage tier runs as a collection of \textit{sites}.
+A site is a group of nodes (servers, user devices) with the following characteristics:
 \begin{itemize}
   \item Network communication latency between nodes in different sites is significantly higher (typically an order of
   magnitude higher) \cite{pbailis:hats} compared to communication latency within a site.
@@ -87,45 +87,39 @@ A site is characterized by the following characteristics:
   (regions) costs double the price of intra-DC data transfer (0.02 and 0.01 USD per GB respectively).
 \end{itemize}
 
-% Sites can correspond to data centers or edge sites.
-% We consider a system composed of data centers and edge sites.
-% We assume that each edge site communicates with a single data center, that which is geographically
-% closest to it.
-% For the rest of the paper we consider, for the sake simplicity, a single data center and edge site.
+A site can correspond to a data center, a group of servers serving as an edge Point of Presence \cite{google:infra}, or
+a group of user devices in close proximity (in the same room or building).
 
-% The storage tier runs in the data center, while the caching tier runs partially on servers located in the data center
-% and partially on servers located on the edge site.
-% Clients are located close the edge site, and perform read queries, while writes are performed directly at the data
-% center.
 
 \subsubsection{Data model}
-% - In short, the corpus is a collection of records grouped in tables. Each record is identified by a unique key (can be a % composite key).
+
 % - Each record also has associated attributes. An attribute is a key-value pair. Schema can be pre-defined or not.
 % - Argue that this data model can express a variety of data models (relational, wide-column, object storage). \\
-The data storage tier is responsible for storing a dataset, which is a collection of \textit{data items}.
-We use the term \textit{data items} to refer to the unit of storage such as files, objects or database records.
-Data items are organized in \textit{tables}, which can be organized in a hierarchical structure
-(e.g. file system repositories), a flat namespace (e.g. object storage buckets), or a relational schema.
+The corpus dataset is a collection of \textit{data items}, organized in \textit{tables}.
+We use the term \textit{data item} to refer to the unit of stored data:
+Depending on the storage system, a data item may correspond to a file, and object, or a database record.
+Tables may be organized in a hierarchical structure (file system repositories), a flat namespace (object store buckets),
+or a relational schema.
 
-A data item is composed of a primary key, is associated with a set of attributes, and optionally a value.
-The primary key can be used to \textit{efficiently} identify the data item, without requiring a scan.
-We model attributes key-value pairs, therefore each data item is associated with a map of attribute keys and values
+A data item is composed of a primary key, a set of attributes, and optionally a value.
+The primary key can be used to efficiently identify and retrieve the data item, without requiring a scan.
+Attributes are key-value pairs: each data item is associated with a map of attribute keys and values
 $\{AttrKey: AttrVal\}$.
 We do not assume a strict schema for attributes: the attributes of each data item are independent of the attributes of
 others.
-We consider the data item's value as a blob of binary data.
+Finally, we consider the data item's value as a blob of binary data.
 
-We assume that all objects have at least one attribute, a ''timestamp``.
-Timestamps can be of any datatype that provides a comparison operator which can be used to establish an at least partial
-order between timestamps, such as Unix time or vector timestamps.
+We assume that objects are ''versioned``.
+Each object is associated with a timestamp, which is one of it's attributes.
+A timestamp can be implemented by any data type that provides a comparison operator which can be used to establish an
+at least partial order between timestamps, such as Unix time or vector timestamps.
 
-\subsubsection{API exposed to the query processing tier}
+\subsubsection{Data storage tier API}
 
-The data storage tier exposes to the query processing tier at least one of the following APIs:
+The data storage tier exposes at least one of the following APIs:
 \begin{itemize}
   \item An API for iterating over the corpus data (List)
   \item An API for subscribing to notification for changes to the corpus data.
-% TODO: cite https://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html
   \item An API for querying the corpus data.
 \end{itemize}
 
@@ -138,21 +132,34 @@ This API provides a mechanism for retrieving the primary key and attributes of a
 $List(Table, [Timestamp_{low}, Timestamp_{high}))$ $\rightarrow$ $[ListResponse]$
 
 \noindent
-$ListResponse$ then contains all data items in $Table$ with $Timestamp_{low} \leq Timestamp < Timestamp_{high}$
-in the form $(ID, {AttrKey: AttrVal})$.
-$ListResponse$ may be implemented in different says, such a single response containing a set of
-data items, or a stream in which each data item is sent as a record, or a handler with a $Next()$ method that returns a
-data item each time it is called.
-We don't assume any ordering in $ListResponse$.
+Given a table name ($Table$) and a range of timestamps ($[Timestamp_{low}, Timestamp_{high})$),
+$ListResponse$ contains all data items in $Table$ with $Timestamp_{low} \leq Timestamp < Timestamp_{high}$.
+Each data item in $ListResponse$ is represented as a tuple $(ID, \{AttrKey: AttrVal\})$, containing the data item's
+primary key ($ID$), and attributes ($\{AttrKey: AttrVal\}$).
 
-$List$ can be implemented as an explicit API method This can provided as a list and a read operation.
+$ListResponse$ may be implemented in different ways, such a single response containing a set of
+data items, or a stream in which each data item is sent as a record, or an iterator in which calling a $Next()$ method
+returns the following data item.
+Finally, We don't assume any ordering in $ListResponse$.
+
+The $List$ API may be provided as an explicit API method or implemented as a combination of a \textit{list} and a
+\textit{read} (get) operation.
+
+Depending on its versioning mechanism, the storage system implementing the data storage tier may not support the
+listing API for any range of timestamps.
+For example, in a storage system that does not provide multi-versioned storage, $List$ will return the latest version of
+each data item.
+For simplicity, we assume the $List$ API as specified above.
+In Section
+TODO
+we describe how our design can cater for a $List$ API without support for Timestamp ranges.
 
 \noindent
-\textbf{API 2: List}
+\textbf{API 2: Subscribe}
   for example triggers in traditional
   database management systems, or event notification mechanisms in cloud storage services.
 
-
+% TODO: cite https://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html
 
 
 % From the point of view of the query tier, the data storage tier can be models as a system that exposes (one or more of)
@@ -262,7 +269,7 @@ and a data item $d$ represented as ($table$, $id$, $attributes$), $d$ satisfies 
   \item $\forall$ ($attrVal_{low}$ $\leq$ $attrKey$ $<$ $attrVal_{high}$) $\in$ $Q.predicate$:
   $attrKey$ $\in$ $d.attributes$ and :  $attrVal_{low}$ $\leq$ $attrVal$ $<$ $attrVal_{high}$:
   the data item contains all attributes included in the query's predicate.
-  \item $\forall$ 
+  \item $\forall$
 \end{itemize}
 
 
