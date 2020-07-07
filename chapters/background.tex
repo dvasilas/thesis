@@ -109,17 +109,59 @@ We do not assume a strict schema for attributes: the attributes of each data ite
 others.
 Finally, we consider the data item's value as a blob of binary data.
 
+This data model can express the data model of multiple different types of storage systems:
+\begin{itemize}
+  \item Object stores, such as AWS S3: \\
+  The data storage tier can be implemented by an object store.
+  In that case, data items correspond to objects and tables to buckets.
+  In addition, a data item's value corresponds to the object's content, and attributes correspond to object
+  tags \cite{awss3:tagging}.
+  \item Wide-column stores, such as Amazon DynamoDB, Google's Bigtable or Apache Cassandra: \\
+  In a data storage tier implemented by a wide-column store:
+  \begin{itemize}
+    \item In both data models data is organized in tables.
+    \item Data items correspond to table rows and attributes correspond to columns.
+    \item Data items' values are empty.
+  \end{itemize}
+  \item Relational databases: \\
+  Similarly to the wide-column data model, the relational model can be expressed by representing table records as data items,
+  and columns as attributes.
+  The difference between the two models is that while in the relational model each table has a schema that defines the
+  names and format of its columns, in the wide-column model column names and format can vary from row to row in the same
+  table.
+  \item Document stores, such as MongoDB: \\
+  The described data model is partially compatible with the document store data model.
+  In the case of a data storage tier implemented by a document store, tables correspond to document collections, and
+  data items correspond to documents.
+  A document's identifier can be represented as a data item's primary key, while document attributes can be represented
+  as attributes.
+  However, the described data model does not model complex attribute types such as lists and maps which are supported by
+  document stores.
+  \item File systems: \\
+  In a data storage tier implemented by a file system, data items correspond to files and tables correspond to file
+  system repositories.
+  A data item's primary key corresponds to the corresponding file's name, the value to the file's content, and attributes
+  correspond to extended file attributes.
+\end{itemize}
+
+This general data model, which is able to express different existing data models, caters to the design goal mentioned
+above:
+Allowing the query processing tier to be agnostic of the underlying data storage tier, and be compatible with different
+storage tier implementations. \\
+
+\noindent \textbf{Timestamps} \\
 We assume that objects are ''versioned``.
 Each object is associated with a timestamp, which is one of it's attributes.
 A timestamp can be implemented by any data type that provides a comparison operator which can be used to establish an
 at least partial order between timestamps, such as Unix time or vector timestamps.
 
+
 \subsubsection{Data storage tier API}
 
 The data storage tier exposes at least one of the following APIs:
 \begin{itemize}
-  \item An API for iterating over the corpus data (List)
-  \item An API for subscribing to notification for changes to the corpus data.
+  \item An API for iterating over the corpus data (List).
+  \item An API for subscribing to notification for changes to the corpus data (Subscribe).
   \item An API for querying the corpus data.
 \end{itemize}
 
@@ -153,35 +195,39 @@ For simplicity, we assume the $List$ API as specified above.
 In Section
 TODO
 we describe how our design can cater for a $List$ API without support for Timestamp ranges.
+\\
 
 \noindent
 \textbf{API 2: Subscribe}
-  for example triggers in traditional
-  database management systems, or event notification mechanisms in cloud storage services.
 
-% TODO: cite https://docs.aws.amazon.com/AmazonS3/latest/dev/NotificationHowTo.html
+\noindent
+This API provides a mechanism for subscribing to notification for updates to data items in a given table:
+
+$Subscribe(Table, [Timestamp_{low}, Timestamp_{high}))$ $\rightarrow$ $[SubscribeResponse]$
+
+\noindent
+Given a table name ($Table$) and a range of timestamps ($[Timestamp_{low}, Timestamp_{high})$),
+$SubscribeResponse$ is a stream containing a record for each update in data item in $Table$
+with $Timestamp_{low} \leq Timestamp < Timestamp_{high}$.
+The Timestamp of an update is equal to the Timestamp of the data item version created by that update.
+Records in $ListResponse$  have the form $(ID, \{AttrKey: (AttrVal_{old}, AttrVal_{new})\})$:
+Each record contains the data item's attributes before and after the update.
+
+If an attribute is created by the update, then its old value has the special value $null$.
+Conversely, if an attribute is deleted by the update, then its new value has the $null$ value.
+
+Various systems provide mechanisms that can be used to implement the $Subscribe$ API.
+Examples include triggers in traditional database management systems \cite{mariadb:triggers}, and event notification
+mechanisms in cloud storage services \cite{awss3:notifications}.
 
 
-% From the point of view of the query tier, the data storage tier can be models as a system that exposes (one or more of)
-% the following APIs:
+
+% From the point of view of the query tier, the data storage tier can be models as a system that exposes (one or more of) % the following APIs:
 
 
 
 
 
-%  ---
-% Each data item is associated with a primary key, $id$, that can be used to efficiently retrieve it, without requiring a scan.
-% Data items are associated with a set of attributes, and optionally a value.
-
-% We represent this as a tuple $(V, \{Attr: AttrVal\})$, where $V$ is the data item's value, and $\{Attr: AttrVal\}$ is a map from attributes keys to attribute values.
-% Attributes can include system metadata (e.g. size), user-defined tags, or attributes computed from $V$.
-% We use the notation $Attr(d)$ to refer to the attribute value of the attribute $Attr$ of data item $d$.
-
-% However, $Attr(d)$ is a partial mapping: some data items may not have a value ($Null$) for $Attr$.
-
-% We assume that every data item has at least one attribute, a ``last-modified'' timestamp, which we describe later in this Section.
-% \end{itemize}
-% This abstraction is compatible with several different data models, including object storage, document databases, key-value stores, wide-column stores, and relational databases.
 
 
 
