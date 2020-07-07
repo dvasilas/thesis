@@ -207,12 +207,13 @@ $Subscribe(Table, [Timestamp_{low}, Timestamp_{high}))$ $\rightarrow$ $[Subscrib
 
 \noindent
 Given a table name ($Table$) and a range of timestamps ($[Timestamp_{low}, Timestamp_{high})$),
-$SubscribeResponse$ is a stream containing a record for each update in data item in $Table$
-with $Timestamp_{low} \leq Timestamp < Timestamp_{high}$.
-The Timestamp of an update is equal to the Timestamp of the data item version created by that update.
-Records in $ListResponse$  have the form $(ID, \{AttrKey: (AttrVal_{old}, AttrVal_{new})\})$:
-Each record contains the data item's attributes before and after the update.
-
+$Subscribe$ initiates a stream called $SubscribeResponse$.
+For each update performed in a data item $d$ in $Table$, creating a new version of $d$ with
+$Timestamp_{low} \leq Timestamp < Timestamp_{high}$, a record is sent in $SubscribeResponse$.
+$ListResponse$ records have the form $(ID, \{AttrKey: (AttrVal_{old}, AttrVal_{new})\})$:
+each record contains the update data item's attributes before and after the update.
+If an operation updates more than one data items, then a $ListResponse$ record is sent for each updated
+data item.
 If an attribute is created by the update, then its old value has the special value $null$.
 Conversely, if an attribute is deleted by the update, then its new value has the $null$ value.
 
