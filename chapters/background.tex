@@ -322,46 +322,47 @@ resulting to a query response being different from $Q_r$.
 \section{Query processing system performance evaluation}
 \label{sec:requirements}
 
+TODO: feels out-of-place. Need a transition from the previous section to this one.
+
 The aspects of a query processing system's performance can be categorized in two groups:
 \textit{efficiency} and \textit{effectiveness} \cite{buttcher:informationretrieval}.
-Efficiency can be measured in terms of time (milliseconds per query) of utilized resources (bytes in memory per based
-data record).
-Evaluating efficiency involves metrics such as response time, throughput, scalability.
+Efficiency can be measured using metrics such as response time, throughput, scalability.
 Effectiveness is a measure of how well a query processing system achieves its intended purpose.
-Evaluating effectiveness involves measures such as precision and recall.
+It involves metrics such as precision and recall.
+
 
 \subsection{Evaluating Efficiency}
 
 The most visible aspect of efficiency is the \textit{response time} experienced by a user between issuing a query and
 receiving the corresponding response.
-Since the query system needs to support many simultaneous users, the \textit{query throughput}, measured in queries per
-second becomes an important performance factor.
-In addition, since response time is the metric that affects user experiences, a performance factor is how
-\textit{response time} scales with \textit{query throughput}.
-Together, \textit{query throughput} and the relation between \textit{response time} and \textit{query throughput}
-characterize the system's \textit{scalability}.
+Since the query system needs to support many simultaneous users, \textit{query throughput}, measured in queries served
+per unit of time, is an important performance metric for the query processing system.
+In addition, as response time is the measure that directly affects user experience, an important efficiency metric is
+how response time scales with query throughput.
+This measures whether the system can maintain low query response time for individual users as its load increases.
+The relation between response time and query throughput, together with the throughout of an individual user, as the
+total system throughput increases, characterize the system's \textit{scalability}.
 
 \subsubsection{Response time}
-Response time - the amount of between making a request and receiving the corresponding response -
-is among important metrics for the quality of user-facing service.
+Response time - the amount of time between making a request and receiving the corresponding response -
+is among the most important metrics for the quality of a user-facing service.
 
-A number of studies and experiments have been studied the effects of response time to user experience.
+A number of studies and experiments have studied the effects of response time to user experience.
 Results show that response time is among factors that have the largest effect users' subjective perception of the
 quality of a system.
 Users have been shown to perceive websites that load faster as more interesting \cite{ramsay/retrievaltimesinvestigation}.
-On the other hand, long response times increase user frustration \cite{ceaparu:userfrustration} and even compromises
-user's conceptions of the security of the system \cite{bouch:qualityeyebeholder}, making users for example less likely to
-make purchases on websites with long loading times.
+On the other hand, long response times increase user frustration \cite{ceaparu:userfrustration} and even compromise
+user's conceptions of the security of the system \cite{bouch:qualityeyebeholder}.
 
-As a result, even small increases in user-perceived response times can result in drops in web traffic and
-therefore sales, as industry reports have indicated.
+Industry reports have indicated that even small increases in user-perceived response times can result in drops in web
+traffic, and therefore sales.
 Experiments by the Google and Bing search engines have shown that loner page loading times have a significant impact on
-metrics such as time to click, repeat site usage, and queries per visit \cite{schurman:rerformanceuserimpact}.
+metrics such as time to click, repeated site usage, and queries per visit \cite{schurman:rerformanceuserimpact}.
 A study from Akamai on the impact of travel site performance on consumers showed that more than half of the users will
-wait three seconds or less before abandon the site \cite{akamai:travelsiteperformance}.
+wait three seconds or less before abandoning the site \cite{akamai:travelsiteperformance}.
 Finally, a comparison shopping service (Shopzilla) has reported that a website re-engineering project that achieved a
 speedup in page load time from 6-9 seconds down to 1.2 seconds resulted in 25\% increase in page views and 5-12\%
-increase in revenue \cite{dixon:shopzillasiteredo}
+increase in revenue \cite{dixon:shopzillasiteredo}.
 
 \subsection{Evaluating Effectiveness}
 
