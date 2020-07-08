@@ -92,9 +92,6 @@ a group of user devices in close proximity (in the same room or building).
 
 
 \subsubsection{Data model}
-
-% - Each record also has associated attributes. An attribute is a key-value pair. Schema can be pre-defined or not.
-% - Argue that this data model can express a variety of data models (relational, wide-column, object storage). \\
 The corpus dataset is a collection of \textit{data items}, organized in \textit{tables}.
 We use the term \textit{data item} to refer to the unit of stored data:
 Depending on the storage system, a data item may correspond to a file, and object, or a database record.
@@ -162,7 +159,7 @@ The data storage tier exposes at least one of the following APIs:
 \begin{itemize}
   \item An API for iterating over the corpus data (List).
   \item An API for subscribing to notification for changes to the corpus data (Subscribe).
-  \item An API for querying the corpus data.
+  \item An API for querying the corpus data (Select).
 \end{itemize}
 
 \noindent
@@ -220,74 +217,54 @@ Conversely, if an attribute is deleted by the update, then its new value has the
 Various systems provide mechanisms that can be used to implement the $Subscribe$ API.
 Examples include triggers in traditional database management systems \cite{mariadb:triggers}, and event notification
 mechanisms in cloud storage services \cite{awss3:notifications}.
+\\
 
+\noindent
+\textbf{API 3: Select}
 
+\noindent
+This API provides a mechanism for identifying data items based on their attributes:
 
-% From the point of view of the query tier, the data storage tier can be models as a system that exposes (one or more of) % the following APIs:
+$Select(Table, Predicate, [Timestamp_{low}, Timestamp_{high}))$ $\rightarrow$ $[SelectResponse]$,
+where $Predicate$ is a map containing attribute keys and ranges:
+$\{AttrKey: [AttrVal_{low}, AttrVal_{high})\}$.
 
+Given a table name ($Table$), a range of timestamps ($[Timestamp_{low}, Timestamp_{high})$), and
+a predicate consisting of attributes keys and ranges of values
+($\{AttrKey: [AttrVal_{low}, AttrVal_{high})\}$), $Select$ returns $SelectResponse$.
+$SelectResponse$ contains all data items in $Table$ that have all attributes contained in $Predicate$ and
+their values are within the ranges specified in $Predicate$.
 
+$Select$ can be expressed as an SQL query with the form: \\
+\noindent
+$SELECT$ $AttrKey_1$, $AttrKey_2$, ..., \\
+$FROM$ $Table$ \\
+$WHERE$ \\
+$AttrKey_1$ $IS$ $NOT$ $NULL$ $AND$ $AttrVal_{low}$ $\leq$ $AttrKey_1$ $<$ $AttrVal_{high}$
+$AND$ $AttrKey_2$ $IS$ $NOT$ $NULL$ $AND$ $AttrVal_{low}$ $\leq$ $AttrKey_2$ $<$ $AttrVal_{high}$
+$AND$ ... \\
+$AND$ $Timestamp_{low}$ $\leq$ $Timestamp$ $<$ $Timestamp_{high}$
 
+$Select$ may be provided as a subset of a more expressive query language, such as in relational database
+systems that support a full SQL query language. \\
 
+\noindent
+As we further discuss in Chapter
+TODO,
+the two tiers interoperate through these well-defined APIs.
+This allows the query processing tier to be agnostic of the data storage tier, and compatible with any storage system
+that exposes the described APIs.
+As an example, the query processing tier can work on top of a streaming system that does not persist data but exposes
+the $Subscribe$ API.
 
-
-
-
-
-% The data storage tier is deployed on
-% It fully or partially replicates $D_i$ across different geo-locations, which we refer to as data centers.
-
-% Each data center is partitioned multiple parts, and each partition is responsible for a non-overlapping subset of $D_i$.
-% We assume that each database engine instance employs the same partitioning across all data centers, but different instances may employ different partitioning schemes.
-
-% We assume that database engines support three operations: i) a read operation that, given a primary key, returns the value and attributes of the corresponding object, ii) a write operation that updates the value and attributes of a given data item (inserting a new data item can be represented as a write operation), and iii) a delete operation which removes a given data item from $D$.
-% The unit of operation on the database engine is the transaction.
-
-% A transaction may contain multiple operations, and is terminated by an abort (writes and deletes have no effect) or a commit (writes and deletes modify the corpus).
-% When a transaction commits an update, the database system does not overwrite the data item with the result of the update, but creates a new version instead.
-% Each data item version is associated with a version timestamp $vt$, which is one of the data item's attributes.
-
-% We define as \textit{snapshot} a cut of the database's state, a state of data item state containing a version of every data item in the database.
-% Each snapshot is identified by a timestamp $ts$.
-% The snapshot $ts$ contains the version $vts$ of each data item $d$ in $D$ for which $vts \leq ts$ $\land$ $\nexists$ $vts'$: $vts \leq vts' < ts$.
-
-% We also assume that database engines provide the following mechanisms:
-
-
-% \textbf{Data (corpus) model} \\
-% In short, the corpus is a collection of records grouped in tables. Each record is identified by a unique key (can be a
-% composite key).
-% Each record also has associated attributes. An attribute is a key-value pair. Schema can be pre-defined or not.
-
-% Argue that this data model can express a variety of data models (relational, wide-column, object storage). \\
-
-% \subsection{Corpus data and system model}
-% The corpus is a data set $D$, which is a collection of \textit{data items} with the following properties:
-% \begin{itemize}
-% \item A data item $d$ in $D$ is associated with a primary key, $id$, that can be used to efficiently retrieve $d$.
-% \item A data item $d$ is composed of a value and a collection of attributes.
-% We represent this as a tuple $(V, \{Attr: AttrVal\})$, where $V$ is the data item's value, and $\{Attr: AttrVal\}$ is a map from attributes keys to attribute values.
-% Attributes can include system metadata (e.g. size), user-defined tags, or attributes computed from $V$.
-% We use the notation $Attr(d)$ to refer to the attribute value of the attribute $Attr$ of data item $d$.
-% However, $Attr(d)$ is a partial mapping: some data items may not have a value ($Null$) for $Attr$.
-% We assume that every data item has at least one attribute, a ``last-modified'' timestamp, which we describe later in this Section.
-% \end{itemize}
-% This abstraction is compatible with several different data models, including object storage, document databases, key-value stores, wide-column stores, and relational databases.
-
-
-% Logically, we consider this tier as a component that may expose some of the following APIs:
-% \begin{itemize}
-%   \item An API for iterating over the corpus data.
-%   \item An API for subscribing to notification for changes to the corpus data.
-%   \item An API for querying the corpus data.
-% \end{itemize}
-% This component can be implementing by an actual storage system that stores the corpus data (in that case it might
-% provide all three APIs), or by an event stream providing only the subscription API.
-
-% Also:
-% \begin{itemize}
-%   \item Describe our assumptions on the consistency guarantees of the storage tier.
-%   \item State that we consider this tier ''imposed''; we build on top of it.
-% \end{itemize}
+For the rest of this document, we assume for simplicity that the data storage tier exposes the $List$ and $Subscribe$
+API as described here.
+In Section
+TODO,
+we discuss the implications of the data storage tier exposing only one of the APIs to the query processing tier
+functionality.
+In addition we discuss the implications of $List$ and $Subscribe$ not supporting a range of timestamps but rather
+returning results about the most recent timestamp, and how the query processing tier can make use of the $Select$ API.
 
 \subsection{Query processing tier}
 \label{subsec:query_prcessing_tier}
