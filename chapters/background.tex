@@ -268,68 +268,56 @@ returning results about the most recent timestamp, and how the query processing 
 
 \subsection{Query processing tier}
 \label{subsec:query_prcessing_tier}
-The query processing tier is responsible for providing the functionality of attribute-based data retrieval.
-In more detail, given a query expressed as a predicate on attributes and a table, the query processing tier is
-responsible for providing the primary keys and attributes of all data items in the given table that match the given
-predicate.
+The design decisions and trade-offs involved in the design of the query processing tier is the main focus of this work.
+In this Section we present an overview of the query processing tier's role and functionality.
+The following Chapters present our query processing tier design in more detail.
 
-As query language, we consider a subset of SQL that contains only expressions of the form: \\
+The query processing tier is responsible for providing attribute-based data retrieval:
+Identifying and retrieving data items based on queries on their attributes.
+
+As query language, we consider a subset of SQL that supports expressions of the form: \\
 
 \noindent
 $SELECT$ $projection$ $FROM$ $Table$ $WHERE$ $predicate$
 \noindent
 where
 \begin{itemize}
-  \item $projection$ is the list of attributes to be included in the query response.
-  It has the form $AttrKey_1$, $AttrKey_2$, ..., $AttrKey_N$
+  \item $projection$ is a list of attributes, $AttrKey_1$, $AttrKey_2$, ..., $AttrKey_N$.
   \item $predicate$: has the form: \\ $rangePredicate_1$ $AND$ $rangePredicate_2$ AND ... AND $rangePredicate_N$, \\
-  where $rangePredicate_i$ an expression of the form $attrVal_{low}$ $\leq$ $attrKey$ $<$ $attrVal_{high}$.
+  where $rangePredicate_i$ an expression of the form $AttrVal_{low}$ $\leq$ $AttrKey$ $<$ $AttrVal_{high}$.
 \end{itemize}
 
-Given a query $Q$ represented as ($projection$, $table$, $predicate$)
-and a data item $d$ represented as ($table$, $id$, $attributes$), $d$ satisfies $Q$ if:
+Given a query $Q$ = ($projection$, $table$, $predicate$)
+and a data item $d$ = ($table$, $id$, $attributes$), $d$ satisfies $Q$ if:
 \begin{itemize}
-  \item $Q.table$ = $d.table$: the data item belongs in the table referred by the query.
-  \item $\forall$ ($attrVal_{low}$ $\leq$ $attrKey$ $<$ $attrVal_{high}$) $\in$ $Q.predicate$:
-  $attrKey$ $\in$ $d.attributes$ and :  $attrVal_{low}$ $\leq$ $attrVal$ $<$ $attrVal_{high}$:
-  the data item contains all attributes included in the query's predicate.
-  \item $\forall$
+  \item $Q.table$ = $d.table$: the data item belongs in the table referred by the query, and
+  \item $\forall$ ($AttrVal_{low}$ $\leq$ $AttrKey$ $<$ $AttrVal_{high}$) $\in$ $Q.predicate$:
+  $attrKey$ $\in$ $d.attributes$ and $AttrVal_{low}$ $\leq$ $AttrVal$ $<$ $AttrVal_{high}$:
+  the data item contains all attributes included in the query's predicate, and their values are within the ranges
+  specified by the predicate.
 \end{itemize}
 
+$Predicate$ may contain expressions that refer to the $Timestamp$ predicate.
+In that case, a data item satisfies $Q$ if, in addition to the above conditions, its $Timestamp$ satisfies the
+$Timestamp$ -related expressions in $predicate$.
+If no $Timestamp$ -related predication is given, then only the latest version of each data item is considered for the
+query.
 
-% The query subsystem provides the functionality of attribute-based queries.
+We define the set of data items that satisfy a query $Q$ as $Q_r$.
+In the ideal case, $Q$'s response is $Q_r$, however, as we explain in the following section a query response may
+differ from $Q_r$. \\
 
-% A query is defined as a set of tuples $Q = \{(Attr, [AttrVal_1, AttrVal_2))\}$ such that $AttrVal_1 \leq AttrVal_2$.
-
-% We refer to each tuple in a query as a predicate.
-
-% A data item $d$ satisfies $Q$ if $\forall$ $(Attr, [AttrVal_1, AttrVal_2))$ $\in$ $Q$: $Attr(d)$ $\neq$ $Null$ $\land$ $AttrVal_1 \leq Attr(d) < AttrVal_2$.
-
-% Each query contains a predicate on the version timestamp attribute.
-% Assuming a predicate $(vt, [t_1, t_2))$, we distinguish the following query semantics:
-% \begin{itemize}
-% \item \textbf{Snapshot queries.} If $t_1 = t_2 = t$, then the query is executed against the snapshot of $D$ with timestamp $vt \leq t$ $\land$ $\nexists$ $vt'$: $vt \leq vt' < t$.
-% \item \textbf{Persistent queries.} if $t_2 >$ $vt_{latest}$, where $vt_{latest}$ is the version timestamp created by the last committed transaction, the query is executed against each new data item version $vt$ created by each transaction commit, while $vt < t_2$.
-% \end{itemize}
-
-% We define the set of all data items in $D$ that satisfy a query $Q$ as $Q_r$.
-% However, the output $Q_o$ of a query may contain additional data items (false positives), or not contain some of the elements of $Q_r$ (false negatives).
-% We define the distance between $Q_o$ and $Q_r$ as query result consistency.
-
-
-% \begin{itemize}
-%   \item Describe the intended functionality.
-%   \item Sketch the query language.
-% \end{itemize}
-
-Query systems often maintain \textit{derived} state, such as indexes, materialized views or caches, which is
-derived from the base data.
-Derived state needs to be updated to reflect changes to the base data.
+\noindent
+\textbf{Derived data} \\
+Query systems often maintain data such as indexes, materialized views, and caches.
+We refer to this data as \textit{derived} data.
+Derived data, in the general case, is obtained by performing a computation over the base data.
+As a result, this state needs to be updated to reflect changes to the base data.
 For indexes and materialized views this involves updating their entries according to the base data changes.
 For caches this involves invalidating obsolete cache entries.
 
-
-\subsubsection{Consistency between corpus data and query responses}
+As we describe in the following section, inconsistencies between base derived data is the main factor
+resulting to a query response being different from $Q_r$.
 
 \section{Query processing system performance evaluation}
 \label{sec:requirements}
@@ -392,7 +380,6 @@ The difference information retrieval and the query processing model in this work
 ranking function.
 In information retrieval relevance is a spectrum: documents can be more or less relevant to a given query.
 Here, relevance is binary: a record is either relevant (satisfies the given query) or it is not.
-
 
 A factor that can affect query effectiveness even when relevance is binary is the consistency between base
 and derived data.
