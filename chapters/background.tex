@@ -1,17 +1,16 @@
-% \begin{tcolorbox}
-% The goal of this chapter is to prepare the ground so that the reader has the mental framework needed to understand the
-% rest of this document.
+\begin{tcolorbox}
+\textbf{Outline Description - Internal}
+The goal of this chapter is to prepare the ground so that the reader has the mental framework needed to understand the
+rest of this document.
 
-% This includes:
-% \begin{itemize}
-%   \item Implicitly establishing a terminology to be used throughout the document.
-%   \item Establishing a ''world view'' by describing the system and data model that we consider, and the assumptions that
-%   we make
-%   \item Establishing concepts that will guide our design decisions in the following chapters (see
-%   Section~\ref{sec:requirements}).
-%   \item Introducing technical background that will be needed for the following chapters.
-% \end{itemize}
-% \end{tcolorbox}
+This includes:
+\begin{itemize}
+  \item Implicitly establishing the terminology to be used throughout the document.
+  \item Establishing a ''world view'' by describing the system and data model that we consider, and the assumptions that
+  we make
+  \item Establishing concepts that will guide our design decisions in the following chapters (performance metrics etc.)
+\end{itemize}
+\end{tcolorbox}
 
 \section{Models}
 We consider a data serving system with a two-tiered architecture: a data storage tier and a query processing tier.
@@ -51,8 +50,6 @@ in detail in the following section.
 
 
 \subsection{Data storage tier}
-
-TODO: [...] or even streaming systems.
 
 The data storage tier is a broad abstraction that can include any system that can be used to store and retrieve data.
 This can include databases, file systems, cloud object storage systems.
@@ -319,17 +316,24 @@ For caches this involves invalidating obsolete cache entries.
 As we describe in the following section, inconsistencies between base derived data is the main factor
 resulting to a query response being different from $Q_r$.
 
+
 \section{Query processing system performance evaluation}
 \label{sec:requirements}
 
-TODO: feels out-of-place. Need a transition from the previous section to this one.
+An important first step in the process of designing a query processing system (and any system in general) is determining
+the factors and metrics that will be used to evaluate how well the design achieves its goals.
 
 The aspects of a query processing system's performance can be categorized in two groups:
 \textit{efficiency} and \textit{effectiveness} \cite{buttcher:informationretrieval}.
-Efficiency can be measured using metrics such as response time, throughput, scalability.
+Efficiency can be measured using metrics such as response time, throughput, and scalability.
 Effectiveness is a measure of how well a query processing system achieves its intended purpose.
 It involves metrics such as precision and recall.
 
+Finally, two other important factors in the design of query processing systems are availability and operational cost.
+Availability is important due to the negative effects of downtime in user serving systems.
+It is especially relevant in the design of distributed systems due to the many different faults that can impact the
+operation of a distributed system \cite{kleppmann:designing}.
+Cost ...
 
 \subsection{Evaluating Efficiency}
 
@@ -369,74 +373,81 @@ increase in revenue \cite{dixon:shopzillasiteredo}.
 Effectiveness is a measure of how well a query processing system achieves its intended purpose.
 In the field of information retrieval, the key notion linked effectiveness is \textit{relevance}
 \cite{buttcher:informationretrieval}:
-Given a user's information need represented by a search query, each document in a given a document collection, is either
+Given a user's information need represented by a search query, each document in a given a document collection is either
 relevant or non-relevant with respect to the information need.
-The two most used measures in information retrieval systems evaluation are precision and recall.
-Recall is the fraction of relevant documents contained in the query result.
-It is affected by false-negatives: not including relevant documents in the query result.
-Precision is the fraction of relevant documents among the documents contained in the query result.
-It is affected by false-positives: including non-relevant documents in the query result.
+The two most used effectiveness measures in information retrieval systems evaluation are recall and precision:
+\begin{itemize}
+  \item Recall is the fraction of relevant documents contained in the query result.
+  It is affected by false-negatives: not including relevant documents in the query result.
+  \item Precision is the fraction of relevant documents among the documents contained in the query result.
+  It is affected by false-positives: including non-relevant documents in the query result.
+\end{itemize}
 
-The difference information retrieval and the query processing model in this work is that here there is no notion of a
-ranking function.
+The difference between information retrieval query model, and the one that we consider in this work is that here there
+is no notion of a ranking function.
 In information retrieval relevance is a spectrum: documents can be more or less relevant to a given query.
-Here, relevance is binary: a record is either relevant (satisfies the given query) or it is not.
+Here, relevance is binary: a data item is either relevant (satisfies the given query) or it is not.
+However, as mentioned in Section \ref{subsec:query_prcessing_tier}, similarly to information retrieval, query results
+can include non-relevant data items, or not include relevant data items.
+Therefore we argue that the recall and precision can be used as metrics to evaluate the effectiveness of the query
+processing tier.
 
-A factor that can affect query effectiveness even when relevance is binary is the consistency between base
-and derived data.
-In traditional database systems, derived data are kept consistent with base data by being updated in the critical path
+As mentioned in Section \ref{subsec:query_prcessing_tier}, a factor that can affect query effectiveness is the
+consistency between base and derived data.
+Traditional database systems, keep derived data consistent with base data by updating them in the critical path
 of each base data update.
-As a result, queries are guaranteed to return all relevant and only relevant results.
 However, in systems that implement asynchronous (lazy) derived data maintenance policies \cite{tan:diffindex,
-qi:secondaryindexconsistencyanalysis, shukla:schemaagnostic}. derived data can be stale with respect to base data.
-This can results in both false-positives and false-negatives.
+qi:secondaryindexconsistencyanalysis, shukla:schemaagnostic} derived data can become stale with respect to base data.
+This can result in both false-positives and false-negatives, affecting the recall and precision of these systems.
 
 We use the notion of \textit{freshness} to refer to the measure of inconsistency between base and derived data due to
-asynchronous maintenance, which results in lower query processing effectiveness.
+asynchronous derived data maintenance.
 
-TODO: paper about freshness metrics.
-% Freshness - Correctness - Consistency
+A number of metrics for measuring data freshness have been proposed in the literature \cite{bouzeghoub:datafreshness}:
+\begin{itemize}
+  \item \textbf{Currency} measures the time between a change in the source data, and that change between reflected in
+  the derived data.
+  In caching systems, the terms recency \cite{bright:latencyrecency} and age \cite{cho:dbfreshness}
+  have been used to describe this metric.
+  \item \textbf{Obsolescence} measures the number of updates to source data since derived data was last updated.
+  Work on query systems has defined the \textit{obsolescence cost} \cite{avigdor:obsolescent}, of a query to represent
+  the penalty of basing a query result on obsolescent materialized view.
+  This cost is computed as a function of the number of insertions, updates, and deletions that cause deviation between
+  the materialized view and and the base table.
+  \item \textbf{Freshness-rate} measures the percentage of derived data entries that are up-to-date with the source
+  data.
+  This metrics has been used to quantify the freshness of web pages \cite{labrinidis:balancingperfomancefreshness} and
+  local databases copies \cite{cho:dbfreshness}.
+\end{itemize}
 
-TODO: Availability
-TODO: Operational Cost
+\subsection{Other aspects of query processing system design}
 
+\subsubsection{Availability}
+The importance of availability becomes apparent when considering the negative effects of service downtime.
 
-\subsection{End-user and system operator requirements}
+A study on user behavior in the Web \cite{nah:waitingtime} found that users abandon a non working hyperlink after
+5-8 seconds.
 
-Another categorization of query processing performance aspects can be made between end-user and system operator
-requirements.
-End-user requirements are performance factors such as response time, effectiveness and availability, which are directly
-visible to end-users and affect their experience
-System operator requirements such as scalability and cost, which are not directly visible to end-users but are important
-for the system's operation.
+Operators of global services understand that "even slightest outage has significant financial
+consequences and impacts customer trust" \cite{deCandia:dynamo}.
+A service 49 minute service outage in January 2013 cost Amazon an estimated \$4 or more in lost sales
+\cite{infoworld:cloudoutages}.
 
+\subsubsection{Operational Cost}
+Operating a query processing system requires computation, memory, network and storage resources.
+When the system is deployed on dedicated infrastructure, the monetary cost of these resources is equivalent to the cost
+of owning and operating the infrastructure.
+Nowadays that services our more and more deployed on cloud infrastructure with fine-grained resource provisioning and
+billing mechanisms, system operators have more fine-grained control over the system's resource usage and thus its
+monetary cost.
+Given a billing model, a system's operational cost can be calculated using its resource utilization.
 
-In this section, present the factors that affect the experience and satisfaction of end-users of the query processing
-tier.
-
-
-% \textbf{Freshness}
-% \begin{itemize}
-%   \item Define freshness intuitively, as query results being up-to-date with the corpus data.
-%   \item Present evidence of use cases in which getting fresh results is important.
-% \end{itemize}
-
-% \textbf{Correctness} \\
-%   Define correctness using recall and precision.
-
-\textbf{Availability} \\
-  Present evidence of the negative effects of downtimes.
-
-% \textbf{Consistency}
-
-% \subsection{System provider requirements}
-% In this section, we present factors that are indirectly affect end-users, but are important for the system operator.
-
-\textbf{Scalability} \\
-Present evidence of about the scale of internet services nowadays.
-
-\textbf{Operational Cost} \\
-The cost of operating the query processing system. Can split to fixed (monthly) cost, and per-query cost.
+The operational cost can be modeled as:
+\begin{itemize}
+  \item \textbf{Per-time unit cost}: Given a model for the system's load, the system's resource utilization over a
+  period of time can be calculated.
+  \item \textbf{Per-query and per-update cost}: The resources used to process a given query or a given base data udpate.
+\end{itemize}
 
 \bibliographystyle{unsrt}
 \bibliography{refs}
