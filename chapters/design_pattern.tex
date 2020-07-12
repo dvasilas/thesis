@@ -125,7 +125,7 @@ More specifically, each QPU class defines:
 
 We categorize QPU classes in three distinct families:
 \begin{itemize}
-  \item \textbf{Statefull QPUs}. QPU classes of this family maintain internal
+  \item \textbf{Stateful QPUs}. QPU classes of this family maintain internal
   query processing state and use it to process queries.
   Examples include index, cache, and materialized view QPUs.
   \item \textbf{Stateless QPUs}. QPU classes of this family do no maintain
@@ -157,7 +157,7 @@ order to be functional:
 \end{itemize}
 
 \section{Computation Model}
-Describe the bidirectional dataflow computation.
+Describe the bidirectional data-flow computation.
 \begin{itemize}
   \item Control messages (queries) flow downwards.
   \item Responses flow upwards through the sub-graph defined by the control
