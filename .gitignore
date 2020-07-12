@@ -4,6 +4,11 @@
 *.aux
 *.ilg
 *.ind
+*.bbl
+*.blg
+*.out
+*.run.xml
+*.toc
 *_latexmk
 
 *.pdf
