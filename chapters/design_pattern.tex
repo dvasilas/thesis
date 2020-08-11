@@ -8,11 +8,11 @@ Note:
 The goals of the structure of this chapter are
 \begin{enumerate}
   \item Give the reader a clear understanding of what a QPU is.
-  It can be frustrating to go into too much detail in something quite vague and
-  abstract as the ``QPU abstraction'', without showing how it is actually used.
+  It may be frustrating to go into too much detail in something as vague and
+  abstract as the ``QPU abstraction'' without showing how it is actually used.
   \item Explain \textbf{why} we came up with it (Themis has already pointed out
   that this was not clear to him).
-  My solution is to try to do a ``step-by-step walkthrough'' of the design:
+  My solution is to try to do a ``step-by-step walk-through'' of the design:
   ``This is what we are trying to achieve (objective, requirements)'', ``this
   is why'', ``these are the observations that guide our design'', and, finally,
   ``here is what we came up with and why it works''.
@@ -44,7 +44,9 @@ approach possible.
   \end{itemize}
 \end{itemize}
 
-\subsection{Designing a query processing component abstraction}
+
+% \subsection{Designing a query processing component abstraction}
+% Νο 4.1.2
 Present the objective: design a query processing operator abstraction ...
 
 Requirements:
@@ -74,6 +76,8 @@ previous section to a ``definitions'' approach for this section.
 Note: Mostly keeping the outline for the rest of this chapter short as it has
 been written in various paper drafts and LightKone deliverables.
 
+TODO: subsection: Graph of QPUs (?)
+
 \subsection{Query API}
 Define the ``query'' API method (arguments, streaming semantics).
 
@@ -101,7 +105,8 @@ This is the main part of the state (implements index and cache data structures).
 It is read to process queries, and is updated using stream records from other
 QPUs.
 \subsubsection{Configuration state}
-This is the part of the state that defines the QPU's behavior.
+This is the part of the state that defines the QPU's behavior (includes its type
+and neighborhood).
 Passed as argument during initialization.
 
 \subsubsection{Local graph view state}
@@ -115,7 +120,7 @@ It is initialized using the ``getConfig'' API method.
 As described earlier, the QPU abstraction works as a ``blueprint''.
 It specifies a communication and execution protocol that QPUs must conform to.
 However, there can be different instantiations of this specification.
-We term these instantiations of the QPU abstract QPU classes.
+We term these instantiations of the QPU abstraction, classes.
 
 More specifically, each QPU class defines:
 \begin{itemize}
@@ -130,11 +135,12 @@ We categorize QPU classes in three distinct families:
   Examples include index, cache, and materialized view QPUs.
   \item \textbf{Stateless QPUs}. QPU classes of this family do no maintain
   internal query processing state (or maintain only intermediate state).
-  Stateless QPUs process queries by performing computation on incoming streams
-  (they initiate streams by sending queries to other QPUs.)
+  Stateless (or Functional ?) QPUs process queries by performing computation on
+  incoming streams (they initiate streams by sending queries to other QPUs.)
   Examples include filter, join, and aggregation QPUs.
   \item \textbf{Routing QPUs}. Stateful and stateless QPUs can only have a
   single outgoing (child) connection in the QPU graph.
+  TODO: QPU graph has not been defined until point. Define-before-reference.
   Routing QPUs have multiple outgoing connections.
   They are responsible for re-writing incoming to queries to sub-queries,
   sending them to the appropriate child QPUs, and merging the responses to a

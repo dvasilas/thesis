@@ -2,17 +2,22 @@
 \usepackage{fancyhdr}
 \usepackage[ddmmyyyy,hhmmss]{datetime}
 \usepackage{tcolorbox}
-\usepackage{hyperref}
+% \usepackage{url}
+% \usepackage{breakurl}
+\usepackage[
+  colorlinks=true,
+  breaklinks=true,
+  allcolors=blue]{hyperref}
 
-\hypersetup{
-    colorlinks,
-    citecolor=blue,
-%     filecolor=black,
-    linkcolor=blue,
-%     urlcolor=black
-}
+\usepackage[numbers,square,sort&compress]{natbib}
+
+\def\UrlBreaks{\do\/\do-}
+
+\setcounter{tocdepth}{3}
+\setcounter{secnumdepth}{3}
 
 \pagestyle{fancy}
+\lhead{}
 \rfoot{Compiled on \today\ at \currenttime}
 \cfoot{}
 \lfoot{Page \thepage}

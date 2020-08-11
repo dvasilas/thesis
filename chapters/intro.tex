@@ -15,18 +15,18 @@ A lot of work has been done to address this.
 \end{itemize}
 
 The same is true for query processing.
-There have been approaches for "tunning" query processing for the needs for different applications:
+There have been approaches for "tuning" query processing for the needs for different applications:
 \begin{itemize}
   \item Selecting which indexes/materialized view to materialize in databases.
   \item Optimizing distributed query execution (finding the best place to execute each operator).
 \end{itemize}
 
-Limitation of this state-of-the-art:
+Limitation of this state of the art:
 \begin{itemize}
   \item Current approaches do not provide flexible placement of query processing state:
   \begin{itemize}
     \item This is definitely the case for sharded NoSQL databases.
-    \item TODO: determine how relational dabasese hanlde index placement.
+    \item TODO: determine how relational database handle index placement.
     \item Haven't seen works considering flexible cache or materialized view placement.
   \end{itemize}
 \end{itemize}
@@ -38,7 +38,7 @@ One example to use is AWS Athena that provides queries on top of AWS S3 with a p
 
 \section{Problem Statement}
 
-\section{State-of-the-art}
+\section{State of the art}
 
 % For motivating the work, we will state the relevance and timeliness of two
 % application needs / market trends / ... : attribute-based data retrieval, and

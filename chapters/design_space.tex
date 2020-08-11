@@ -20,13 +20,36 @@ performance and efficiency.
 \subsection{Query processing techniques}
 
 The choice between (1) performing query processing by iterating over the corpus
-(filtering, aggregation without materialized views), (2) using caches on top of
-that, or (3) maintaining derived state (indexes, materialized views) updated in
-response to changes to the corpus data.
-
+(filtering, aggregation without materialized views), (2) maintaining derived state
+(indexes, materialized views) updated in response to changes to the corpus data,
+or (3) using caches on top of that.
 
 \subsubsection{Secondary indexing}
 
+General system design pattern:
+Having the same data represented in different formats to address different access patterns.
+
+We have a primary copy of the data in one system (that might be called the source of truth)
+and different derived data systems which they take their data as a copy from this
+primary system.
+Transform it in some way and then represent it differently
+in order to satisfy certain read access patterns.
+Writes go to the primary storage system and all of the other systems are derived from it.
+TODO: address that some systems support writes to a view.
+The other systems only serve read requests.
+
+
+\begin{itemize}
+  \item
+  \item it’s just another way of saying we’re going to take the same data and have multiple
+  copies of it represented in different ways, either sorted in a different way, or with a different
+  storage layout.  That allows us to access the data in ways depending on what you’re trying to do. 
+  \item In any relational database, if you have a secondary what you’re really saying is,
+  I want to construct this additional structure on the side (typically a B-tree) and every time you write to some table to update
+  that index to also allow me to find records based on values of a column other than the primary key.
+  (It just happens to be done internally by the database.)
+
+\end{itemize}
 \subsubsection{Distributed Query planning}
 
 \subsubsection{Caching}
@@ -41,7 +64,7 @@ State maintenance schemes have two characteristics:
   When maintaining an index we assume that every index entry is materialized.
   In contrast, when maintaining a cache, only a subset of entries are
   materialized
-  (a subtlety here is how an ''entry'' is defined, it might be different between
+  (a subtlety here is how an ``entry'' is defined, it might be different between
   index and cache).
   There is a finite storage area for materializing entries.
   When it is filled, some entries are evicted to make space for new entries to
@@ -50,7 +73,7 @@ State maintenance schemes have two characteristics:
   The options for this can be:
   \begin{itemize}
     \item Update-triggered - Synchronously. When an update to the corpus
-    occurs, it is blocked until the derived state is up-to-day.
+    occurs, it is blocked until the derived state is up-to-date.
     \item Update-triggered - Asynchronously. Updating the derived state is done
     outside of the critical path of the corpus update.
     \item Read-triggered. The derived state mays updated as a response to the
@@ -84,7 +107,7 @@ Deciding on placement schemes can lead to trade-offs cause by:
   \item An operator might have multiple update and/or query sources.
 \end{itemize}
 
-We can define ``levels`` of placement: on the same physical machine, on the same
+We can define ``levels'' of placement: on the same physical machine, on the same
 cluster, in the same DC.
 
 \section{Trade-offs}
@@ -111,12 +134,12 @@ and of replicating the derived data used for query processing.
 \subsection{Implications of replicated data in derived state}
 Implication of query processing over AP storage systems:
 \begin{itemize}
-  \item If not carefully desgined, concurrent non-conflicting updates may
-  result to confliced on related state.
-  Example: write1: recordX:attributeA=1, write2: recordY:attriuteA=1.
+  \item If not carefully designed, concurrent non-conflicting updates may
+  result to conflicts on the derived state.
+  Example: write1: recordX:attributeA=1, write2: recordY:attributeA=1.
   This results to: index\_update1: add recordX to (attributeA, 1),
   index\_update2: add recordY to (attributeA, 1).
-  Therefore a ''set CRDT'' behavior is needed for indexes.
+  Therefore a ``set CRDT'' behavior is needed for indexes.
   Generalize to state other than indexes.
   \item Conflicting updates to the corpus data.
   Ensure that conflict resolution on corpus data is reflected on derived data.

@@ -22,7 +22,9 @@ sending sub-queries to child QPUs.
 
 In detail, we present the algorithms for:
 \begin{itemize}
-  \item Determining given query a QPU can process locally and which it needs to forward to child connections.
+  \item Determining if the QPU can process a given query locally, or if the QPU needs to forward parts of the query
+  processing computation to the QPU graph.
+  This can be done by sending sub-queries to its child connections.
   \item How a QPU uses its knowledge of the query processing capabilities of its child connections to generate and send
   sub-queries.
 \end{itemize}
@@ -43,6 +45,6 @@ Overview:
 Here, we also define the operation of combining the capabilities of more than one QPUs (a QPU uses that operation to
 calculate its capabilities given its configuration and the capabilities of its children)
 
-\subsection{Configuration propagation API}
-
+% \subsection{Configuration propagation API}
+% Νο 5.3.2
 
