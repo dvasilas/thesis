@@ -1,15 +1,95 @@
 \section{Query Processing in Relational Database Systems}
 
-\section{NoSQL Datastores}
+\section{Query Processing in NoSQL Datastores}
 
-\subsection{NoSQL Data models}
+\subsection{NoSQL Datastores}
 
-\subsection{Partitioning}
+\subsubsection{NoSQL Data models}
+
+\subsubsection{Partitioning}
 \label{sec:partitioning}
 
-\subsection{Replication}
+Partitioning is data distribution technique, in which a database's records are split into subsets called partitions so
+that different partitions can be assigned to different nodes (also known as sharding).
 
-\subsection{Secondary indexes}
+The goal of partitioning is to spread data and load evenly across nodes.
+When implemented efficiently, it enables horizontal scaling:
+doubling the number of nodes in the system should make the system able to handle double the volume of data, and
+should double the system's read and write throughput.
+
+The sharding techniques commonly used in NoSQL systems are:
+
+\bigskip
+\noindent
+\textbf{Range partitioning.}
+Range partitioning assigns a continuous range of keys to each partition.
+These ranges of key are not necessarily evenly spaced, because data may not be evenly distributed.
+Partition boundaries might be chosen manually by an administrator, or the database can choose them automatically.
+
+Within each partition keys are kept in sorted order.
+This has the advantage that range queries on the partitioning key are efficient:
+it is easy to determine which partitions contain keys of a given range, and within each partition the key can be treated
+as an index.
+
+The downside of this partitioning scheme is that certain access patterns can lead to hotspots.
+Therefore, systems that implement range partitioning need mechanisms for detecting and resolving hotspots, by splitting
+overburdened shards.
+
+This partitioning strategy is used by Bigtable, its open source equivalent HBase \cite{hbasebigtable:comparison}.
+
+\bigskip
+\noindent
+\textbf{Hash partitioning.}
+An alternative approach that avoids the risks of skew and hotspots is to use a hash function to determine the partition
+for a given key.
+Hash partitioning assigns each partition a range of hashes --- rather than a range of keys --- and every key whose has
+falls within a partition's range is handled by that partition.
+
+This partitioning scheme is efficient at distributing keys fairly among partitions.
+However, this approach does not allow for efficient range queries, as adjacent keys are scattered across multiple
+partitions.
+
+MongoDB introduced hash partitioning in version 2.4 \cite{mongo:hashpartitioning}.
+
+\subsection{Query Processing}
+\subsubsection{Secondary indexes}
+
+A common technique used to support efficient filter queries the use of secondary indexes (secondary indexing).
+
+A secondary index is an additional structure that is derived from the primary data, and stores data in a form that
+provides a way to efficiently access records in a database by means other than the primary key.
+
+Essentially, a secondary index is a key-value structure where the key is a \textit{term} (an attribute or key of the
+database record other than the primary key) and the
+value is a list of primary keys of all the records that contain that term (a \textit{posting list}).
+
+The following data structures are commonly used for implementing secondary indexes:
+
+\medskip
+\noindent
+\textbf{B-Trees}
+
+\medskip
+\noindent
+\textbf{LSM-Trees}
+
+\bigskip
+
+\noindent
+TODO:
+In this work, ...
+
+\bigskip
+\noindent
+Secondary indexing is an instance of a general system design pattern:
+having the same data represented in different formats to address different access patterns.
+Database tables are the primary copy of data.
+Derived copies of the data transform or represent the primary copy differently in order to satisfy certain access patterns.
+Adding a secondary index does not affect the contents of the database; it only affects the performance of (read and write)
+queries.
+Writes go to the primary data and all of the other data copies are derived from it.
+The other copies only serve read requests.
+TODO: address that some systems support writes to a view.
 
 \subsubsection{Partitioning and Secondary Indexes}
 
