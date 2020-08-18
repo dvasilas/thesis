@@ -35,7 +35,8 @@ The downside of this partitioning scheme is that certain access patterns can lea
 Therefore, systems that implement range partitioning need mechanisms for detecting and resolving hotspots, by splitting
 overburdened shards.
 
-This partitioning strategy is used by Bigtable, its open source equivalent HBase \cite{hbasebigtable:comparison}.
+This partitioning strategy is used by Bigtable, its open source equivalent HBase \cite{hbasebigtable:comparison}, RethinkDB,
+and MongoDB before version 2.4.
 
 \bigskip
 \noindent
@@ -49,7 +50,72 @@ This partitioning scheme is efficient at distributing keys fairly among partitio
 However, this approach does not allow for efficient range queries, as adjacent keys are scattered across multiple
 partitions.
 
-MongoDB introduced hash partitioning in version 2.4 \cite{mongo:hashpartitioning}.
+Hash partitioning is used in Amazon's Dynamo, MongoDB since 2.4 \cite{mongo:hashpartitioning}, Riak, CouchBase,
+and Voldemort.
+
+\subsubsection{Replication}
+
+Partitioning is usually combined with replication so that copies of each partition are stored on multiple nodes.
+Replication increases availability (allowing the systems to continue working even if some of its parts have failed)
+To  (and thus increase availability)
+To scale out the number of machines that can serve read queries (and thus increase read throughput)
+
+Considering a single partition, each node that takes part in the replication, called a replica, stores a copy of the
+partition.
+Each write to the database needs to be processed by every replica;
+A replication strategy answers two questions: where a write is accepted, and when the corresponding data changes are
+propagated to replicas
+TODO: cite The dangers of replication and a solution.
+
+\bigskip
+\noindent
+The most common approach to the first question this is called \textit{leader-based} replication.
+One of the replicas is designated the \textit{leader} (also termed \textit{master} or \textit{primary}).
+Database writes are sent to the leader.
+The leader determines the order in which writes should be processed, sends the corresponding data changes to the other
+replicas (termed \textit{followers}, \textit{slaves} or \textit{secondaries}),
+and followers apply those changes in the same order.
+Databases reads can be performed either from the leader or any of the followers.
+
+This mode of replication is used in MongoDB, RethinkDB, and Espresso.
+
+Leader-based replication has one main downside: as there is only one reader (when replication is combined with partitioning there is one leader per partition),
+and all database writes must go through it; if the leader is unreachable writes cannot be performed.
+
+An extension of leader-based replication is to allow more than one replicas to accepts writes.
+In \textit{multi-leader} replication, there are multiple readers, each processing writes and forwarding the corresponding data changes to all other nodes;
+each leader simultaneously acts as a follower to the other leaders, accepting writes from them.
+
+An alternative approach, termed \textit{leaderless} replication, is to allow any replica directly accept writes from clients.
+Each write is sent (either by the client, or by a coordinator) to $W$ replicas, and each read is sent to $R$ replicas,
+where $W$ and $R$ are per-operation parameters.
+In order to ensure that eventually all data is copied to every replica, leaderless replication implementations often employ two mechanisms:
+(1) read repair, detecting and updating stale values during read, and (2) anti-entropy, having a background process that replicates missing data between replicas.
+This approach was popularized by Amazon's Dynamo.
+Riak, Cassandra, and Voldemort are datastores with leader replication models inspired by Dynamo.
+
+\bigskip
+\noindent
+There are two approaches for the question ``when the leader propagates data changes to followers''.
+In \textit{synchronous} (or \textit{eager}) replication the leader propagates changes synchronously and waits for acknowledgements from followers before reporting
+success to the user.
+In \textit{asynchronous} (or \textit{lazy}) replication the leader propagates changes and does not wait for responses from the followers.
+
+The advantage of synchronous replication is that followers are guaranteed to have copies of the data that are up-to-date with the leader.
+The disadvantage is that if followers do not respond (due to a crash, network fault or other reasons) writes cannot be processed.
+
+\bigskip
+\noindent
+Geo-replication (replication across geographically distributed data centers) can protect the system against data center failures and network problems,
+and improve read latency for clients distributing across multiple geographic locations.
+Synchronous geo-replication, as implemented in Google's Megastore \cite{baker:megastore} and Spanner \cite{corbett:spanner, bacon:spanner},
+achieves strong consistency at the cost of high write latency.
+In asynchronous geo-replication, as used in Dynamo \cite{deCandia:dynamo}, PNUTS \cite{cooper:pnuts08, cooper:pnuts19},
+Walter \cite{sovran:walter}, COPS \cite{lloyd:cops}, Cassandra \cite{lakshman:cassandra}, and Bigtable \cite{chang:bigtable}
+the inter-data center network delays are hided from clients, and the system remains available during partitions.
+The downside for the approach is that the same data may be concurrently modified in different data centers creating
+conflicts that then need to be resolved.
+
 
 \subsection{Query Processing}
 \subsubsection{Secondary indexes}
@@ -62,6 +128,16 @@ provides a way to efficiently access records in a database by means other than t
 Essentially, a secondary index is a key-value structure where the key is a \textit{term} (an attribute or key of the
 database record other than the primary key) and the
 value is a list of primary keys of all the records that contain that term (a \textit{posting list}).
+
+Secondary indexing is an instance of a general system design pattern:
+having the same data represented in different formats to address different access patterns.
+Database tables are the primary copy of data.
+Derived copies of the data transform or represent the primary copy differently in order to satisfy certain access patterns.
+Adding a secondary index does not affect the contents of the database; it only affects the performance of (read and write)
+queries.
+Writes go to the primary data and all of the other data copies are derived from it.
+The other copies only serve read requests.
+TODO: address that some systems support writes to a view.
 
 The following data structures are commonly used for implementing secondary indexes:
 
@@ -78,18 +154,6 @@ The following data structures are commonly used for implementing secondary index
 \noindent
 TODO:
 In this work, ...
-
-\bigskip
-\noindent
-Secondary indexing is an instance of a general system design pattern:
-having the same data represented in different formats to address different access patterns.
-Database tables are the primary copy of data.
-Derived copies of the data transform or represent the primary copy differently in order to satisfy certain access patterns.
-Adding a secondary index does not affect the contents of the database; it only affects the performance of (read and write)
-queries.
-Writes go to the primary data and all of the other data copies are derived from it.
-The other copies only serve read requests.
-TODO: address that some systems support writes to a view.
 
 \subsubsection{Partitioning and Secondary Indexes}
 
