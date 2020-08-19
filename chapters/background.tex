@@ -64,8 +64,7 @@ Considering a single partition, each node that takes part in the replication, ca
 partition.
 Each write to the database needs to be processed by every replica;
 A replication strategy answers two questions: where a write is accepted, and when the corresponding data changes are
-propagated to replicas
-TODO: cite The dangers of replication and a solution.
+propagated to replicas \cite{gray:replication}.
 
 \bigskip
 \noindent
@@ -143,17 +142,66 @@ The following data structures are commonly used for implementing secondary index
 
 \medskip
 \noindent
-\textbf{B-Trees}
+\textbf{B-Tree.}
+The B-tree is the most widely used indexing structure.
+Its purpose is to keep key-value pairs sorted by key, which allows efficient key lookups and range queries.
+The B-tree breaks the indexed key-value pairs into fixed-size  \textit{pages} (traditionally 4 KB in size),
+and read or write one page at a time.
+Pages can be identified using an address, which allows one page to refer to another, in disk instead of in memory.
+The B-tree uses these references to construct a tree of pages.
+Each page contains multiple keys and references to child pages.
+Each child is responsible for a continuous range of keys; keys between references to child page indicate the boundaries
+of those range.
+
+To update the value for an existing key in a B-tree, one must search for the lead page that contains that key,
+change the value in that page, and write the page back to disk.
+Adding a new key consists of finding the page whose range encompasses the new key, and adding it to that page.
+
+The B-tree algorithm ensures that the tree remains balanced: a B-tree with $n$ keys always has a depth of $O(log n)$
 
 \medskip
 \noindent
-\textbf{LSM-Trees}
+\textbf{Log-Structured Merge Tree.}
+Like the B-tree, the log-structured merge (LSM) tree is a key-value structure that keeps keys sorted.
+An LSM-tree is composed of two or more tree-like component data structures.
+A smaller component (for example a red-black or AVL tree), sometimes called a \textit{memtable} resides entirely in
+memory.
+The rest of LSM tree's components are persisted on disk as Sorted String Table (\textit{SSTables}); an SSTable is a
+sequence of key-value pairs, sorted by keys.
+
+Write operations are performed on the memtable.
+When the memtable gets bigger that some threshold, the system writes it out to disk as an SSTable file.
+To serve reads, the system first tries to find the requested key in the memtable, then in the most recent on-disk segment,
+then in the next-older segment etc.
+A background process merges SSTables by removing redundant and deleted keys and creating compacted SSTables.
+
+LSM-trees are typically able to sustain higher write throughput that B-trees, partly because they sequentially write
+compact SSTable files to disk rather than having to potentially overwrite several pages for each write \cite{lsm:vsbtree}.
+
+Originally the Log-Structured Merge Tree index structure was described by O'Neil et al. in \cite{oneil:lsmtree}.
+The terms memtable and SSTable were introduced by Google's Bigtable paper \cite{chang:bigtable}.
+LSM trees are used in data stores such as LevelDB \cite{leveldb:implnotes} and RocksDB \cite{rocksdb:history},
+and similar storage engines are used in Cassandra and HBase \cite{hbase:hfile}.
 
 \bigskip
-
 \noindent
-TODO:
-In this work, ...
+The B-tree and LSM-tree can be both used as a primary key or secondary index structures.
+
+In this work, we focus on the aspects of employing secondary indexes on sharded and replicated databases.
+We consider these aspects orthogonal to the index implementation;
+we use an abstraction on top the index implementation, and view a secondary index as a system component that provides
+the following API:
+\begin{itemize}
+  \item An efficient range query operation $query(key_1, key_2) \rightarrow [value]$,
+  where $key_1$ and $key_2$ are the boundaries or a range of keys.
+  Using this API, a key lookup is a special case in which $key_1 == key_2$.
+
+  \item Operation for inserting, updating, and deleting keys.
+\end{itemize}
+We argue that our results hold true for any index implementation with the above specification.
+In our prototype
+TODO: ref to implementation chapter
+we use of-the-shelf state of the art index data structure implementations.
 
 \subsubsection{Partitioning and Secondary Indexes}
 
