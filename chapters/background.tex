@@ -256,8 +256,13 @@ a write to a single document may affect multiple partitions, the document's term
 DynamoDB supports both global and local secondary indexes \cite{dynamodb:secondaryindexes}.
 Global indexing has also been used in the research systems such as SLIK \cite{kejriwal:slik} and Diff-Index \cite{tan:diffindex}.
 
-\bigskip
-TODO: discuss routing on the two approaches.
+\subsubsection{Query Planning and Execution}
+
+Most non-relational databases have simple query models that do not support complex operations such as aggregation and
+joins.
+However, some document-oriented databases like MongoDB \cite{mongodb:joins}, RethinkDB \cite{rethinkdb:joins}, and CouchDB \cite{couchdb:joins} support join operations.
+Query planning in NoSQL databases mainly deals with the database's distribution model:
+a query execution plans consist of routing query requests to the appropriate data or index partitions.
 
 TODO:
 % https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GSI.html
