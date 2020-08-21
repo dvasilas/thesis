@@ -1,8 +1,116 @@
 \section{Query Processing in Relational Database Systems}
 
-\section{Query Processing in NoSQL Datastores}
+Query processing refers to the range of activities involved in extracting data from a database.
+The activities include the translation of queries in high-level database languages into expressions that can be used at
+the physical level of the file system, query-optimizing transformations, and actual evaluation of queries.
 
-\subsection{NoSQL Datastores}
+The database component responsible for query processing the \textit{query processor}.
+The role of a relational query processor is, given a declarative SQL statement, to validate it, optimizes it into a
+procedural dataflow execution plan, and execute that dataflow program.
+
+Query processing consists of the following phases \cite{hellerstein:databasearchitecture, kossmann:distqeuryprocessing}:
+
+\bigskip
+\noindent
+\textbf{Query Parsing.}
+The goal of the first phase of query processing is to translate a given query into the internal representations processed by later phases.
+In generating the internal form of the query,
+the query processor checks the syntax of the given query,
+verifies that the relation names appearing in the query are names of the relations in the database,
+and verifies that the user is authorized to execute the query.
+
+\bigskip
+\noindent
+\textbf{Query Rewrite}
+In the query rewrite phase, the query processor transforms the query in order to carry out optimizations that are
+beneficial regardless of the physical state of the system
+(the size of tables, presence of indices, locations of copies of tables etc.)
+
+Typical transformations include:
+\begin{itemize}
+
+  \item \textbf{Elimination of redundant predicates and simplification of expressions:}
+  This includes the evaluation of constant arithmetic expressions,
+  short-circuit evaluation of logical expressions via satisfiability tests,
+  and using the transitivity of predicates to induce new predicates.
+  Adding new transitive predicates increases the ability of the query optimization phase to choose plans that filter
+  data early in execution, and the use of index-based access methods.
+
+  \item \textbf{View expansion, sub-query un-nesting}
+  For each view reference that appears in the query, the query processor retrieves the view definition
+  and rewrites the query to replace that view with its definition.
+  In addition, this phase flattens nested queries when possible.
+
+  \item \textbf{Semantic optimization}
+  In many cases, integrity constrains defined by the schema can be used to simplify queries.
+  An important such optimization is redundant join elimination (for example, a query that joins two tables but does not
+  make use of the columns of one of the tables).
+
+\end{itemize}
+
+\bigskip
+\noindent
+\textbf{Query Optimization}
+
+In the query optimization phase, the query processor transforms the internal query representation into an efficient query
+plan for executing the query.
+A query plan can be thought of as a dataflow diagram that specifies how the query is to be executed.
+A common approach to represent a query plan is using a tree:
+the tree's nodes are operators
+--- each operator carrying out a particular operation such as join, group by, sort, scan, etc. ---,
+and edges  represent consumer-producer relationships between operators.
+
+During query optimization, the optimizer (the query processor component responsible for query optimizations)
+makes decisions such as which indices to use to execute a query,
+which methods to use to execute the operators of a query,
+and in which order to execute a query's operations.
+In a distributed system, the optimizer also decides at which node each operation is to be executed.
+
+To make these decisions, the optimizer enumerates alternative plans,
+assigns a cost to each plan using a cost estimation mode,
+and chooses the plan that minimized the cost of query evaluation.
+
+TODO: techniques similar to those described in the famous paper by Selinger et al. on the System R optimizer.
+
+\bigskip
+\noindent
+\textbf{Query Execution}
+
+Query execution is carried out by the \textit{query execution engine}.
+The query execution engine is the query processor's component that provides implementations for every operator.
+
+The most common approach used by query execution engines to implement query operators is the iterator model
+\cite{graefe:queryevaluation}.
+
+Iterators can be described using the object-oriented paradigm.
+Figure~\ref{lst:iterator} shows a simplified definition for a general iterator class.
+
+\begin{lstlisting}[caption={Iterator class pseudocode \cite{hellerstein:databasearchitecture}},label={lst:iterator},captionpos=b,language=Java]
+class iterator {
+  iterator &inputs[];
+  void init();
+  tuple get_next();
+  void close();
+}
+\end{lstlisting}
+
+In the iterator model has certain useful properties for implementing query execution:
+\begin{itemize}
+
+  \item All iterators have the same interface.
+  As a result, a consumer-producer relationship can exist between any two iterators, and thus, any plan can be executed.
+  In addition, the common interface means that each iterator's logic is independent of its children and parents in the graph.
+
+  \item Finally, the iterator paradigm supports pipelining of results from one operator to another.
+
+\end{itemize}
+
+\subsection{Distributed Query Processing}
+
+\subsection{Materialized Views}
+
+
+\section{Query Processing in Non-Relational Database Systems}
 
 \subsubsection{NoSQL Data models}
 
