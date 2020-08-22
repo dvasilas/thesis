@@ -13,7 +13,8 @@ Query processing consists of the following phases \cite{hellerstein:databasearch
 \bigskip
 \noindent
 \textbf{Query Parsing.}
-The goal of the first phase of query processing is to translate a given query into the internal representations processed by later phases.
+The goal of the first phase of query processing is to translate a given query into an internal representation that can
+be processed by later phases, commonly a tree of relational operators \cite{silberschatz:dbbook}.
 In generating the internal form of the query,
 the query processor checks the syntax of the given query,
 verifies that the relation names appearing in the query are names of the relations in the database,
@@ -69,8 +70,7 @@ In a distributed system, the optimizer also decides at which node each operation
 To make these decisions, the optimizer enumerates alternative plans,
 assigns a cost to each plan using a cost estimation mode,
 and chooses the plan that minimized the cost of query evaluation.
-
-TODO: techniques similar to those described in the famous paper by Selinger et al. on the System R optimizer.
+The techniques used in query optimization were first introduced in IBM's System R project \cite{selinger:systemr}.
 
 \bigskip
 \noindent
@@ -112,9 +112,41 @@ In the iterator model has certain useful properties for implementing query execu
 
 \section{Query Processing in Non-Relational Database Systems}
 
-\subsubsection{NoSQL Data models}
+The querying capabilities of a NoSQL database mainly follow from their distribution model and data model.
+Thus different NoSQL databases have varying querying capabilities.
 
-\subsubsection{Partitioning}
+To further discuss query processing in NoSQL databases, we first briefly introduce the data models and data distribution
+techniques used in these systems.
+
+\subsection{NoSQL Data models}
+\noindent
+\textbf{Key-Value Stores.} A key-value store's data model is a map/dictionary of key-value pairs.
+As the structure of values is opaque to the database system, this data model only supports get and put operations
+(requesting and writing value using a key).
+Key-value stores in generally favor scalability over a richer data model and more complex query capabilities:
+the simple key-value model makes partitioning and locating data efficient, thus enabling these systems to achieve low
+latency and high throughput.
+
+\bigskip
+\noindent
+\textbf{Document Stores.} A document store is a key-value store that restricts values to semi-structured formats such as
+XML, YAML, JSON or BSON \cite{bson:spec}.
+This enables a richer data access capabilities: apart from retrieving an entire document from its key, documents stores
+have richer query capabilities.
+
+\bigskip
+\noindent
+\textbf{Wide-column Stores.} The data model of wide-column stores is often depicted as a relational table with many
+sparse columns.
+More accurately, the data model of a wide-column store can be described as a distributed, multi-level, sorted map.
+The first-level keys identify rows (row keys) and the second-level keys identify columns (column keys).
+In some wide-column stores multi-versioning is implemented by adding third-level, timestamp keys.
+
+Rows are distributed across system nodes through sharding on the row key.
+Columns are also distributed across nodes, using the concept of ``column families'' (columns that are usually accessed
+together are co-located).
+
+\subsection{Partitioning}
 \label{sec:partitioning}
 
 Partitioning is data distribution technique, in which a database's records are split into subsets called partitions so
@@ -161,7 +193,7 @@ partitions.
 Hash partitioning is used in Amazon's Dynamo, MongoDB since 2.4 \cite{mongo:hashpartitioning}, Riak, CouchBase,
 and Voldemort.
 
-\subsubsection{Replication}
+\subsection{Replication}
 
 Partitioning is usually combined with replication so that copies of each partition are stored on multiple nodes.
 Replication increases availability (allowing the systems to continue working even if some of its parts have failed)
