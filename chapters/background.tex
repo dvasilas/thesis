@@ -105,9 +105,68 @@ In the iterator model has certain useful properties for implementing query execu
 
 \end{itemize}
 
-\subsection{Distributed Query Processing}
-
 \subsection{Materialized Views}
+
+An important element of the relational model is the \textit{view}.
+A view is a ``virtual relation`` defined by a query, that conceptually contains the result of that query.
+The view is not precomputed and stored.
+The database stores only the query defining the view;
+each time the view is used the database expands it into the view’s underlying query on the fly,
+and then processes the expanded query.
+
+In contrast, a materialized view is a view whose contents are computed and stored by the database.
+In many cases reading the contents of a materialized view is much more efficient than computing the contents of the view
+by executing the query that the defines the view.
+Essentially, a materialized view is a precomputed cache of query results.
+The use of materialized views is a common technique for reducing query response time
+
+
+\subsubsection{View maintenance}
+
+A consideration with materialized views is that when the data used in the view definition changes, the materialized view
+must be kept up-to-date.
+A simplistic way of achieving this to recompute the materialized view on every update.
+A better option is to, on each update, modify only the affected parts of the materialized view,
+which is known as incremental view maintenance.
+There is considerate research on incremental view maintenance for in relational databases
+\cite{larson:outerjoinviewmaintenance, lee:multiplejoinviewmaintenance, zhuge:viewmaintenance}.
+
+Another design decision when incremental view maintenance is used, is when to perform the maintenance:
+in \textit{synchronous} view maintenance, view maintenance is performed as soon as an update occurs,
+as part of the updating transaction,
+while in \textit{asynchronous} or lazy view maintenance,
+view maintenance is deferred to a later time \cite{zhou:lazymvMaintenance}.
+Materialized views with deferred view maintenance may not be consistent with the underlying data.
+
+\subsubsection{Query Optimization and Materialized Views}
+
+Materialized views add further consideration to query optimization:
+
+\begin{itemize}
+
+  \item Rewriting queries to use materialized views.
+  The query processor may produce a more efficient query plan by rewriting the query to make use of an available
+  materialized view.
+
+  \item Replacing the use of a materialized view with its definition.
+  It sometimes may be beneficial to replace a materialized view with its definition, if the view does not have any
+  indices that can be used to speed up the query, but the underlying tables do.
+
+\end{itemize}
+
+\subsubsection{Materialized View Selection}
+
+Materializing an appropriate set of views and processing queries using these views can significantly speed up the
+query processing since the access to materialized views can be much faster than recomputing the views.
+In principle, materializing all queries that a system can receive can achieve the lowest query processing cost.
+However, maintains a materialized view incurs a maintenance cost.
+In addition, query results may be too large to fit in the available storage space.
+There is therefore a need for selecting a set of views to materialize by taking into account query processing cost,
+view maintenance cost and storage space.
+The problem of choosing which views to materialize which in order to achieve desirable balance among these three
+parameters is known as the view selection problem \cite{gupta:viewselection, mami:viewselection}.
+
+\subsection{Distributed Query Processing}
 
 
 \section{Query Processing in Non-Relational Database Systems}
@@ -404,9 +463,15 @@ However, some document-oriented databases like MongoDB \cite{mongodb:joins}, Ret
 Query planning in NoSQL databases mainly deals with the database's distribution model:
 a query execution plans consist of routing query requests to the appropriate data or index partitions.
 
-TODO:
 % https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GSI.html
 % When you put or delete items in a table, the global secondary indexes on that table are updated in an eventually consistent fashion. Changes to the table data are propagated to the global secondary indexes within a fraction of a second, under normal conditions. However, in some unlikely failure scenarios, longer propagation delays might occur. Because of this, your applications need to anticipate and handle situations where a query on a global secondary index returns results that are not up to date.
 
+% caching
+
+% derived data
+% A dataset that is created from some other data through a repeatable process, which you could run again if necessary. Usually, derived data is needed to speed up a particular kind of read access to the data. Indexes, caches, and materialized views are examples of derived data.
+
+
 \bibliographystyle{plainnat}
 \bibliography{refs}
+
