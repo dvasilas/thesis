@@ -168,6 +168,37 @@ parameters is known as the view selection problem \cite{gupta:viewselection, mam
 
 \subsection{Distributed Query Processing}
 
+So far we covered query processing from the perspective of a single-node database, without considering data distribution.
+However, sharded, and geo-replicated relational databases like Spanner \cite{bacon:spanner} and CockroachDB \cite{cockroachdb:docs}
+need to take data distribution into account during query processing.
+
+In Ingres \cite{epstein:ingres}, tables can be distributed across a collection of ``sites''.
+Query processing is based on \textit{decomposing} queries into sub-queries that can be processed on a single site.
+The database uses query decomposition heuristics based on two optimization criteria:
+minimizing response time and minimizing network traffic.
+
+Spanner \cite{bacon:spanner} is sharded, geo-replicated relational database system.
+Spanner uses a \textit{distributed union} operator in the query tree to represent query distribution.
+Distributed union is used to a sub-query to each shard of a table, and concatenate the results.
+It provides a building block for more complex distributed operators such as distributed joins between independently
+sharded tables.
+
+When a query tree is initially created, a distributed union operator is inserted immediately above every table.
+In the query optimization phase, where possible, query tree transformations may pull the distributed union operator up the tree
+in order to push the maximum amount of computation to the servers. responsible for the table shards.
+In the query execution phase, distributed union routes a sub-query request addressed to a shard to one of the nearest
+replicas of that shard in order to minimize latency.
+
+
+CockroachDB employs an mechanism for distributed query processing \textbf{computation}
+\cite{cockroachdb:distsql}.
+(for example join, aggregation, or sorting) on multiple nodes in order to improve performance.
+In CockroachDB, a query plan is a tree of operators, termed \textit{aggregators}:
+each aggregator consumes an input stream of records and produces an output stream or records.
+The key idea is that an aggregator splits the input stream into \textit{groups}:
+the computation for each group is independent of the computation for other groups; the output stream is the concatenation
+of the computation result for all groups.
+Since results for each group are independent, different groups can be processed on different nodes.
 
 \section{Query Processing in Non-Relational Database Systems}
 
@@ -253,6 +284,7 @@ Hash partitioning is used in Amazon's Dynamo, MongoDB since 2.4 \cite{mongo:hash
 and Voldemort.
 
 \subsection{Replication}
+\label{sec:replication}
 
 Partitioning is usually combined with replication so that copies of each partition are stored on multiple nodes.
 Replication increases availability (allowing the systems to continue working even if some of its parts have failed)
