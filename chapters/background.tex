@@ -1,28 +1,41 @@
-\section{Query Processing in Relational Database Systems}
 
 Query processing refers to the range of activities involved in extracting data from a database.
-The activities include the translation of queries in high-level database languages into expressions that can be used at
-the physical level of the file system, query-optimizing transformations, and actual evaluation of queries.
+These activities include the translation of queries from high-level languages into formats that can be processed
+by the database, query-optimizing transformations, and actual evaluation of queries.
 
-The database component responsible for query processing the \textit{query processor}.
-The role of a relational query processor is, given a declarative SQL statement, to validate it, optimizes it into a
-procedural dataflow execution plan, and execute that dataflow program.
+Query processing has been studied extensively in the context of relational database systems.
+Relational databases provide sophisticated querying capabilities and require complex query processing techniques
+to connect declarative query languages to efficient query execution.
+
+On the other hand, databases that belong in the class of nonrelational database systems (also referred to as NoSQL)
+in general make design decisions that favor scalability (very large datasets or very high write throughput) over rich
+query models, often supporting only primary key lookups.
+There, query processing is mainly linked to data distribution schemes and involves the use of secondary indexes.
+
+The purpose of this chapter is to present an overview of several ``textbook'' query processing techniques.
+Our work is influenced by and builds on top of the techniques presented in this chapter.
+
+\section{Query Processing in Relational Database Systems}
+
+The database component responsible for query processing is the \textit{query processor}.
+The role of a relational query processor is, given a declarative high-level statement (often SQL), to validate it,
+optimize it into a procedural dataflow execution plan, and execute that dataflow program.
 
 Query processing consists of the following phases \cite{hellerstein:databasearchitecture, kossmann:distqeuryprocessing}:
 
 \bigskip
 \noindent
 \textbf{Query Parsing.}
-The goal of the first phase of query processing is to translate a given query into an internal representation that can
+The goal of the query parsing is to translate a given query into an internal representation that can
 be processed by later phases, commonly a tree of relational operators \cite{silberschatz:dbbook}.
 In generating the internal form of the query,
 the query processor checks the syntax of the given query,
-verifies that the relation names appearing in the query are names of the relations in the database,
+verifies that the relation names that appear in the query are valid names of relation in the database,
 and verifies that the user is authorized to execute the query.
 
 \bigskip
 \noindent
-\textbf{Query Rewrite}
+\textbf{Query Rewrite.}
 In the query rewrite phase, the query processor transforms the query in order to carry out optimizations that are
 beneficial regardless of the physical state of the system
 (the size of tables, presence of indices, locations of copies of tables etc.)
@@ -34,15 +47,15 @@ Typical transformations include:
   This includes the evaluation of constant arithmetic expressions,
   short-circuit evaluation of logical expressions via satisfiability tests,
   and using the transitivity of predicates to induce new predicates.
-  Adding new transitive predicates increases the ability of the query optimization phase to choose plans that filter
-  data early in execution, and the use of index-based access methods.
+  Adding new transitive predicates increases the ability of the following phase (query optimization) to construct query
+  plans that filter data early in execution, and make use of index-based access methods.
 
-  \item \textbf{View expansion, sub-query un-nesting}
-  For each view reference that appears in the query, the query processor retrieves the view definition
-  and rewrites the query to replace that view with its definition.
+  \item \textbf{View expansion, sub-query un-nesting:}
+  For each view reference that appears in the query, the query processor retrieves the view definition and rewrites the
+  query to replace that view with its definition.
   In addition, this phase flattens nested queries when possible.
 
-  \item \textbf{Semantic optimization}
+  \item \textbf{Semantic optimization:}
   In many cases, integrity constrains defined by the schema can be used to simplify queries.
   An important such optimization is redundant join elimination (for example, a query that joins two tables but does not
   make use of the columns of one of the tables).
@@ -51,37 +64,37 @@ Typical transformations include:
 
 \bigskip
 \noindent
-\textbf{Query Optimization}
+\textbf{Query Optimization.}
+In the query optimization phase, the optimizer (the query processor component responsible for query optimizations)
+transforms the internal query representation into an efficient plan for executing the query.
 
-In the query optimization phase, the query processor transforms the internal query representation into an efficient query
-plan for executing the query.
 A query plan can be thought of as a dataflow diagram that specifies how the query is to be executed.
 A common approach to represent a query plan is using a tree:
 the tree's nodes are operators
---- each operator carrying out a particular operation such as join, group by, sort, scan, etc. ---,
-and edges  represent consumer-producer relationships between operators.
+--- each operator carrying out a particular operation such as join, group by, sort, scan, etc. ---
+and edges represent consumer-producer relationships between operators.
 
-During query optimization, the optimizer (the query processor component responsible for query optimizations)
-makes decisions such as which indices to use to execute a query,
+The optimizer is responsible for decisions such as which indices to use to execute a query,
 which methods to use to execute the operators of a query,
 and in which order to execute a query's operations.
 In a distributed system, the optimizer also decides at which node each operation is to be executed.
 
-To make these decisions, the optimizer enumerates alternative plans,
-assigns a cost to each plan using a cost estimation mode,
-and chooses the plan that minimized the cost of query evaluation.
-The techniques used in query optimization were first introduced in IBM's System R project \cite{selinger:systemr}.
+Selinger et al.’s foundational paper on System R \cite{selinger:systemr} decomposes the problem of query optimization
+into three distinct sub-problems: cost estimation, relational equivalences that define a search space, and cost-based
+search.
+The optimizer assigns a cost estimate to the execution of each component of a query, measured in terms of I/O and CPU
+cost.
+To do so, the optimizer relies on pre-computed statistics about the contents of each relation, and heuristics for
+determining the cardinality of the query output.
+It then uses a dynamic programming algorithm to construct a query plan based on these cost estimates.
 
 \bigskip
 \noindent
 \textbf{Query Execution}
-
 Query execution is carried out by the \textit{query execution engine}.
 The query execution engine is the query processor's component that provides implementations for every operator.
 
-The most common approach used by query execution engines to implement query operators is the iterator model
-\cite{graefe:queryevaluation}.
-
+The most common approach used to implement query operators is the iterator model \cite{graefe:queryevaluation}.
 Iterators can be described using the object-oriented paradigm.
 Figure~\ref{lst:iterator} shows a simplified definition for a general iterator class.
 
@@ -94,40 +107,39 @@ class iterator {
 }
 \end{lstlisting}
 
-In the iterator model has certain useful properties for implementing query execution:
+The iterator model has certain useful properties for modeling query execution:
 \begin{itemize}
 
   \item All iterators have the same interface.
   As a result, a consumer-producer relationship can exist between any two iterators, and thus, any plan can be executed.
-  In addition, the common interface means that each iterator's logic is independent of its children and parents in the graph.
+  In addition, the common interface means that each iterator's logic is independent of its children and parents in the
+  graph.
 
-  \item Finally, the iterator paradigm supports pipelining of results from one operator to another.
+  \item Τhe iterator paradigm supports pipelining of results from one operator to another.
 
 \end{itemize}
 
 \subsection{Materialized Views}
 
 An important element of the relational model is the \textit{view}.
-A view is a ``virtual relation`` defined by a query, that conceptually contains the result of that query.
-The view is not precomputed and stored.
-The database stores only the query defining the view;
-each time the view is used the database expands it into the view’s underlying query on the fly,
+A view is a ``virtual relation'' defined by a query that conceptually contains the result of that query.
+Views are not precomputed and stored; the database stores only the query defining the view.
+Each time the view is used, the database expands it on the fly into the underlying query,
 and then processes the expanded query.
 
 In contrast, a materialized view is a view whose contents are computed and stored by the database.
 In many cases reading the contents of a materialized view is much more efficient than computing the contents of the view
-by executing the query that the defines the view.
+by executing the query that the view defines.
 Essentially, a materialized view is a precomputed cache of query results.
-The use of materialized views is a common technique for reducing query response time
-
+The use of materialized views is a common technique for reducing query response time.
 
 \subsubsection{View maintenance}
 
-A consideration with materialized views is that when the data used in the view definition changes, the materialized view
-must be kept up-to-date.
+An important aspect of materialized views is that when the data referred in the view definition changes,
+the view must be kept up-to-date.
 A simplistic way of achieving this to recompute the materialized view on every update.
-A better option is to, on each update, modify only the affected parts of the materialized view,
-which is known as incremental view maintenance.
+A better option is to, on each update, modify only the affected parts of the view.
+This approach is known as incremental view maintenance.
 There is considerate research on incremental view maintenance for in relational databases
 \cite{larson:outerjoinviewmaintenance, lee:multiplejoinviewmaintenance, zhuge:viewmaintenance}.
 
@@ -135,7 +147,7 @@ Another design decision when incremental view maintenance is used, is when to pe
 in \textit{synchronous} view maintenance, view maintenance is performed as soon as an update occurs,
 as part of the updating transaction,
 while in \textit{asynchronous} or lazy view maintenance,
-view maintenance is deferred to a later time \cite{zhou:lazymvMaintenance}.
+updating the view is deferred to a later time \cite{zhou:lazymvMaintenance}.
 Materialized views with deferred view maintenance may not be consistent with the underlying data.
 
 \subsubsection{Query Optimization and Materialized Views}
@@ -149,8 +161,8 @@ Materialized views add further consideration to query optimization:
   materialized view.
 
   \item Replacing the use of a materialized view with its definition.
-  It sometimes may be beneficial to replace a materialized view with its definition, if the view does not have any
-  indices that can be used to speed up the query, but the underlying tables do.
+  It may sometimes be beneficial to replace a materialized view with its definition, if the view does not have any
+  indices that can be used to speed up the query, but the underlying relations do.
 
 \end{itemize}
 
@@ -158,21 +170,23 @@ Materialized views add further consideration to query optimization:
 
 Materializing an appropriate set of views and processing queries using these views can significantly speed up the
 query processing since the access to materialized views can be much faster than recomputing the views.
-In principle, materializing all queries that a system can receive can achieve the lowest query processing cost.
-However, maintains a materialized view incurs a maintenance cost.
+In principle, materializing all queries that a system may receive can achieve the optimal query response time.
+However, maintaining a materialized view incurs a maintenance cost.
 In addition, query results may be too large to fit in the available storage space.
 There is therefore a need for selecting a set of views to materialize by taking into account query processing cost,
 view maintenance cost and storage space.
-The problem of choosing which views to materialize which in order to achieve desirable balance among these three
+The problem of choosing which views to materialize in order to achieve a desirable balance among these three
 parameters is known as the view selection problem \cite{gupta:viewselection, mami:viewselection}.
 
 \subsection{Distributed Query Processing}
 
 So far we covered query processing from the perspective of a single-node database, without considering data distribution.
-However, sharded, and geo-replicated relational databases like Spanner \cite{bacon:spanner} and CockroachDB \cite{cockroachdb:docs}
-need to take data distribution into account during query processing.
+However, data is inherently distributed \cite{bacon:spanner, cockroachdb:docs} and therefore query processing needs to
+efficiently operate on distributed data.
+In addition, query processing computations need to be able to be distributed and run in parallel on multiple nodes to
+achieve better scalability.
 
-In Ingres \cite{epstein:ingres}, tables can be distributed across a collection of ``sites''.
+In Ingres \cite{epstein:ingres}, relations can be distributed across a collection of ``sites''.
 Query processing is based on \textit{decomposing} queries into sub-queries that can be processed on a single site.
 The database uses query decomposition heuristics based on two optimization criteria:
 minimizing response time and minimizing network traffic.
@@ -184,33 +198,32 @@ It provides a building block for more complex distributed operators such as dist
 sharded tables.
 
 When a query tree is initially created, a distributed union operator is inserted immediately above every table.
-In the query optimization phase, where possible, query tree transformations may pull the distributed union operator up the tree
-in order to push the maximum amount of computation to the servers. responsible for the table shards.
-In the query execution phase, distributed union routes a sub-query request addressed to a shard to one of the nearest
+In the query optimization phase, where possible, query tree transformations may pull the distributed union operator up
+the tree in order to push the maximum amount of computation to the servers.
+In the query execution phase, distributed union routes a sub-query request addressed to a shard, to one of the nearest
 replicas of that shard in order to minimize latency.
 
-
-CockroachDB employs an mechanism for distributed query processing \textbf{computation}
-\cite{cockroachdb:distsql}.
+CockroachDB employs an mechanism for distributed query processing \textbf{computation} \cite{cockroachdb:distsql}
 (for example join, aggregation, or sorting) on multiple nodes in order to improve performance.
 In CockroachDB, a query plan is a tree of operators, termed \textit{aggregators}:
 each aggregator consumes an input stream of records and produces an output stream or records.
 The key idea is that an aggregator splits the input stream into \textit{groups}:
-the computation for each group is independent of the computation for other groups; the output stream is the concatenation
-of the computation result for all groups.
+the computation for each group is independent of the computation for other groups; the output stream is the
+concatenation of computation result for all groups.
 Since results for each group are independent, different groups can be processed on different nodes.
 
 \section{Query Processing in Non-Relational Database Systems}
 
-The querying capabilities of a NoSQL database mainly follow from their distribution model and data model.
-Thus different NoSQL databases have varying querying capabilities.
+The querying capabilities of a non-relational database mainly follow from their distribution model and data model.
+Thus different non-relational databases have varying querying capabilities.
 
-To further discuss query processing in NoSQL databases, we first briefly introduce the data models and data distribution
-techniques used in these systems.
+To further discuss query processing in non-relational databases,
+we first briefly introduce the data models and data distribution techniques used in these systems.
 
-\subsection{NoSQL Data models}
+\subsection{Non-relational Database Data models}
 \noindent
-\textbf{Key-Value Stores.} A key-value store's data model is a map/dictionary of key-value pairs.
+\textbf{Key-Value Stores.}
+A key-value store's data model is a map/dictionary of key-value pairs.
 As the structure of values is opaque to the database system, this data model only supports get and put operations
 (requesting and writing value using a key).
 Key-value stores in generally favor scalability over a richer data model and more complex query capabilities:
@@ -219,42 +232,40 @@ latency and high throughput.
 
 \bigskip
 \noindent
-\textbf{Document Stores.} A document store is a key-value store that restricts values to semi-structured formats such as
+\textbf{Document Stores.}
+A document store is a key-value store that restricts values to semi-structured formats such as
 XML, YAML, JSON or BSON \cite{bson:spec}.
-This enables a richer data access capabilities: apart from retrieving an entire document from its key, documents stores
-have richer query capabilities.
+This enables more sophisticated data access capabilities:
+apart from retrieving an entire document from its key, documents stores support predicate queries
+(retrieving the keys of all documents that match a given predicate), and joins.
 
 \bigskip
 \noindent
-\textbf{Wide-column Stores.} The data model of wide-column stores is often depicted as a relational table with many
-sparse columns.
-More accurately, the data model of a wide-column store can be described as a distributed, multi-level, sorted map.
+\textbf{Wide-column Stores.}
+The data model of wide-column stores is often depicted as a relational table with many sparse columns.
+More accurately, this data model can be described as a distributed, multi-level, sorted map.
 The first-level keys identify rows (row keys) and the second-level keys identify columns (column keys).
 In some wide-column stores multi-versioning is implemented by adding third-level, timestamp keys.
-
-Rows are distributed across system nodes through sharding on the row key.
-Columns are also distributed across nodes, using the concept of ``column families'' (columns that are usually accessed
-together are co-located).
 
 \subsection{Partitioning}
 \label{sec:partitioning}
 
-Partitioning is data distribution technique, in which a database's records are split into subsets called partitions so
-that different partitions can be assigned to different nodes (also known as sharding).
+Partitioning is data distribution technique, in which the records of a database are split into subsets called partitions
+so that different partitions can be assigned to different nodes (also known as sharding).
 
 The goal of partitioning is to spread data and load evenly across nodes.
 When implemented efficiently, it enables horizontal scaling:
 doubling the number of nodes in the system should make the system able to handle double the volume of data, and
 should double the system's read and write throughput.
 
-The sharding techniques commonly used in NoSQL systems are:
+The sharding techniques commonly used in non-relational databases are range and hash partitioning.
 
 \bigskip
 \noindent
 \textbf{Range partitioning.}
 Range partitioning assigns a continuous range of keys to each partition.
 These ranges of key are not necessarily evenly spaced, because data may not be evenly distributed.
-Partition boundaries might be chosen manually by an administrator, or the database can choose them automatically.
+Partition boundaries might be chosen manually by an administrator, or automatically by the database.
 
 Within each partition keys are kept in sorted order.
 This has the advantage that range queries on the partitioning key are efficient:
@@ -262,23 +273,22 @@ it is easy to determine which partitions contain keys of a given range, and with
 as an index.
 
 The downside of this partitioning scheme is that certain access patterns can lead to hotspots.
-Therefore, systems that implement range partitioning need mechanisms for detecting and resolving hotspots, by splitting
-overburdened shards.
+Therefore, systems that use range partitioning need mechanisms for detecting and resolving hotspots.
 
-This partitioning strategy is used by Bigtable, its open source equivalent HBase \cite{hbasebigtable:comparison}, RethinkDB,
-and MongoDB before version 2.4.
+Range partitioning is used by Bigtable and its open source equivalent HBase \cite{hbasebigtable:comparison},
+RethinkDB, and MongoDB before version 2.4.
 
 \bigskip
 \noindent
 \textbf{Hash partitioning.}
 An alternative approach that avoids the risks of skew and hotspots is to use a hash function to determine the partition
 for a given key.
-Hash partitioning assigns each partition a range of hashes --- rather than a range of keys --- and every key whose has
+Hash partitioning assigns each partition a range of hashes --- rather than a range of keys --- and every key whose hash
 falls within a partition's range is handled by that partition.
 
 This partitioning scheme is efficient at distributing keys fairly among partitions.
-However, this approach does not allow for efficient range queries, as adjacent keys are scattered across multiple
-partitions.
+The downside of this approach is that does not allow for efficient range queries,
+as adjacent keys are scattered across multiple partitions.
 
 Hash partitioning is used in Amazon's Dynamo, MongoDB since 2.4 \cite{mongo:hashpartitioning}, Riak, CouchBase,
 and Voldemort.
@@ -287,106 +297,135 @@ and Voldemort.
 \label{sec:replication}
 
 Partitioning is usually combined with replication so that copies of each partition are stored on multiple nodes.
-Replication increases availability (allowing the systems to continue working even if some of its parts have failed)
-To  (and thus increase availability)
-To scale out the number of machines that can serve read queries (and thus increase read throughput)
+Replication improves availability by allowing the systems to continue working even if some of its parts have failed,
+and increases read throughput by increasing the number of machines that can serve read queries.
 
 Considering a single partition, each node that takes part in the replication, called a replica, stores a copy of the
 partition.
-Each write to the database needs to be processed by every replica;
-A replication strategy answers two questions: where a write is accepted, and when the corresponding data changes are
-propagated to replicas \cite{gray:replication}.
+A replication strategy answers two design decisions:
+when a write request is send to the database (1) in which replica the write is accepted,
+and (2) when the corresponding data changes are propagated to other replicas \cite{gray:replication}.
 
 \bigskip
 \noindent
-The most common approach to the first question this is called \textit{leader-based} replication.
+A common approach to the first design decision is called \textit{leader-based} replication.
 One of the replicas is designated the \textit{leader} (also termed \textit{master} or \textit{primary}).
-Database writes are sent to the leader.
-The leader determines the order in which writes should be processed, sends the corresponding data changes to the other
-replicas (termed \textit{followers}, \textit{slaves} or \textit{secondaries}),
-and followers apply those changes in the same order.
-Databases reads can be performed either from the leader or any of the followers.
+Every write is sent to the leader.
+The leader determines the order in which writes should be processed,
+and sends the corresponding data changes to the other replicas
+(termed \textit{followers}, \textit{slaves} or \textit{secondaries}),
+Followers apply those changes in the same order.
+Reads can be performed either from any replica.
 
-This mode of replication is used in MongoDB, RethinkDB, and Espresso.
+This approach is used in MongoDB, RethinkDB, and Espresso.
 
-Leader-based replication has one main downside: as there is only one reader (when replication is combined with partitioning there is one leader per partition),
-and all database writes must go through it; if the leader is unreachable writes cannot be performed.
+Leader-based replication has one main downside:
+as there is only one reader (when replication is combined with partitioning there is one leader per partition),
+and all database writes must go through it, if the leader is unreachable writes cannot be performed.
 
 An extension of leader-based replication is to allow more than one replicas to accepts writes.
-In \textit{multi-leader} replication, there are multiple readers, each processing writes and forwarding the corresponding data changes to all other nodes;
-each leader simultaneously acts as a follower to the other leaders, accepting writes from them.
+In \textit{multi-leader} replication there are multiple readers,
+each processing writes and forwarding the corresponding data changes to all other replicas.
+Each leader acts also as a follower to the other leaders, accepting writes from them.
 
-An alternative approach, termed \textit{leaderless} replication, is to allow any replica directly accept writes from clients.
+An alternative approach, termed \textit{leaderless} replication,
+is to allow any replica directly accept writes from clients.
 Each write is sent (either by the client, or by a coordinator) to $W$ replicas, and each read is sent to $R$ replicas,
-where $W$ and $R$ are per-operation parameters.
-In order to ensure that eventually all data is copied to every replica, leaderless replication implementations often employ two mechanisms:
-(1) read repair, detecting and updating stale values during read, and (2) anti-entropy, having a background process that replicates missing data between replicas.
+where $W$ and $R$ are configuration parameters.
+In order to ensure that eventually all data is propagated to every replica,
+leaderless replication implementations often employ two mechanisms:
+(1) read repair, a way to detect and update stale values during reads,
+and (2) anti-entropy, having a background process that replicates missing data between replicas.
+
 This approach was popularized by Amazon's Dynamo.
 Riak, Cassandra, and Voldemort are datastores with leader replication models inspired by Dynamo.
 
 \bigskip
 \noindent
-There are two approaches for the question ``when the leader propagates data changes to followers''.
-In \textit{synchronous} (or \textit{eager}) replication the leader propagates changes synchronously and waits for acknowledgements from followers before reporting
-success to the user.
-In \textit{asynchronous} (or \textit{lazy}) replication the leader propagates changes and does not wait for responses from the followers.
+There are two approaches for the design decision ``when the leader propagates data changes to followers''.
+In \textit{synchronous} (or \textit{eager}) replication the leader propagates changes synchronously
+and waits for acknowledgements from followers before reporting success to the user.
+In \textit{asynchronous} (or \textit{lazy}) replication the leader propagates changes
+and does not wait for responses from followers.
 
-The advantage of synchronous replication is that followers are guaranteed to have copies of the data that are up-to-date with the leader.
-The disadvantage is that if followers do not respond (due to a crash, network fault or other reasons) writes cannot be processed.
+The advantage of synchronous replication is that followers are guaranteed to have copies of the data that are
+up-to-date with the leader.
+Its disadvantage is that if followers do not respond (due to a crash, network fault or other reasons)
+writes cannot be processed.
 
 \bigskip
 \noindent
-Geo-replication (replication across geographically distributed data centers) can protect the system against data center failures and network problems,
-and improve read latency for clients distributing across multiple geographic locations.
-Synchronous geo-replication, as implemented in Google's Megastore \cite{baker:megastore} and Spanner \cite{corbett:spanner, bacon:spanner},
+Geo-replication (replication across geographically distributed data centers) can protect the system against data center
+failures and network problems,
+and improve read latency for clients distributed across multiple geographic locations.
+Synchronous geo-replication, as implemented in Google's Megastore \cite{baker:megastore}
+and Spanner \cite{corbett:spanner, bacon:spanner},
 achieves strong consistency at the cost of high write latency.
 In asynchronous geo-replication, as used in Dynamo \cite{deCandia:dynamo}, PNUTS \cite{cooper:pnuts08, cooper:pnuts19},
 Walter \cite{sovran:walter}, COPS \cite{lloyd:cops}, Cassandra \cite{lakshman:cassandra}, and Bigtable \cite{chang:bigtable}
-the inter-data center network delays are hided from clients, and the system remains available during partitions.
-The downside for the approach is that the same data may be concurrently modified in different data centers creating
-conflicts that then need to be resolved.
-
+the inter-data center network delays are hidden from clients,
+and the system remains available during partitions.
+The downside of asynchronous geo-replication is that the same data may be concurrently modified in different data centers
+creating conflicts that then need to be resolved.
 
 \subsection{Query Processing}
+
+Non-relational database systems in general support two types of queries:
+
+\bigskip
+\noindent
+\textbf{Primary key lookups.}
+In a primary key lookup, a data item is retrieved using its primary key.
+This is the main data access method in non-relational databases.
+It can be efficiently supported as it is compatible with both hash and range partitioning.
+
+\bigskip
+\noindent
+\textbf{Filter (predicate) queries.}
+A filter query returns all data items from a database table that meet a predicate specified over their properties.
+In their simplest form, filter queries can be performed as filtered full-table scans.
+
 \subsubsection{Secondary indexes}
+For databases that use hash partitioning a full-table scan implies a scatter-gather operation where each shard
+performs a filtered scan, and results from all shard are merged.
 
-A common technique used to support efficient filter queries the use of secondary indexes (secondary indexing).
+A common technique used to support efficient filter queries is the use of secondary indexes (secondary indexing).
 
-A secondary index is an additional structure that is derived from the primary data, and stores data in a form that
-provides a way to efficiently access records in a database by means other than the primary key.
+A secondary index is a structure that is derived from the primary data, and organizes data in a form that
+provides a way to efficiently access database records by means other than the primary key.
 
-Essentially, a secondary index is a key-value structure where the key is a \textit{term} (an attribute or key of the
-database record other than the primary key) and the
-value is a list of primary keys of all the records that contain that term (a \textit{posting list}).
+Essentially, a secondary index is a key-value structure where the key is a \textit{term} (an attribute or key of a
+database record other than the primary key),
+and the value is a list of primary keys of all the records that contain that term (a \textit{posting list}).
 
 Secondary indexing is an instance of a general system design pattern:
 having the same data represented in different formats to address different access patterns.
 Database tables are the primary copy of data.
-Derived copies of the data transform or represent the primary copy differently in order to satisfy certain access patterns.
-Adding a secondary index does not affect the contents of the database; it only affects the performance of (read and write)
-queries.
+Derived copies of the data transform the primary copy differently in order to satisfy certain access patterns.
+Adding a secondary index does not affect the contents of the database;
+it only affects the performance of read and write operations.
 Writes go to the primary data and all of the other data copies are derived from it.
 The other copies only serve read requests.
-TODO: address that some systems support writes to a view.
+(TODO: address write-through?)
 
-The following data structures are commonly used for implementing secondary indexes:
+The following data structures are commonly used as secondary indexing structures:
 
 \medskip
 \noindent
 \textbf{B-Tree.}
 The B-tree is the most widely used indexing structure.
 Its purpose is to keep key-value pairs sorted by key, which allows efficient key lookups and range queries.
-The B-tree breaks the indexed key-value pairs into fixed-size  \textit{pages} (traditionally 4 KB in size),
-and read or write one page at a time.
+The B-tree breaks the indexed key-value pairs into fixed-size \textit{pages} (traditionally 4 KB in size);
+reads and writes are performed in the granularity of a page.
 Pages can be identified using an address, which allows one page to refer to another, in disk instead of in memory.
 The B-tree uses these references to construct a tree of pages.
 Each page contains multiple keys and references to child pages.
-Each child is responsible for a continuous range of keys; keys between references to child page indicate the boundaries
-of those range.
+Each child is responsible for a continuous range of keys; keys between child page references indicate the boundaries
+of those ranges.
 
-To update the value for an existing key in a B-tree, one must search for the lead page that contains that key,
+To update the value of an existing key in a B-tree, one must search for the leaf page that contains that key,
 change the value in that page, and write the page back to disk.
-Adding a new key consists of finding the page whose range encompasses the new key, and adding it to that page.
+Adding a new key consists of finding the page whose range contains the new key, and adding it to that page.
 
 The B-tree algorithm ensures that the tree remains balanced: a B-tree with $n$ keys always has a depth of $O(log n)$
 
@@ -395,83 +434,85 @@ The B-tree algorithm ensures that the tree remains balanced: a B-tree with $n$ k
 \textbf{Log-Structured Merge Tree.}
 Like the B-tree, the log-structured merge (LSM) tree is a key-value structure that keeps keys sorted.
 An LSM-tree is composed of two or more tree-like component data structures.
-A smaller component (for example a red-black or AVL tree), sometimes called a \textit{memtable} resides entirely in
-memory.
-The rest of LSM tree's components are persisted on disk as Sorted String Table (\textit{SSTables}); an SSTable is a
-sequence of key-value pairs, sorted by keys.
+A smaller component (for example a red-black or AVL tree), sometimes called a \textit{memtable},
+resides entirely in memory.
+The rest of LSM tree's components are persisted on disk as Sorted String Table (\textit{SSTables}).
+An SSTable is a sequence of key-value pairs, sorted by keys.
 
 Write operations are performed on the memtable.
-When the memtable gets bigger that some threshold, the system writes it out to disk as an SSTable file.
-To serve reads, the system first tries to find the requested key in the memtable, then in the most recent on-disk segment,
-then in the next-older segment etc.
-A background process merges SSTables by removing redundant and deleted keys and creating compacted SSTables.
+When the memtable reaches some size threshold, the system writes it out to disk as an SSTable file.
+To serve a lookup, the LSM tree algorithm first tries to find the requested key in the memtable,
+then in the most recent on-disk segment, then in the next-older segment etc.
+A background process periodically merges SSTables by removing redundant and deleted keys and creating compacted SSTables.
 
 LSM-trees are typically able to sustain higher write throughput that B-trees, partly because they sequentially write
 compact SSTable files to disk rather than having to potentially overwrite several pages for each write \cite{lsm:vsbtree}.
 
-Originally the Log-Structured Merge Tree index structure was described by O'Neil et al. in \cite{oneil:lsmtree}.
-The terms memtable and SSTable were introduced by Google's Bigtable paper \cite{chang:bigtable}.
+Originally the log-structured merge tree index structure was described by O'Neil et al. in \cite{oneil:lsmtree}.
+The terms \textit{memtable} and \textit{SSTable} were introduced by Google's Bigtable paper \cite{chang:bigtable}.
 LSM trees are used in data stores such as LevelDB \cite{leveldb:implnotes} and RocksDB \cite{rocksdb:history},
 and similar storage engines are used in Cassandra and HBase \cite{hbase:hfile}.
 
 \bigskip
 \noindent
-The B-tree and LSM-tree can be both used as a primary key or secondary index structures.
+The B-tree and LSM-tree can be both used as primary or secondary index structures.
 
-In this work, we focus on the aspects of employing secondary indexes on sharded and replicated databases.
+In this work, we focus on the aspects of employing secondary indexes on distributed data.
 We consider these aspects orthogonal to the index implementation;
-we use an abstraction on top the index implementation, and view a secondary index as a system component that provides
-the following API:
+we abstract index implementation details by modeling a secondary index as a system component that provides the following
+API:
 \begin{itemize}
+
   \item An efficient range query operation $query(key_1, key_2) \rightarrow [value]$,
-  where $key_1$ and $key_2$ are the boundaries or a range of keys.
+  where $key_1$ and $key_2$ are the boundaries of a range of keys.
   Using this API, a key lookup is a special case in which $key_1 == key_2$.
 
-  \item Operation for inserting, updating, and deleting keys.
+  \item Operations for inserting, updating, and deleting keys.
+
 \end{itemize}
+
 We argue that our results hold true for any index implementation with the above specification.
 In our prototype
-TODO: ref to implementation chapter
+(TODO: ref to implementation chapter)
 we use of-the-shelf state of the art index data structure implementations.
 
 \subsubsection{Partitioning and Secondary Indexes}
 
 The partitioning schemes discussed in \ref{sec:partitioning} rely on a key-value data model.
-Secondary indexes do not neatly map to the partitioning technique:
+Secondary indexes do not neatly map to these partitioning techniques:
 a secondary index usually does not uniquely identify a data item, but rather provides a way of searching for occurrences
 of a particular value.
 
 There are two main approaches to partitioning a secondary index:
 document-based partitioning and term-based partitioning.
 
-The terminology used in the rest of this section comes from the literature of full-text indexes (a particular kind of secondary index):
-a document is a self-contained piece of information, that is composed of terms.
+The terminology used in the rest of this section comes from the literature of full-text indexes
+(a particular kind of secondary index):
+a document is a self-contained piece of information, is composed of terms.
 
 \bigskip
-
 \noindent
 \textbf{Partitioning Indexes by Document.}
 In this approach, each partition is separate:
 each partition maintains its own secondary indexes, covering only documents in that partition.
-A document-partitioned index is also known as a \textit{local index}.
 
-When this approach is used, each database write (adding, removing, or updating a document) is handled only by the
-partition that contains the corresponding document.
-However, reading from a document-partitioned index requires a scatter/gather approach:
-sending the query to all partitions, and combining the returned results.
+In a document-partitioned index (also known as a \textit{local index}),
+each database write (adding, removing, or updating a document) is handled only by the partition that contains the
+corresponding document.
+Reading from a document-partitioned index requires a scatter/gather approach:
+sending the query to all partitions and combining the returned results.
 This can make index lookups quite expensive.
-Even if index lookup requests are sent to partitions in parallel, scatter/gather is prone to tail latency amplification,
-as the total latency depends from the latency of the slowest index partition.
+Even if index lookup requests are sent to partitions in parallel, response time depends from the latency of the slowest
+index partition.
 
 This approach is widely used: MongoDB, Riak \cite{riakv:secondaryindexes}, Cassandra \cite{cassandra:secondaryindexing}
 Elasticsearch \cite{elastic:docrouting}, Solr \cite{solr:indexsharding}.
 
 \bigskip
-
 \noindent
 \textbf{Partitioning Secondary Indexes by Term.}
 An alternative approach is to construct a \textit{global index} that covers data in all partitions.
-A global index, however, also needs to be partitioned, as storing it on one node would likely become a bottleneck.
+A global index, however, needs to be partitioned itself, as storing it on one node would likely become a bottleneck.
 
 To partition a global index, the indexed terms can be used as the partition key (thus the term \textit{term-partitioned}
 index).
@@ -482,16 +523,19 @@ The advantage of a term-partitioned index is that it can make reads more efficie
 rather than requiring a scatter/gather over all partitions, a lookup for a given term only needs to make a request to the
 partition containing that term.
 The downside of this approach is that writes are more complicated and slower:
-a write to a single document may affect multiple partitions, the document's terms may be on different partitions.
+a write to a single document may affect multiple partitions as the corresponding terms may correspond to multiple
+different partitions.
 
-DynamoDB supports both global and local secondary indexes \cite{dynamodb:secondaryindexes}.
-Global indexing has also been used in the research systems such as SLIK \cite{kejriwal:slik} and Diff-Index \cite{tan:diffindex}.
+DynamoDB supports both local and global secondary indexes \cite{dynamodb:secondaryindexes}.
+Term-partitioned indexes have also been used in the research systems such as SLIK \cite{kejriwal:slik}
+and Diff-Index \cite{tan:diffindex}.
 
 \subsubsection{Query Planning and Execution}
 
 Most non-relational databases have simple query models that do not support complex operations such as aggregation and
 joins.
-However, some document-oriented databases like MongoDB \cite{mongodb:joins}, RethinkDB \cite{rethinkdb:joins}, and CouchDB \cite{couchdb:joins} support join operations.
+However, some document-oriented databases like MongoDB \cite{mongodb:joins}, RethinkDB \cite{rethinkdb:joins},
+and CouchDB \cite{couchdb:joins} support join operations.
 Query planning in NoSQL databases mainly deals with the database's distribution model:
 a query execution plans consist of routing query requests to the appropriate data or index partitions.
 
@@ -503,7 +547,5 @@ a query execution plans consist of routing query requests to the appropriate dat
 % derived data
 % A dataset that is created from some other data through a repeatable process, which you could run again if necessary. Usually, derived data is needed to speed up a particular kind of read access to the data. Indexes, caches, and materialized views are examples of derived data.
 
-
 \bibliographystyle{plainnat}
 \bibliography{refs}
-
