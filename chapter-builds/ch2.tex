@@ -1,0 +1,40 @@
+\documentclass[a4paper]{report}
+\usepackage{fancyhdr}
+\usepackage[ddmmyyyy,hhmmss]{datetime}
+\usepackage{tcolorbox}
+\usepackage[numbers,square,sort&compress]{natbib}
+\usepackage[
+  colorlinks=true,
+  breaklinks=true,
+  allcolors=blue]{hyperref}
+\usepackage{chapterbib}
+\usepackage{listings}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+\def\UrlBreaks{\do\/\do-}
+
+\setcounter{tocdepth}{3}
+\setcounter{secnumdepth}{3}
+
+\pagestyle{fancy}
+\lhead{}
+\rfoot{Compiled on \today\ at \currenttime}
+\cfoot{}
+\lfoot{Page \thepage}
+
+\makeindex
+
+\title{Background}
+\author{Dimitrios Vasilas}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\include{chapters/background}
+
+\end{document}
