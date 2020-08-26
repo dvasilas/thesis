@@ -178,6 +178,18 @@ view maintenance cost and storage space.
 The problem of choosing which views to materialize in order to achieve a desirable balance among these three
 parameters is known as the view selection problem \cite{gupta:viewselection, mami:viewselection}.
 
+\subsection{Caching}
+Another technique for speeding up queries, besides the use of indexes and materialized views, is caching:
+storing the result of a costly computation so that repeated reads of this result can be performed without re-executing
+the computation, if the underlying data has not change.
+
+A common approach is to deploy a \textit{caching tier} between the database system and the clients.
+In-memory key-value stores such as Redis \cite{redis:cache} and memcached \cite{memcached:wiki} are often used for this
+purpose.
+
+However, this approach requires application logic to invalidate or replace cache entries,
+which may be complex and error prone.
+
 \subsection{Distributed Query Processing}
 
 So far we covered query processing from the perspective of a single-node database, without considering data distribution.
@@ -211,6 +223,7 @@ The key idea is that an aggregator splits the input stream into \textit{groups}:
 the computation for each group is independent of the computation for other groups; the output stream is the
 concatenation of computation result for all groups.
 Since results for each group are independent, different groups can be processed on different nodes.
+
 
 \section{Query Processing in Non-Relational Database Systems}
 
@@ -538,14 +551,6 @@ However, some document-oriented databases like MongoDB \cite{mongodb:joins}, Ret
 and CouchDB \cite{couchdb:joins} support join operations.
 Query planning in NoSQL databases mainly deals with the database's distribution model:
 a query execution plans consist of routing query requests to the appropriate data or index partitions.
-
-% https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GSI.html
-% When you put or delete items in a table, the global secondary indexes on that table are updated in an eventually consistent fashion. Changes to the table data are propagated to the global secondary indexes within a fraction of a second, under normal conditions. However, in some unlikely failure scenarios, longer propagation delays might occur. Because of this, your applications need to anticipate and handle situations where a query on a global secondary index returns results that are not up to date.
-
-% caching
-
-% derived data
-% A dataset that is created from some other data through a repeatable process, which you could run again if necessary. Usually, derived data is needed to speed up a particular kind of read access to the data. Indexes, caches, and materialized views are examples of derived data.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
