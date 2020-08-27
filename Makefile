@@ -11,22 +11,15 @@ help:           ## Show this help.
 all:            ## Build all
 all: $(DOC).pdf
 
-show:           ## Build and open the document
-show: $(DOC).pdf
-	make $(DOC).pdf
-	open $(DOC).pdf
-
 $(DOC).pdf: $(DOC).tex refs.bib
-	latexmk -bibtex -recorder -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make -g $(DOC).tex
+	latexmk -bibtex -recorder -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make -pvc -g $(DOC).tex
 
 
 ch2: chapter-builds/ch2.tex refs.bib
-	latexmk -bibtex -recorder -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make -g chapter-builds/ch2.tex
-	open ch2.pdf
+	latexmk -bibtex -recorder -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make -pvc -g chapter-builds/ch2.tex
 
 ch3: chapter-builds/ch3.tex refs.bib
-	latexmk -bibtex -recorder -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make -g chapter-builds/ch3.tex
-	open ch3.pdf
+	latexmk -bibtex -recorder -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make -pvc -g chapter-builds/ch3.tex
 
 clean:
 	latexmk -CA
