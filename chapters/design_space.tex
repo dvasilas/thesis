@@ -92,7 +92,7 @@ Database systems provide mechanisms for managing this trade-off at runtime, by a
 to select indexes and materialized views to be created, and by providing mechanisms to automate this selection
 \cite{valentin:db2advisor, chaudhuri:decadeselftuning}.
 
-\section{Design decisions and trade-off in derive state based query processing systems}
+\section{Design decisions and trade-offs in derive state based query processing systems}
 
 Designing a query processor that maintains derived state involves a number of design decisions:
 \begin{itemize}
@@ -188,21 +188,28 @@ This incurs overhead in write latency, but ensures that derived state is always 
 An alternative approach is to perform some of the maintenance step asynchronously: deferring them for after the write
 operation has been acknowledged to the client.
 This reduces the overhead to write operations, but has the implication that the derived state may be temporarily
-inconsistent with the base data.
-If inconsistent derive state is used for query processing, then query results may not reflect the state of the base
-dataset.
+stale, representing a previous state of the base data.
+If stale derive state is used for query processing, then query results may be inconsistent with the state of the base
+dataset, having false-positives and false-negatives.
 Therefore, asynchronous state maintenance reduces the query processor's \textit{effectiveness}.
 
 \bigskip
 
+We can view derived state maintenance schemes through the lens of read and write path computation as follows.
+The write path computation can be broken down into synchronous and asynchronous computation;
+synchronous write path computation incurs an overhead on write operations, while asynchronous write path computation
+relaxes the consistency of the derived state.
+The state maintenance scheme determines the boundary between synchronous and asynchronous write path computation.
+Because reading from inconsistent derived state is possible to results that are not up-to-date with the base data,
+maintenance scheme design decisions involve a trade-off between \textit{write overhead} and query result
+\textit{effectiveness}.
 
-
-\medskip
+\bigskip
 
 \noindent
 One asynchronous maintenance scheme consists of inserting new derived state entries synchronously (step 2),
 and removing the old state entries asynchronously in the background (steps 2 and 3).
-The literature often refers to this scheme as \text{sync-insert}.
+The literature often refers to this scheme as \textit{sync-insert}.
 
 The implications of sync-insert is that it reduces the work needed to be done at the critical path of write operations,
 but it temporarily leaves stale entries in the derived state, until steps 2 and 3 are performed.
@@ -211,7 +218,7 @@ A common complementary mechanism used with sync-insert is read-repair:
 The system validates query results by reading from the base data, and removing false-positive.
 Therefore, the read-repair mechanism can be seen as a way to shift an amount of work from the write to the read path.
 
-Another asynchronous policy, termed \text{async-simple} consists of acknowledging the write operation to the client as
+Another asynchronous policy, termed \textit{async-simple} consists of acknowledging the write operation to the client as
 soon as the base data is updated, and performing all derived state maintenance steps in the asynchronously.
 In practice, async-simple is implemented using an asynchronous update queue: write operation are acknowledged as soon
 as they are logged in the queue; a background process ingests the queue and performs derived state maintenance.
@@ -224,6 +231,14 @@ Reading from the state in this time window, it is possible that a data item that
 appears with an old value in the query results (neither step 1 nor 3 have been applied), appears to have been remove
 from the database (step 3 has been applied, but not step 1), or appears to be associated with two values (step 1 has
 been applied but not step 3).
+
+This scheme is used by Amazon's DynamoDB
+TODO: cite
+% https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GSI.html
+.
+Secondary indexes in DynamoDB are update in an eventually consistent fashion.
+Because of this applications need to
+``anticipate and handle situations where a query on a secondary index returns results that are not up to date''
 
 Diff-Index \cite{tan:diffindex} has proposed an asynchronous index maintenance scheme that provides sessions guarantees.
 The technique used to achieve this is to track additional state in the client library:
@@ -240,12 +255,6 @@ This guarantees the read-your-writes property.
 
 % -> effect on efficiency : false-positives
 
-% Staleness
-% https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GSI.html
-% When you put or delete items in a table, the global secondary indexes on that table are updated in an eventually consistent fashion.
-% Changes to the table data are propagated to the global secondary indexes within a fraction of a second, under normal conditions.
-% However, in some unlikely failure scenarios, longer propagation delays might occur.
-% Because of this, your applications need to anticipate and handle situations where a query on a global secondary index returns results that are not up to date.
 
 
 \subsection{Index partitioning}
@@ -363,9 +372,6 @@ schemes.
 
 \subsection{Placement}
 \label{sec:placement}
-
-\bigskpip
-
 
 
 
