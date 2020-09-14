@@ -38,6 +38,15 @@ One example to use is AWS Athena that provides queries on top of AWS S3 with a p
 
 \section{Problem Statement}
 
+% It is well understood that efficient query processing requires tuning on a case-by-case and even query-by-query basis.
+% Databases systems allow database administrators to select which indexes to materialize, and choose between different
+% index types.
+% Relational database systems in particular have a long history of aiming to provide access to data via the use of
+% optimizers, components that automatically construct query execution plans, select query operator algorithms etc. based
+% on statistics on the characteristics of data.
+% The common characteristics of these techniques is that query processing systems are designed as general purpose systems
+% and provide mechanisms for optimizing query processing to the characteristics of different use cases \textit{at runtime}.
+
 \section{State of the art}
 
 % For motivating the work, we will state the relevance and timeliness of two

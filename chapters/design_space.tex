@@ -1,65 +1,37 @@
-% The goal of this chapter is to draw the design space of designing a query engine.
+Indexes, materialized views, and caches are crucial to query processing.
+Most query processors employ one or more of these technique to speed up queries.
+These technique all have a common characteristic:
+they are based on the idea of maintaining additional \textit{derived state} in order to achieve more efficient read
+access to data.
 
-% Present the different design decisions,
-% and the trade-offs the create (how each decision affects the metrics )
+The use of derived state in query processing poses a number of design decisions,
+which are often in tension and create trade-offs.
+In this chapter, we analyze the design space of derived state based query processors.
+In addition, we present a unified framework for reasoning about how these design choices interact
+and how they affect the behavior of the query processor.
 
-% This includes:
-% \begin{itemize}
-%   \item Listing the axes of the design space, and the options for each axis.
-%   \item Describing the expected performance and efficiency characteristics
-%   of each point in the design space.
-%   \item Describe the trade-offs that occur from the above analysis.
-%   \item Discuss the additional challenges/constraints that occur from the geo-
-%   distribution of data.
-%   \item Present state-of-the-art approaches and their limitations.
-% \end{itemize}
-
-% \section{Design choices and trade-offs}
-% Describe the design choices involved in design a query engine.
-% For each, list the possible options and comment on their effect on the engine's
-% performance and efficiency.
-
-% It is well understood that efficient query processing requires tuning on a case-by-case and even query-by-query basis.
-% Databases systems allow database administrators to select which indexes to materialize, and choose between different
-% index types.
-% Relational database systems in particular have a long history of aiming to provide access to data via the use of
-% optimizers, components that automatically construct query execution plans, select query operator algorithms etc. based
-% on statistics on the characteristics of data.
-% The common characteristics of these techniques is that query processing systems are designed as general purpose systems
-% and provide mechanisms for optimizing query processing to the characteristics of different use cases \textit{at runtime}.
-
-As discussed in chapter~\ref{ch:background}, secondary indexing, the use of materialized views, and caching are techniques
-crucial to providing efficient query processing.
-They all involve the use of \textbf{derived state}, specialized representations of the base data that speed up a
-particular read access to data.
-The use of derived state for efficient query processing involves a number of design decisions.
-These decisions are often in tension and create trade-offs.
-
-In this chapter, we describe the design decisions and trade-offs involved in the use of derived state for query processing,
-and discuss how difference choices affect the behavior of the query processor.
-In addition, we present a framework for reasoning about these design choices and their interactions.
 
 \section{The use of derived state in query processing}
 
-Indexes, materialized views, and caches are all instances of a common technique:
+Secondary indexing, caching, and the use of materialized views are all instances of a common technique:
 creating derived state by applying a transformation to the data stored in the database in order to speed up a particular
 read access to the data.
 
-At an abstract level, derived state can be described by a \textbf{write path} and a \textbf{read path}
+At an abstract level, derived state can be described by a \textit{write path} and a \textit{read path}
 \cite{kleppmann:designing}.
-The write path is the process of updating the derived state to reflect a change to the base data.
-The read path is the process serving a query using the derived state.
-% Note that in the case of caches, the read path modifies the derived data (inserting new cache entries after a cache miss).
-In other words, the write path is the pre-computation that takes place as soon as a change to the base data occurs,
-regardless if the results are going to be consumed by a query;
-the read path is the computation that occurs when one reads uses the derived state to process query.
+\todo{illustrate with figure}
+The write path is the process of creating the derived state, and keeping it up-to-date with the base data.
+The read path is the process of reading from the derived in order to perform a query processing task.
+In other words, the write path is the pre-computation that takes place when a change to the base data occurs,
+regardless if the results are going to be consumed;
+the read path is the computation that takes place only when it is needed for query processing.
 
 \medskip
 
-We can illustrate how the notion of the read and write path applies on different derived state structures using an example.
+We can illustrate how the notion of the read and write path applies on different derived state techniques using an example.
 Consider a database that stores images.
-Each image can be associated with user-defined metadata tags, and the database provides the functionality of
-images via queries on those tags.
+An stored image can be associated with user-defined metadata tags, and the database provides the functionality of searching
+images using queries on their tags.
 Consider the query \\
 
 \noindent
@@ -70,217 +42,222 @@ $WHERE$ $tags.predominantColor$ $BETWEEN$ $\#0a6fb6$ $AND$ $\#52aca2$ \\
 (this query could for example be part of a service that automatically creates slideshows from the image dataset).
 
 A secondary index on the $predominantColor$ tag can be used to speed up this type of queries.
-In that case, the write path updates the index (when images are inserted or deleted), and the read path searches the
-index for color values in the range specified by the query, and combines the results.
-If an index has not been created, processing the query would involve scanning all the images in $photo-album$:
-no work is required in the write path, and significantly more work is needed in the read path.
-Using an index, therefore, shifts an amount of computation from the read to the write path.
+In this case, the write path consists of updating the secondary index when an image is inserted or deleted in the database.
+The read path consists of performing an index lookups for the $predominantColor$ values in a given query,
+and combining the results.
 
-Another option is to maintain pre-computed search results for the most common queries, so that they can be served
-without needing to access the index or scan the dataset.
-This can be implemented either as a \textit{cache} of common queries, or as a \textit{materialized view}.
-In the case of a cache, the read path either reads from the cache, or falls back to using the index or performing a scan
-and then writes to the cache; the write path may invalidate cache entries, depending on the policy that is used.
-In the case of a materialized view, the read path read the query results from the view, while the write path updates the
-view to reflect updates to the dataset that should be included in the results of the most common queries.
+When serving the query without the use of the secondary index, the read path consists of scanning the images in $photo-album$,
+while no tasks need to be performed when an image is inserted of deleted in the database.
 
-From this example it is clear that indexes, materialized views, and caches can be viewed as techniques for shifting the
-boundaries between the read and the write path.
-They allow the system to perform more work on the write path, in order to reduce the work needed or speed up the
-processing on the read path.
-Database systems provide mechanisms for managing this trade-off at runtime, by allowing the database administrator
-to select indexes and materialized views to be created, and by providing mechanisms to automate this selection
-\cite{valentin:db2advisor, chaudhuri:decadeselftuning}.
+Using an index, therefore, moves an amount of work from the read to the write path:
+less work is required for serving the query (an index lookup rather than scanning the dataset), at the expense of performing
+some work at each change in the dataset.
+
+Another option for serving this query is to maintain pre-computed search results for the most common queries.
+This can be implemented either as a cache, or as a materialized view.
+In the case of a cache, if the query result is stored in the cache then the read path consists only of retrieving the
+results from the cache;
+otherwise, the read path falls back to serving the query using one of the methods described above,
+and then stores the query results in the cache;
+The write path may consist on invalidating cache entries, depending on the caching policy being used.
+In the case of a materialized view, the read path consists of retrieving the query results from the view,
+and the write path consists of updating the view to reflect changes to the dataset.
+
+From this example, it is clear that indexing, caching, and the use of materialized views,
+can be viewed as techniques for shifting the boundaries between the read and the write path.
+They allow the query processor to perform more work on the write path in order to reduce the work needed on the read path.
+
 
 \section{Design decisions and trade-offs in derive state based query processing systems}
 
-Designing a query processor that maintains derived state involves a number of design decisions:
+Choosing between the derived state techniques described in the previous sections,
+poses a trade-off between work required on the read and work required on the write path,
+and between work on the read path and the memory and storage overhead of maintaining derived state.
+These trade-offs have been studied extensively \cite{valentin:db2advisor, chaudhuri:decadeselftuning}.
+Database systems provide mechanisms for managing this trade-off at runtime, by allowing the database administrator
+to select indexes and materialized views to be created, and by providing mechanisms to automate this choice.
+
+However, the use of derived state for speeding up query processing involves a number of additional design choices:
 \begin{itemize}
 
   \item Given a change in the base data, when is the derive state updated to reflect this change?
 
   \item How is the derived state distributed across the system's nodes?
 
-  \item In a system composed of multiple geographically distributed sites, how is the derived state placed across sites?
+  \item When base data is distributed across multiple data centers, how is the derived state placed across data centers?
 
 \end{itemize}
 
-The approaches taken in these questions affect different aspects the query processors characteristics, including query
-performance, overhead to write operation, relevance of query results, and operation cost.
+These design choices affect multiple aspects of the query processing system's behavior,
+including query performance, overhead to write operation, relevance of query results, and operational cost.
 
-These design decisions and their effects to the system's characteristics can be analyzed through the lens of the
-read and write path computations to derived data:
-\begin{itemize}
-  % \item Selecting which indexes and materialize views to create and maintain shifts the \textbf{balance between
-  % read-path and write-path computation} (section~ \ref{sec:index_view_selection}).
-  % Materializing more views and indexes reduces the amount of work to be done on the read-path, speeding up query
-  % processing; it also, however, increases the amount of work on the write-path.
-  % This results in a trade-off between the amount of read-path and write-path computation
+We can reason about how these design choices interact and how they affect the query processing system's behavior
+using the read and write path framework.
+To do so, we first describe in more detail the tasks involved in the read and write path.
+\todo{here we need a visualization}
 
-  \item Selecting between maintaining derived data synchronously or asynchronously, changes the
-  \textbf{impact of write-path computation} (section~ \ref{sec:sync_async_maintenance})
-  Maintaining derived data synchronously incurs an overhead to write operations, as derived data need to be updated in
-  the critical path of writes.
-  On the other hand, asynchronous maintenance does not cause an overhead to write operations, but it means that derived
-  data are not strongly consistent with the base data.
-  Therefore the design decisions on derived state maintenance involve a trade-off between the overhead to write operations
-  and the consistency between base and derived data.
+\medskip
 
-  \item In distributed databases, derived data structures are often partitioned,
-  and therefore read path and write path computations are distributed computations.
-  The partitioning scheme determines the \textbf{communication patterns} of read and write path computations.
-  In section~ \ref{sec:index_partitioning} we describe how the choice of index partitioning scheme affects query
-  performance and the overhead to write operations (assuming synchronous maintenance).
-  The two main index partitioning approaches can be viewed as a trade-off in the volume of communication (number
-  of round trips, and number of entities to be contacted) between the read and the write path.
+Given a change to the base data,
+the write path consists of one or two round trip communications between the base data and the derived state
+in order to propagate the changes to the base data (described in more detail in section~\ref{sec:sync_async_maintenance}),
+and the computation required to apply the change to the derived state.
+Similarly, given a query, the read path consists of a round trip communication between the query source (the client or a
+query manager component) and a query processing computation (for example in index lookup) at the derived state.
+For simplicity, we assume here simple predicate queries that do not involve more complex operations such as joins.
 
-  \item In a database system that is distributed across multiple geographically distributed sites, the placement of
-  derived data across sites affects the \textbf{communication latency} of the read-path and write-path computations.
-  (section~ \ref{sec:placement})
-  Since both clients and base data are distributed across sites, placement decisions involve a trade-off between
-  requiring cross-site communication on the read path or the write path.
+In a distributed database, both the base data as well as the derived state are partitioned;
+this entails that, both the write and read path may involve communication among multiple derived state and base data
+partitions (section~\ref{sec:index_partitioning}).
 
-\end{itemize}
+Finally, in a geo-distributed database in which base data and derived state is distributed across multiple data centers,
+both the write and read path may involve inter- data center communication, with latencies orders of magnitude
+higher that intra- data center communication.
 
-TODO: here we need a visualization for this analysis. a table? a decision tree? both?
 
-It is important to note that the framework of read and write path computations does not include the memory and storage
-costs associated with maintaining derived state.
-
-% \subsection{Index and materialized view selection}
-% \label{sec:index_view_selection}
-% As discussed in chapter~\ref{ch:background} indexes are crucial to query processing performance in most database system.
-% The use of indexes provides fast access to data,
-% but also complicates updates operations since indexes need to be updated to reflect changes to the indexed data.
-% Hence, there is a tradeoff involved in selecting which indices to materialize.
-% Having too few or not having the appropriate indexes may force many queries to scan large parts of the dataset;
-% Having too many indexes incurs high update costs.
-
-% A similar tradeoff lies in the problem of selecting materialized views.
-% Using an appropriate set of materialized views can significantly reduce query response time as processing a query by
-% accessing a materialized view can be much faster than processing the query from the base data.
-% On the other hand, materializing a view incurs an additional maintenance and storage space cost.
-
-% Therefore, both the index and view selection problem involve a tradeoff between the reduced query response time
-% from the one size,
-% and write latency and memory/storage space overhead from the other.
-
-% The index and view selection problems have been studied extensively.
-% In particular, various commercial and research systems have focused on the problem of automated index selection
-% \cite{valentin:db2advisor, chaudhuri:decadeselftuning}
-
-% TODO: methods for finding a rewriting of a query using a set of materialized views -> orthogonal
-
-\subsection{Derive state maintenance policies}
+\subsection{Derived state maintenance schemes}
 \label{sec:sync_async_maintenance}
 
-Given a database write that updates a data item $d$ by sets the value of an attribute $attr$ $v_1$,
-updating derived state (and index or materialized view) that is affected by this update consists of the following steps:
-(1) inserting $d$ to the state entries or materialized query results that correspond to $attr$ $=$ $v_1$,
-(2) retrieve the value of $attr$ in $d$ before this update, say $v_0$,
-(3) and remove $d$ from the state entries or materialized query results that correspond to $attr$ $=$ $v_0$,
+\todo{Figure~\ref{fig:maintenance_schemes} (temporary; borrowed) redo}
 
-The derived state maintenance policy scheme defines when these steps are performed.
-In \textbf{synchronous} maintenance, all steps are performed in the critical step of a write operation, usually bundled
-as a transaction.
-This incurs overhead in write latency, but ensures that derived state is always up-to-date with the base data.
+Given an update to a data item $d$ that changes the value of one of $d.attributeA$, from $x$ to $y$,
+updating derived state (an index or materialized view) that is affected by this update consists of the following steps:
+\begin{enumerate}
+  \item Insert $d$ to index entries or materialized query results that correspond to $attributeA$ $=$ $y$,
+  \item Retrieve the value of $attributeA$ in $d$ before the change from the base data, $x$, and
+  \item Remove $d$ from the index entries or materialized query results that correspond to $attributeA$ $=$ $y$,
+\end{enumerate}
+
+In practice, the derived state subscribe to the change log of the base data.
+If the change log contains the information about the value of $d.attributeA$ before the change, then steps (2) and (3)
+are not needed.
+
+\medskip
+
+Given a write operation to the database,
+there are different design choices for \textit{when} these steps described above are performed relative to the critical
+path of the write.
+We term these design choices, the derived state maintenance scheme.
+
+In synchronous maintenance, all steps are performed in the critical path of the write operation,
+usually bundled as a transaction.
+This increases write latency, but ensures that derived state is always up-to-date with the base data.
 
 An alternative approach is to perform some of the maintenance step asynchronously: deferring them for after the write
 operation has been acknowledged to the client.
-This reduces the overhead to write operations, but has the implication that the derived state may be temporarily
-stale, representing a previous state of the base data.
-If stale derive state is used for query processing, then query results may be inconsistent with the state of the base
-dataset, having false-positives and false-negatives.
-Therefore, asynchronous state maintenance reduces the query processor's \textit{effectiveness}.
+This reduces the overhead to write latency, but also has the implication that for each write operation
+there is a time window when a data item has been updated, but the update has not been reflected in the derived state,
+i.e. the derived state is stale.
+Serving queries from derived that is stale relative to the base data may result in query results with false-positives
+and false-negatives.
+
+Amazon's DynamoDB maintains its global secondary indexes asynchronously \cite{dynamodb:async}.
+As a result,
+applications need to ``anticipate and handle situations where a query on a secondary index returns results that are
+not up to date''.
+
 
 \bigskip
 
-We can view derived state maintenance schemes through the lens of read and write path computation as follows.
-The write path computation can be broken down into synchronous and asynchronous computation;
-synchronous write path computation incurs an overhead on write operations, while asynchronous write path computation
-relaxes the consistency of the derived state.
-The state maintenance scheme determines the boundary between synchronous and asynchronous write path computation.
-Because reading from inconsistent derived state is possible to results that are not up-to-date with the base data,
-maintenance scheme design decisions involve a trade-off between \textit{write overhead} and query result
-\textit{effectiveness}.
+We can reason about derived state maintenance schemes using the framework for derived state's read and write path.
+The write path can be broken down into synchronous and asynchronous tasks:
+synchronous write path tasks incur overhead in write latency, while asynchronous one relax derived state's consistency
+relative tho the base data.
+
+State maintenance scheme determines the boundary between synchronous and asynchronous write path tasks.
+Because asynchronous write path tasks result state derived state, and serving queries using stale derived state
+introduces false-positives and false-negatives, the choice of maintenance scheme poses a trade-off between write latency
+and query processing effectiveness.
+
+\begin{figure}
+  \centering
+
+  \includegraphics[width=\textwidth]{./figures/design_space/maintenance.png}
+
+  \caption{Sequence diagram for sync (left), sync-insert (middle), async-simple (right) maintenance}
+
+  \label{fig:maintenance_schemes}
+
+\end{figure}
 
 \bigskip
 
-\noindent
+The following state maintenance schemes have been proposed in the literature:
+
+\subsection{Sync-insert}
 One asynchronous maintenance scheme consists of inserting new derived state entries synchronously (step 2),
 and removing the old state entries asynchronously in the background (steps 2 and 3).
 The literature often refers to this scheme as \textit{sync-insert}.
 
-The implications of sync-insert is that it reduces the work needed to be done at the critical path of write operations,
-but it temporarily leaves stale entries in the derived state, until steps 2 and 3 are performed.
-Queries that read from read the stale entries will include false positives in their results.
-A common complementary mechanism used with sync-insert is read-repair:
-The system validates query results by reading from the base data, and removing false-positive.
-Therefore, the read-repair mechanism can be seen as a way to shift an amount of work from the write to the read path.
+Sync-insert reduces the work needed to be performed at the critical path of write operations,
+but it removes stale entries from the derived state in an eventually consistent fashion.
+Leaving stale entries in the derived state for a time window means that query results may contain false-positives.
 
-Another asynchronous policy, termed \textit{async-simple} consists of acknowledging the write operation to the client as
-soon as the base data is updated, and performing all derived state maintenance steps in the asynchronously.
-In practice, async-simple is implemented using an asynchronous update queue: write operation are acknowledged as soon
-as they are logged in the queue; a background process ingests the queue and performs derived state maintenance.
+The sync-insert scheme is often complemented with a read-repair mechanism.
+After reading from the derived state, the system removes false-positives by validating the retrieved results against
+the base data.
+The read-repair mechanism is a technique for shifting an amount of work from the write to the read path.
+
+\subsection{Async-simple}
+Another asynchronous scheme, termed \textit{async-simple}, consists of acknowledging the write operation to
+the client as soon as the base data is updated,
+and performing all derived state maintenance steps in the asynchronously.
+In practice, async-simple is implemented using an asynchronous update queue:
+write operation are acknowledged as soon as they are logged in the queue;
+a background process ingests the queue and performs derived state maintenance.
 
 This scheme incurs no overhead to write operations.
-However, this approach only provides eventually consistency;
-for each write operation there is a time window in which a data item has been updated, but this update has not been
-reflected in the derived state.
-Reading from the state in this time window, it is possible that a data item that has already been updated in the database
-appears with an old value in the query results (neither step 1 nor 3 have been applied), appears to have been remove
-from the database (step 3 has been applied, but not step 1), or appears to be associated with two values (step 1 has
-been applied but not step 3).
+However, it permits more anomalies due to applying base data changes to the in an eventually consistent fashion.
+More specifically, considering an update that changes $d.attributeA$ from $x$ to $y$:
+\begin{itemize}
+  \item If none of the state maintenance steps have been performed, $x$ will appears as the value of $d.attributeA$
+  in query results.
 
-This scheme is used by Amazon's DynamoDB
-TODO: cite
-% https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GSI.html
-.
-Secondary indexes in DynamoDB are update in an eventually consistent fashion.
-Because of this applications need to
-``anticipate and handle situations where a query on a secondary index returns results that are not up to date''
+  \item If the entry for $d.attributeA$ $==$ $x$ has been removed from the derived state, but the new value has not been
+  inserted, $d$ will appear to have been removed from the dataset
 
-Diff-Index \cite{tan:diffindex} has proposed an asynchronous index maintenance scheme that provides sessions guarantees.
-The technique used to achieve this is to track additional state in the client library:
-this state is used to guarantee that any index look-up contains updates to the base data that were made in the same
-session.
-This guarantees the read-your-writes property.
+  \item If the entry for $d.attributeA$ $==$ $y$ has been added to the derived state, but the old value has not been
+  removed, $d.attributeA$ will appear to have two values
+\end{itemize}
 
-% So far we have assumed that index updates are synchronous:
-% index entries are updated inside the critical path of write operations.
-% However, as we discussed in the previous section, in the case of a term-partitioned index,
-% index updates are distributed operations.
-% This may result in significant overhead to write operations.
-% As a result, many databases do not update their indexes synchronously, but rather use asynchronous maintenance schemes.
+% Diff-Index \cite{tan:diffindex} has proposed an asynchronous index maintenance scheme that provides sessions guarantees.
+% The technique used to achieve this is to track additional state in the client library:
+% this state is used to guarantee that any index look-up contains updates to the base data that were made in the same
+% session.
+% This guarantees the read-your-writes property.
 
-% -> effect on efficiency : false-positives
-
-
-
-\subsection{Index partitioning}
+\subsection{Derived state partitioning}
 \label{sec:index_partitioning}
-Maintaining indexes and materialized views in a distributed database is complex because the partitioning schemes of
-derived state do not map to the partitioning of base data, and as a result read path and write path computations may
-involve communication among multiple nodes.
 
-The are two main approaches for partitioning an index over a partitioned dataset, presented in chapter~\ref{ch:background},
-are:
+\todo{Figures~\ref{fig:prob1_6_2} and~\ref{fig:prob1_6_1} (temporary; borrowed) redo}
+
+Scaling derived state both in terms size and and read access requires partitioning it across multiple system nodes.
+In chapter chapter~\ref{ch:background}, we presented the two main index partitioning schemes.
+
+Briefly, the main index partitioning schemes are:
 \begin{itemize}
 
   \item In \textbf{partitioning by document}, index entries are co-located in the same node as the corresponding
   data items.
 
-  \item In \textbf{partitioning by term}, a global index is partitioned using the same partitioning scheme as the base
-  tables, and using the indexes value as the partitioning key.
+  \item In \textbf{partitioning by term}, a global index is partitioned with the same partitioning scheme as the base data,
+  using the indexed value as partitioning key.
 
 \end{itemize}
+
+The same partitioning schemes can be applied to a materialized view.
+Therefore, while in the rest of this section we refer to secondary indexes, the same results apply to Materialized
+views.
+
+\medskip
 
 In the partitioning-by-document approach, an index lookup requires broadcasting a read request to every index partition
 and then gathering the returned results.
 On the other hand, when reading from a term-partitioned index only the index partitions with index entries that are
-relevant for the query need to be contacted.
-In this approach, however, an additional round of messages is required for retrieving the base data items, as they may
-be located on different nodes that the corresponding index entries.
+relevant to the query need to be contacted.
+In term-partitioned index, however, an additional round of messages is required for retrieving the base data items,
+as they may be located on different nodes that the corresponding index entries (assuming the index does not contain a
+replica of the base data)
 This is not the case for the document-partitioned index, since data items are by-design co-located with the corresponding
 index entries.
 
@@ -291,70 +268,88 @@ item may involve updating index entries located on different nodes.
 
 \bigskip
 
-These observations can be grouped under the framework of read and write path computations:
-partitioning-by-document guarantees local-only communication on the write path, but the most amount of communication on
-the write path (a scatter/gather operation involving all index partitions);
-partitioning-by-term involves communication across nodes on the write path, but requires less communication on the read
-path in the general case (index partitions known do not include relevant index entries are not contacted).
+These observations can be grouped under the framework of derived state's read and write path.
+Partitioning-by-document guarantees local-only communication on the write path, but requires a large volume amount of
+communication on the write path (a scatter/gather operation involving all partitions);
+Partitioning-by-term involves communication across nodes on the write path (a change to data item may need to be sent to
+an index partition on another node),
+but requires less communication on the read path in the general case
+(index partitions known do not include relevant index entries are not contacted).
 
-TODO: figures
-
-\bigskip
+\begin{figure}
+    \centering
+    \begin{minipage}{.5\textwidth}
+        \centering
+        \includegraphics[scale=0.3]{figures/design_space/communication_pattern_document_partitioned.png}
+        \caption{}
+        \label{fig:prob1_6_2}
+    \end{minipage}%
+    \begin{minipage}{0.5\textwidth}
+        \centering
+        \includegraphics[scale=0.3]{figures/design_space/communication_pattern_term_partitioned.png}
+        \caption{}
+        \label{fig:prob1_6_1}
+    \end{minipage}
+\end{figure}
 
 Guided by this analysis we can reason about the performance characteristics of the two approaches.
 
-Partitioning-by-document is more suitable at a small scale (with a small number of nodes),
-while partitioning-by-term becomes preferable as the number of nodes increases and has been shown to provide better
-scalability \cite{kejriwal:slik}.
+Partitioning-by-document is more suitable at a small scale (small number of nodes),
+while partitioning-by-term becomes more suitable as the number of nodes increases,
+and has been shown to provide better scalability \cite{kejriwal:slik}.
 
-In addition to the system's characteristics, which approach is more suitable for a certain case depends on various
-workload characteristics.
+In addition to the system's architecture scale,
+which approach is more suitable depends on a number of different workload characteristics.
 In \cite{dsilva:tworings}, D`silva et al. perform an extensive experimental comparison of the two approaches,
-implemented in HBase.
-Their results show how the performance characteristics of the two approaches is affected by various characteristics of
-the workload.
+implemented in HBase, and show how various workload characteristic affect the index partitioning scheme's performance.
 
 The factors that affect index lookup performance are:
 \begin{itemize}
 
-  \item The distribution of values of the indexes attribute:
-  As the number of data items per index value increase, the partitioning-by-document approach performs better.
+  \item The distribution of the values of the indexed attribute:
+  As the number of data items per index value increase, partitioning-by-document performs better.
   This is because of the additional round trip required to retrieve the base data items:
   as the number of data items per index value increases, a term-partitioned index is likely to have to contact
   more and more remote nodes, while in a document-partitioned index data items are always co-located on the same node as
   the index entries.
 
   \item Concurrency:
-  As the number of concurrent index lookups increases, the partitioning-by-term approach performs better.
+  As the number of concurrent index lookups increases, partitioning-by-term performs better.
   This can be attributed to the overhead of the scatter/gather operation used by the document-partitioned index:
-  As the volume of concurrent index lookups increases, the overhead of broadcasting to every node become more significant.
+  As the volume of concurrent index lookups increases,
+  the overhead of broadcasting to every node becomes more significant.
 
   \item The selectivity of queries:
-  The document-partitioned index outperforms the term-partitioned index as the range of range queries increases.
-  This is in accordance with the observation that the partitioning-by-document approach is beneficial where there are
+  The document-partitioned index outperforms the term-partitioned index as the range size in range queries increases.
+  This is in accordance with the observation that partitioning-by-document is beneficial when there are
   more records to be returned.
 
 \end{itemize}
 
 In addition, this work assumes synchronous index maintenance, and evaluates the impact of the two approach to write
 operations.
-The document-partitioned index generally outperforms the term-partitioned for writes, incurring less overhead
-and providing better scalability.
+The document-partitioned index generally outperforms the term-partitioned for writes,
+incurring less overhead to write latency and providing better scalability.
 
 From the above analysis it is evident that neither of the two approaches is suitable for all needs.
-The choice of which approach to use should be guided by factors including the scale of the system, the properties of the
-dataset (distribution of indexed values over the data items), and the characteristics of the workload (query/write ratio,
-concurrency, query selectivity):
+The choice of which approach to use should be guided by factors including the scale of the system,
+the properties of the dataset (distribution of indexed values over the data items),
+and the characteristics of the workload (query/write ratio, concurrency, query selectivity)
+
+More specifically:
 \begin{itemize}
 
-  \item Document-partitioned indexes are more suitable for: (1) smaller scale systems with a small number of nodes and
-  limit concurrency in index lookups, (2) workloads with less selective queries that return large result sets, (3)
-  skewed data distribution where a large number of data items have the same indexed value, or (4) write-intensive
-  workloads.
+  \item Partitioning-by-document is more suitable for:
+  (1) smaller scale systems with a small number of nodes and light index lookup concurrency,
+  (2) workloads with less selective queries that return large result sets,
+  (3) skewed data distribution where a large number of data items have the same indexed value,
+  or (4) write-intensive workloads.
 
-  \item Term-partitioned indexes are more suitable for: (1) larger scale systems with a greater number of nodes, (2)
-  query-intensive workloads with a large query load, (3) workloads consisting of more selective queries with smaller
-  result sets, or (4) data with normal distribution in the indexed value.
+  \item Term-partitioned indexes are more suitable for:
+  (1) larger scale systems with a greater number of nodes,
+  (2) query-intensive workloads with a large query load,
+  (3) workloads consisting of more selective queries with smaller result sets,
+  or (4) data with normal distribution of the indexed value.
 
 \end{itemize}
 
@@ -363,150 +358,158 @@ Database systems should to support both index partitioning schemes, and expose t
 configuration parameter at the time of creating an index.
 We are not aware of any database system that provides this functionality.
 In existing systems, this design decision is made at design time, and every index uses the same partitioning scheme.
-\cite{}
-  TODO: cite.
+\cite{kejriwal:slik, tan:diffindex, riakv:secondaryindexes, cassandra:secondaryindexing}
 In Chapter~\ref{ch:case_studies} we demonstrate how a distributed database can provide both index partitioning
 schemes.
 
 
+\subsection{Derived state topology patterns}
+\label{sec:topology_patterns}
 
-\subsection{Placement}
-\label{sec:placement}
+In our analysis, we have so far made the implicit assumption that base data and derived state are placed on the
+same date center, and that clients are located in the same geographic region,
+and that therefore communication latency among them is not significant.
+However, in modern cloud-scale services this is often not the case.
+Users often are spread across multiple geographic locations.
+As a results, database systems distributed data across geographically distributed data centers,
+in order to reduce latencies and improve fault-tolerance.
+
+Long-distance inter- data center network links exhibit latencies in the order of tens to hundreds of milliseconds.
+This is an order of magnitude higher than intra- data center latencies as well as latencies perceived by users served
+from a data center close to their location \cite{kleppmann:localfirst}.
+
+In this setting, design choices about the placement of derived state,
+and about the communication patterns between with base data and derived state and between derived state and clients
+determine whether the read and write path computations require intra- or inter- data center communication.
+We term these design choices \textit{topology patterns}.
+
+Design choices related to inter- data center communication exacerbate the trade-offs presented in the previous sections,
+but also pose additional trade-offs related to derived state replication.
+
+In this section, we discuss a number of scenarios that involve geo-distribution, and the associated derived state
+topology patterns.
+Throughout the following sections we consider as an example the design choices involved in maintaining a secondary index,
+however the analysis can be applied to also to materialized views.
+
+\subsubsection{Geo-replication}
+Cloud-scale database systems rely on geo-distribution to minimize user-perceived latency and improve fault-tolerance.
+This architecture poses a design choice which stems from an impossibility property, known as the CAP theorem
+\cite{brewer:cap}.
+in the face of network partitions between data centers, geo-replicated databases must choose between strongly consistent
+(CP) and high-available (AP) designs.
+In a strongly-consistent design, replicas are kept synchronized at all times.
+This provides the abstraction of single replica system which simplifies application logic, but exposes users to high
+latencies due to the need for inter- data center communication between replicas in on the critical path of each write
+operation.
+In addition, strongly-consistent designs are susceptible to downtimes due to network partitions.
+In a highly-available design, replicas synchronize in the background, out of the critical path of write operations.
+This ensures low latency and availability under network partitions, as each replica serves write operations locally.
+Nevertheless, this allows replicas to accept concurrent conflicting updates and temporarily diverge.
+
+\medskip
+
+We first consider a strongly-consistent design.
+One approach is to maintain a replica of the materialized view on each data center.
+With this approach, both the read and write path involve only intra- data center communication.
+Queries can be served from the materialized view at the closest date center.
+Moreover, since the entire dataset is present on each data center,
+keeping materialized view replicas up-to-date with the base data requires only intra- data center communication.
+The downside of this approach is the storage overhead associated with maintaining multiple replicas of the materialized
+view.
+
+An alternative approach is to have materialized view replicas only on some data centers.
+This reduces the storage overhead, but means that a query sent to a data center without a materialized view
+either needs to be forward to another data center, or processed without the use of a materialized view,
+both of which result in slower query processing.
+This can be suitable for case in which some data centers are queried more often than others.
+Moreover, this approach can be supplemented with the use of caches in data centers without materialized
+views.
+
+\medskip
+
+TODO: here we need a paragraph about AP.
+Mainly, discuss conflicts and derived data.
+
+\subsubsection{Geo-partitioning}
+A different geo-distribution strategy is geo-partitioning.
+In geo-partitioning, data is partitioned across data centers, and partitions are placed on data centers according to
+their access patterns.
+As a result, latency read and write access to data that belong to a local partition is low.
+CockroachDB allows developers to partition data across data centers at a row-level granularity
+\cite{cockroachdb:geopartitioning}.
+
+One approach for maintaining a secondary index over geo-partitioned data is to use the partitioning-by-document scheme:
+each data center maintains a secondary index covering only the data items in local partitions.
+This approach has the same implication as document-based partitioning:
+the write path only requires intra- data center communication, since the index is co-located with the base data;
+the read path needs to contact every index partition and gather results, which requires inter- data center
+communication.
+
+A different approach is to maintain a global secondary index on each data center.
+In that case, the index lookups (read path) can always be served on the local data center.
+However, each change to the base data need to be propagated to all data centers (write path).
+The downside of this approach is that it significantly increases the storage cost.
+
+\subsubsection{Multi-cloud and Query federation}
+More recently, the concept of multi-cloud data storage has emerged.
+Organizations spread their data across private data centers and public cloud services in order to reduce costs and
+ensure fault-tolerance.
+Moreover, they distribute data across multiple cloud providers in order to avoid dependence from a to single
+cloud provider, take advantage of diverse storage and computing services, and improve reliability.
+
+The advent of data distributed across multiple independent storage systems has created the need for unified access and
+federated search across platforms.
+The problem of federated query processing can be viewed as a generalization of the geo-partitioning case:
+the dataset at each platform can be seen as a partition of the logical global dataset.
+For simplicity, we assume that a multi-cloud platform consists of multiple, independent instances of a common database
+system.
+Under there assumptions, the same design decisions and trade-offs as in the case of geo-partitioning apply to query
+federation across multiple clouds.
+
+\bigskip
+
+From the examples above it becomes clear that topology patterns play a major role in the performance of geo-distributed
+query processing based on derived state
+
+\section{Conclusion (placeholder title)}
+
+\todo{we need a vizualization \\ multi-dimensional table? decision tree? something else?}
+
+\begin{itemize}
+  \item The use of derived state to speed-up query processing moves query processing work from the read path to the write
+  path, while also incurring the memory and storage overhead.
+  Moreover, different derived state schemes (indexes, materialized views, caching) shift the balance between work
+  on the read and write path.
+
+  \item The choice of derived state maintenance scheme controls the impact of work on the write path:
+  Synchronous maintenance keeps the derived state up-to-date with the base data,
+  but incurs overhead to the latency of write operations.
+  On the other hand, asynchronous maintenance schemes move some of the work on the write path in the background.
+  This reduces the overhead to write operations, but also means that derived state is not always up-to-date with the base
+  data.
+  Because serving queries from derived state that is stale relative to the base data may introduce false-positive and
+  false-negatives,
+  design decisions on derived state maintenance pose a trade-off between the overhead to write operations
+  and the relevance of query results.
+
+  \item The derived state partitioning scheme determines the communication pattern between base data and derived state
+  on the write path, and between derived state and client on the read path.
+  More specifically, partitioning-by-document ensures that no cross-node communication is needed on the write path,
+  but requires a scatter/gather operation across all state partitions on the read path.
+  Partitioning-by-term requires cross-node communication on the write path but reduces the number of state partitions
+  that need to participate on the read path.
+  Therefore, the choice of partitioning scheme poses a trade-off in the type (intra-node or cross-node) and volume
+  of communication on the read versus the write path.
+
+  \item When base data and client are distributed across different geographic locations,
+  the choice of topology pattern affect the communication latency (intra versus inter data center communication).
+  Often, this creates a trade-off between low latency, intra- data center communication, and the overheads of
+  maintaining a derived state replica on each data center.
+
+\end{itemize}
 
 
 
-% -> This can apply to any query processing operator, not only stateful ones.
-
-% \subsection{Query processing techniques}
-
-% The choice between
-% (1) performing query processing by iterating over the corpus (filtering, aggregation without materialized views)
-% (2) maintaining derived state (indexes, materialized views) updated in response to changes to the corpus data
-% (3) using caches on top of that.
-
-% \subsubsection{Secondary indexing}
-
-% General system design pattern:
-% Having the same data represented in different formats to address different access patterns.
-
-% We have a primary copy of the data in one system (that might be called the source of truth)
-% and different derived data systems which they take their data as a copy from this
-% primary system.
-% Transform it in some way and then represent it differently
-% in order to satisfy certain read access patterns.
-% Writes go to the primary storage system and all of the other systems are derived from it.
-% TODO: address that some systems support writes to a view.
-% The other systems only serve read requests.
-
-% \begin{itemize}
-%   \item
-%   \item it’s just another way of saying we’re going to take the same data and have multiple
-%   copies of it represented in different ways, either sorted in a different way, or with a different
-%   storage layout.  That allows us to access the data in ways depending on what you’re trying to do. 
-%   \item In any relational database, if you have a secondary what you’re really saying is,
-%   I want to construct this additional structure on the side (typically a B-tree) and every time you write to some table to update
-%   that index to also allow me to find records based on values of a column other than the primary key.
-%   (It just happens to be done internally by the database.)
-% \end{itemize}
-
-% \subsubsection{Distributed Query planning}
-
-% \subsubsection{Caching}
-
-% \subsection{State maintenance}
-% When maintaining derived state, the choice between synchronously versus
-% asynchronously updating it for each change to the corpus.
-
-% State maintenance schemes have two characteristics:
-% \begin{itemize}
-%   \item How much of the state is materialized.
-%   When maintaining an index we assume that every index entry is materialized.
-%   In contrast, when maintaining a cache, only a subset of entries are
-%   materialized
-%   (a subtlety here is how an ``entry'' is defined, it might be different between
-%   index and cache).
-%   There is a finite storage area for materializing entries.
-%   When it is filled, some entries are evicted to make space for new entries to
-%   be materialized.
-%   \item When is the state being updated.
-%   The options for this can be:
-%   \begin{itemize}
-%     \item Update-triggered - Synchronously. When an update to the corpus
-%     occurs, it is blocked until the derived state is up-to-date.
-%     \item Update-triggered - Asynchronously. Updating the derived state is done
-%     outside of the critical path of the corpus update.
-%     \item Read-triggered. The derived state mays updated as a response to the
-%     state being read (cache misses).
-%     This is used in caching.
-%   \end{itemize}
-% \end{itemize}
-%   Based on the above analysis, we can argue that caching is just another state
-%   maintenance scheme, and therefore could be treated as a configuration
-%   parameter when deploying a QPU.
-%   (Note: this is just a way to unify and simplify things by merging caching
-%   QPUs with index QPUs, materialized view QPUs etc.)
-
-% \subsection{Component placement}
-% There are two types of computational query processing operator can be
-% involved in:
-% \begin{itemize}
-%   \item Update-triggered: For example, updating an index as a result to a corpus
-%   update
-%   \item Query-triggered: For example, index/cache lookup as a result to a query.
-% \end{itemize}
-% This can apply to any query processing operator, not only stateful ones.
-
-% The placement determines how close (in terms of network round trip time) the
-% operator is placed related to its sources of updates and queries.
-
-% Deciding on placement schemes can lead to trade-offs cause by:
-% \begin{itemize}
-%   \item The benefits and costs of placing operators close to update sources
-%   versus close to query sources.
-%   \item An operator might have multiple update and/or query sources.
-% \end{itemize}
-
-% We can define ``levels'' of placement: on the same physical machine, on the same
-% cluster, in the same DC.
-
-% \section{Trade-offs}
-% Summarize how the previously described design choices result to performance and
-% efficiency trade-offs.
-
-% Note: This may be redundant depending on how detailed those trade-offs are
-% discussed in the previous section, but it is central to the thesis to make the
-% argument that it is because of these trade-offs that we propose the QPU
-% approach.
-
-% An idea is to here focus on examples of applications that might choose different
-% points in these trade-offs.
-
-% \subsection{Response time vs Freshness}
-
-% \subsection{Response time \& Freshness vs Cost}
-
-
-% \section{Constraints of geo-distributed data}
-% Discuss the implication of performing query processing on geo-distributed data,
-% and of replicating the derived data used for query processing.
-
-% \subsection{Implications of replicated data in derived state}
-% Implication of query processing over AP storage systems:
-% \begin{itemize}
-%   \item If not carefully designed, concurrent non-conflicting updates may
-%   result to conflicts on the derived state.
-%   Example: write1: recordX:attributeA=1, write2: recordY:attributeA=1.
-%   This results to: index\_update1: add recordX to (attributeA, 1),
-%   index\_update2: add recordY to (attributeA, 1).
-%   Therefore a ``set CRDT'' behavior is needed for indexes.
-%   Generalize to state other than indexes.
-%   \item Conflicting updates to the corpus data.
-%   Ensure that conflict resolution on corpus data is reflected on derived data.
-% \end{itemize}
-
-% \subsection{CAP}
-% Describe how query processing performance-availability is constraint by
-% CAP in the case of replicated derived state.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}

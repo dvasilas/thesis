@@ -9,12 +9,15 @@
   allcolors=blue]{hyperref}
 \usepackage{chapterbib}
 \usepackage{listings}
-\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{graphicx}
+\usepackage[colorinlistoftodos]{todonotes}
 
 \def\UrlBreaks{\do\/\do-}
 
 \setcounter{tocdepth}{3}
-\setcounter{secnumdepth}{3}
+\setcounter{secnumdepth}{4}
+
+\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
 
 \pagestyle{fancy}
 \lhead{}
@@ -31,6 +34,8 @@
 \begin{document}
 
 \maketitle
+
+\listoftodos
 
 \tableofcontents
 
