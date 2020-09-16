@@ -79,7 +79,7 @@ which methods to use to execute the operators of a query,
 and in which order to execute a query's operations.
 In a distributed system, the optimizer also decides at which node each operation is to be executed.
 
-Selinger et al.’s foundational paper on System R \cite{selinger:systemr} decomposes the problem of query optimization
+The foundational paper by Selinger et al. on System R \cite{selinger:systemr} decomposes the problem of query optimization
 into three distinct sub-problems: cost estimation, relational equivalences that define a search space, and cost-based
 search.
 The optimizer assigns a cost estimate to the execution of each component of a query, measured in terms of I/O and CPU
@@ -127,7 +127,7 @@ Views are not precomputed and stored; the database stores only the query definin
 Each time the view is used, the database expands it on the fly into the underlying query,
 and then processes the expanded query.
 
-In contrast, a materialized view is a view whose contents are computed and stored by the database.
+In contrast, a materialized view is a view whose contents are pre-computed and stored (cached?) by the database.
 In many cases reading the contents of a materialized view is much more efficient than computing the contents of the view
 by executing the query that the view defines.
 Essentially, a materialized view is a precomputed cache of query results.
@@ -140,7 +140,7 @@ the view must be kept up-to-date.
 A simplistic way of achieving this to recompute the materialized view on every update.
 A better option is to, on each update, modify only the affected parts of the view.
 This approach is known as incremental view maintenance.
-There is considerate research on incremental view maintenance for in relational databases
+There is considerable research on incremental view maintenance for in relational databases
 \cite{larson:outerjoinviewmaintenance, lee:multiplejoinviewmaintenance, zhuge:viewmaintenance}.
 
 Another design decision when incremental view maintenance is used, is when to perform the maintenance:
@@ -148,7 +148,7 @@ in \textit{synchronous} view maintenance, view maintenance is performed as soon 
 as part of the updating transaction,
 while in \textit{asynchronous} or lazy view maintenance,
 updating the view is deferred to a later time \cite{zhou:lazymvMaintenance}.
-Materialized views with deferred view maintenance may not be consistent with the underlying data.
+Materialized views with deferred view maintenance may be somewhat out-of-date with the underlying data.
 
 \subsubsection{Query Optimization and Materialized Views}
 
@@ -161,8 +161,11 @@ Materialized views add further consideration to query optimization:
   materialized view.
 
   \item Replacing the use of a materialized view with its definition.
-  It may sometimes be beneficial to replace a materialized view with its definition, if the view does not have any
-  indices that can be used to speed up the query, but the underlying relations do.
+  Sometimes, using the query that defines a materialized view instead of directly reading from its pre-computed contents
+  may offer more optimization options.
+  For example, consider a case in which a materialized view does not include indexes that can be used to speed up the query,
+  but the underlying relations do.
+  Using the views definition instead of its contents enables query execution to take advantage of those indexes.
 
 \end{itemize}
 
@@ -187,8 +190,7 @@ A common approach is to deploy a \textit{caching tier} between the database syst
 In-memory key-value stores such as Redis \cite{redis:cache} and memcached \cite{memcached:wiki} are often used for this
 purpose.
 
-However, this approach requires application logic to invalidate or replace cache entries,
-which may be complex and error prone.
+% However, this approach requires application logic to invalidate or replace cache entries, which may be complex and error prone.
 
 \subsection{Distributed Query Processing}
 
@@ -215,7 +217,7 @@ the tree in order to push the maximum amount of computation to the servers.
 In the query execution phase, distributed union routes a sub-query request addressed to a shard, to one of the nearest
 replicas of that shard in order to minimize latency.
 
-CockroachDB employs an mechanism for distributed query processing \textbf{computation} \cite{cockroachdb:distsql}
+CockroachDB employs a mechanism for distributed query processing \textbf{computation} \cite{cockroachdb:distsql}
 (for example join, aggregation, or sorting) on multiple nodes in order to improve performance.
 In CockroachDB, a query plan is a tree of operators, termed \textit{aggregators}:
 each aggregator consumes an input stream of records and produces an output stream or records.
@@ -237,7 +239,7 @@ we first briefly introduce the data models and data distribution techniques used
 \noindent
 \textbf{Key-Value Stores.}
 A key-value store's data model is a map/dictionary of key-value pairs.
-As the structure of values is opaque to the database system, this data model only supports get and put operations
+As the structure of values is usually opaque to the database system, this data model only supports get and put operations
 (requesting and writing value using a key).
 Key-value stores in generally favor scalability over a richer data model and more complex query capabilities:
 the simple key-value model makes partitioning and locating data efficient, thus enabling these systems to achieve low
@@ -258,27 +260,31 @@ apart from retrieving an entire document from its key, documents stores support 
 The data model of wide-column stores is often depicted as a relational table with many sparse columns.
 More accurately, this data model can be described as a distributed, multi-level, sorted map.
 The first-level keys identify rows (row keys) and the second-level keys identify columns (column keys).
-In some wide-column stores multi-versioning is implemented by adding third-level, timestamp keys.
+% In some wide-column stores multi-versioning is implemented by adding third-level, timestamp keys.
 
 \subsection{Partitioning}
 \label{sec:partitioning}
 
-Partitioning is data distribution technique, in which the records of a database are split into subsets called partitions
-so that different partitions can be assigned to different nodes (also known as sharding).
+Partitioning is a technique for dividing a logical database into smaller distinct parts, called partitions, and spreading
+across several nodes.
+Partitioning divides both the database's content (corpus) as well as its computations.
+Each partition effectively acts as a database of its own, although there may be operations that involve multiple partitions.
+Different database systems use different terms to refer to what we here call partition, including \textit{shard}
+\todo{MongoDB, elasticSearch}, \textit{region} \todo{HBase}, \textit{tablet} \todo{BigTable} and \textit{vnode} \todo{Cassandra, Riak}.
 
 The goal of partitioning is to spread data and load evenly across nodes.
 When implemented efficiently, it enables horizontal scaling:
 doubling the number of nodes in the system should make the system able to handle double the volume of data, and
 should double the system's read and write throughput.
 
-The sharding techniques commonly used in non-relational databases are range and hash partitioning.
+The partitioning techniques commonly used in non-relational databases are range and hash partitioning.
 
 \bigskip
 \noindent
 \textbf{Range partitioning.}
-Range partitioning assigns a continuous range of keys to each partition.
-These ranges of key are not necessarily evenly spaced, because data may not be evenly distributed.
-Partition boundaries might be chosen manually by an administrator, or automatically by the database.
+Range partitioning assigns an interval of keys to each partition.
+These ranges of key are not necessarily evenly spaced, because data might be unevenly distributed.
+Partition boundaries might be chosen manually by an administrator, or automatically by the database management system.
 
 Within each partition keys are kept in sorted order.
 This has the advantage that range queries on the partitioning key are efficient:
@@ -294,7 +300,7 @@ RethinkDB, and MongoDB before version 2.4.
 \bigskip
 \noindent
 \textbf{Hash partitioning.}
-An alternative approach that avoids the risks of skew and hotspots is to use a hash function to determine the partition
+An alternative approach that avoids the risks of skew and hotspots is to use a quasi-random hash function to determine the partition
 for a given key.
 Hash partitioning assigns each partition a range of hashes --- rather than a range of keys --- and every key whose hash
 falls within a partition's range is handled by that partition.
@@ -313,11 +319,13 @@ Partitioning is usually combined with replication so that copies of each partiti
 Replication improves availability by allowing the systems to continue working even if some of its parts have failed,
 and increases read throughput by increasing the number of machines that can serve read queries.
 
-Considering a single partition, each node that takes part in the replication, called a replica, stores a copy of the
-partition.
-A replication strategy answers two design decisions:
-when a write request is send to the database (1) in which replica the write is accepted,
-and (2) when the corresponding data changes are propagated to other replicas \cite{gray:replication}.
+There are multiple different replication strategies.
+These strategies can be categorized based on two design decisions \cite{gray:replication}:
+\begin{itemize}
+  \item How are updates regulated. Is there single ``master'' replica responsible for processing updates to a given data item,
+  or can any replica with a given data item update its copy?
+  \item Are updates propagated between replicas eagerly or lazily?
+\end{itemize}
 
 \bigskip
 \noindent
@@ -328,16 +336,16 @@ The leader determines the order in which writes should be processed,
 and sends the corresponding data changes to the other replicas
 (termed \textit{followers}, \textit{slaves} or \textit{secondaries}),
 Followers apply those changes in the same order.
-Reads can be performed either from any replica.
+Reads can be performed from any replica.
 
 This approach is used in MongoDB, RethinkDB, and Espresso.
 
 Leader-based replication has one main downside:
-as there is only one reader (when replication is combined with partitioning there is one leader per partition),
+as there is only one leader (when replication is combined with partitioning there is one leader per partition),
 and all database writes must go through it, if the leader is unreachable writes cannot be performed.
 
-An extension of leader-based replication is to allow more than one replicas to accepts writes.
-In \textit{multi-leader} replication there are multiple readers,
+An extension of leader-based replication is to allow more than one replica to accepts writes.
+In \textit{multi-leader} replication there are multiple leaders,
 each processing writes and forwarding the corresponding data changes to all other replicas.
 Each leader acts also as a follower to the other leaders, accepting writes from them.
 
