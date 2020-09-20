@@ -753,25 +753,173 @@ For each QPU class can be generalized to two types of rules:
   balancer QPU can perform distribute these queries among its downstream connections.
 \end{itemize}
 
+\subsection{Computation model}
+\label{sec:computation_model}
+
+% In this section we present how QPU-based query processing systems process queries.
+% We first present an overview of the computation model \ref{sec:computation_model}, and then ...
+
+The query processing unit computation model combines elements from microservice architectures and stream processing systems.
+Similar to stream processing systems,
+query processing units operate on input streams either to incrementally update their state, or to perform query processing
+computations.
+Similar to microservices architectures, any stream is initiates as a response to a \textit{service request}.
+
+\medskip
+
+The computation run by a QPU-based query processing system directly emerges from the QPU specification.
+We describe this collective computation by describing the execution of a generic query $q$ by a QPU graph.
+Given a query $q$, the query processing function of a QPU $Q$ at the root of a QPU graph sends query request to
+downstream connection in order to initialize input stream required for processing the query.
+The QPU performs a computation on the input streams, potentially also involving its state, and emits the results at its
+output stream.
+The same process is performed at each of the downstream connection of $Q$, and their downstream connection, propagating
+downwards through the QPU graph.
+This creates a \textit{query execution sub-graph} composed of the QPUs that participate in the processing of $q$.
+
+The leaves of this sub-graph are QPU that can process their given queries without sending downward query requests.
+This includes database driver QPUs, and derived state QPUs.
+These QPUs become the leaves of $q$'s execution sub-graph.
+Leaf QPUs produce output streams that are then received as input stream at \textit{upstream QPUs}.
+Progressively, each non-leaf QPU in the query execution sub-graph receives an input stream for each query request sent,
+and produces itself an output stream.
+Finally, $Q$ calculates the response for $q$ and emits it as its output stream.
+We call this type of QPU graph computation \textit{query execution mode}.
+
+\medskip
+our ````````````````````````''''''''''''''''''''''''
+The same process is performed for incrementally updating secondary index and materialized view QPUs (\textit{state maintenance mode}).
+There are the following differences between query execution mode and state maintenance mode:
+\begin{itemize}
+  \item Query execution happens in response to a client query,
+  while state maintenance happens in response to the initialization of a secondary index of materialized view QPU.
+  \item The goal of query execution is to process a client query,
+  while the goal state maintenance is to establish a long running stream of notification for corpus updates.
+  \item The root of a query execution sub-graph is one the QPU graph root nodes,
+  while the root of a state maintenance sub-graph is a derived state QPU.
+\end{itemize}
+
+\medskip
+
+Based on the above description, the computation run of a QPU-based processing system can be characterized as a
+\textit{bi-directional dataflow computation}.
+For a given query or state maintenance execution,
+query requests flow downwards through the QPU graph, defining an execution sub-graph.
+Response streams flow upwards through that sub-graph, each stream corresponding to an edge defined by a query request.
+
+\medskip
+
+Finally, query processing units are multi-threaded:
+a QPU can process multiple queries in parallel.
+Therefore, multiple different query execution and state maintenance sub-graph can co-exist in parallel in the same QPU
+graph.
 
 \subsection{Query execution}
 
-In this section we present how QPU-based query processing systems process queries.
-We first present an overview of the computation model \ref{sec:computation_model}, and then ...
+\subsubsection{Query parse tree}
 
-\subsubsection{Computation model}
-\label{sec:computation_model}
+The first of a QPU's query processing function is to parse the query request to a form that can be used for query processing.
+This form is a \textit{parse tree}.
+
+A parse tree is constructed by applying the QPU query language's grammar to a given query string.
+More specifically, a parse tree is composed to three types of nodes:
+\begin{itemize}
+  \item \textbf{Atoms}, which include keywords of the query language ($SELECT$, $FROM$ etc.),
+  identifiers, such as table or attribute names, constants, operators and tokens.
+  Atoms are leaf nodes of the parse tree.
+
+  \item \textbf{Syntactic categories}, which are constructs built from other syntactic categories, or atoms,
+  follow the query language's grammar rules ($SelectExpression$, $TableExpression$ etc.)
+  Syntactic categories are internal nodes of the parse tree
+\end{itemize}
+
+Given a query string $s$, a parse tree is constructed by parsing $s$ using the query language grammar rules.
+\todo{ref parsing algorithms}
+
+\subsubsection{Query processing capabilities tree}
+
+In this section we present the \textit{query processing capabilities tree} (QPC tree)
+The QPC tree represents the \textbf{set of all query parse trees that a QPU can process}.
+
+To achieve that, we introduce an additional typo of tree node, the \textbf{conjunction} \todo{better name??}.
+Conjunction nodes essentially express the different branches of a syntax rule.
+For example, the rule:
+{\obeylines\obeyspaces
+\texttt{
+PredicateExpression  ::=  PredicateExpression OR PredicateExpression |
+~~~~~~~~~~~~~~~~~~~~~~~~~~PredicateExpression AND PredicateExpression |
+~~~~~~~~~~~~~~~~~~~~~~~~~~NOT PredicateExpression |
+~~~~~~~~~~~~~~~~~~~~~~~~~~Term Op Term
+}}
+
+can be represented as \todo{do the tree}.
+
+
+.. Present the trees in the orders example ..
+
+Each QPU has a QPU tree, which is parts of its configuration state.
+Stores the QPC trees of its neighbors as part of its local view state.
+
+It is used for two purposes
+\begin{itemize}
+  \item The QPU uses determines if it can process a given query by the parse tree of the given query ``fits'' its QPC tree.
+  \item The QPU generates downstream query requests using the QPC trees of its downstream connections, by performing a
+  trimming operation.
+\end{itemize}
+
+
+
+
+% Given $q$, the query processing function of a QPU $Q$ at the root of the QPU graph sends query request to some its
+% downstream connection, in order to initialize input stream required for processing the query.
+% Upon receiving a query request from $Q$, each of its downstream connection performs the same process.
+% In that way, query requests are propagated downwards through the QPU graph, creating a \textit{query execution sub-graph}
+% composed of the QPUs that participate in the processing of $q$.
+
+% As query requests requests are propagated downwards, expanding the $q$'s execution sub-graph, eventually some QPUs can
+% process their queries without sending further query requests downwards.
+% This occurs in database driver and derived state QPUs.
+% The leaves of this sub-graph are QPU that can process 
+% This includes database driver QPUs, and derived state QPUs.
+% These QPUs produce output streams that are then processed as input stream at \textit{upstream QPUs}.
+
+% Progressively, each non-leaf QPU in the query sub-graph receives an input stream for each query request sent,
+% and produces it self an output 
+
+
+% We describe how a QPU graph processes a given query using the example of Figure~\ref{fig:qpu_graph_emergent_properties}.
+
+% Consider the query:
+% {\obeylines\obeyspaces
+% \texttt{Q = SELECT CustomerName, CustomerEmail, OrderID
+%         ~~~~FROM Customers
+%         ~~~~INNER JOIN Orders ON Customers.OrderID = Orders.OrderID
+%         ~~~~WHERE Orders.OrderDate >= 2020-08-20 AND Orders.OrderDate < 2020-09-02
+%         ~~~~TIMESTAMP FROM LATEST TO LATEST
+%         }}
+
+
+
+
+
+% - queries / control messages flow downwards.
+% - responses flow upwards through the sub-graph defined by the queries
+% - (each query establishes a sub-graph - actually a tree - to be used by that particular query);
+% - Updates (independently) also flow upwards
+
 % As described in the previous sections, query processing units can collaborate by invoking the query API of one another.
 % QPUs can be composed in DAG hierarchies in which parent units can invoke the query API of their child units.
-
 % Query responses for both snapshot and persistent queries are streams of results.
 % Communication between QPUs thus uses a combination of the remote procedural call model (query API invocations) and the stream-processing model (query responses).
 
 % Clients perform queries by invoking the query API of units at root nodes of the graph.
-% Once a QPU receives a query, it determines whether it can directly process it, for example by performing lookups at its indexing structures, and if that is the case it responds with the query result.
+% Once a QPU receives a query, it determines whether it can directly process it, for example by performing lookups at its indexing structures,
+% and if that is the case it responds with the query result.
 % In case the query processing computation requires partial query results from its child units, the unit invokes the query API of those units with the appropriate sub-queries.
 % Sub-query results are received and processed through the unit's callback function.
+
 % This process is recursively performed at each query processing unit.
+
 % Therefore, the computation that runs in QPU a graph can be modeled as a bidirectional data-flow computation.
 % Queries flow downwards through the graph, are incrementally split into sub-queries, and processed across the graph.
 % Sub-query results flow back upwards, are incrementally processed, and eventually produce the results to the initial query.
@@ -780,7 +928,6 @@ We first present an overview of the computation model \ref{sec:computation_model
 % We have extended the query interface semantics so that the query API can be used to subscribe to notifications for corpus updates, and query results can encode these updates.
 % Using this mechanism, units with indexing functionalities can subscribe to corpus updates by invoking the query API of QPUs that provide this functionality.
 % We describe this mechanism in more detail in Section \ref{subsec:query_classes}.
-
 
 
 % The QPU graph runs a distributed bidirectional data-flow computation.
