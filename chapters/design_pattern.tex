@@ -217,7 +217,6 @@ Each QPU class provides implementations for these functions.
 A conceptual depiction of the query processing unit model is shown in Figure~\ref{fig:qpu_abstraction}.
 When the QPU's query API is called, an output stream ($R_A$) is established between the unit and the sender,
 and the unit's query processing function is invoked for the given query.
-
 The query processing function can read the QPU's state, and can perform downstream queries to other units.
 For each downstream query, a corresponding stream is established ($Q_{A.1}$ and $Q_{A.2}$).
 When a record is received from one of the streams, the QPU's callback function is invoked.
@@ -227,91 +226,110 @@ Upon receiving a result from a callback function,
 the query processing function can potentially write to the QPU's state and/or emit a record to the output stream.
 
 
-\subsection{Query Processing Unit model specification}
+\subsection{Query Processing Unit component model specification}
 \label{ref:specification}
 
-In this section we present the detailed specification of the Query Processing Unit model.
+In this section we present the detailed specification of the query processing unit component model.
 
 \subsubsection{Query interface}
 \label{ref:query_interface}
-In this section, we first present a high level overview of the QPU model's interface,
-and then describe each of its elements in more detail.
+% we first present a high level overview of the QPU model's interface, and then describe each of its elements in more detail.
 
-Each query processing unit exposes and interface for receiving query requests:
-
+Query processing units expose an interface for receiving query requests:
 
 \begin{displaymath}
   Query(QueryRequest) \rightarrow QueryResponse
 \end{displaymath}
 
-$QueryRequest$ specifies a predicate on the data items' \textit{attributes}, and a \textit{time interval}.
+\begin{itemize}
+  \item $QueryRequest$ specifies a predicate on the data items' \textit{attributes}, and a \textit{time interval}.
 
-$QueryResponse$ is a stream containing records that represent \textbf{updates} (an update can be a creation, modification, or deletion)
-performed to data item of the corpus
-It represents updates as \textit{deltas}:
-a delta representing an update $u$ contains the data item's attribute values before $u$ is applied,
-and those after the $u$ is applied.
+  \item $QueryResponse$ is a stream containing the query's results.
+\end{itemize}
+
+\noindent
+\textbf{Query results as updates}.
+$QueryResponse$ records represent \textbf{updates} to the corpus (an update can be a creation, modification, or deletion
+of a data item).
+Updates are represented as \textit{deltas}:
+a delta representing an update $u$ to a data item $d$ contains the values of $d$'s attributes before $u$ is applied,
+and those after $u$ is applied.
 
 More specifically:
 \[
-  QueryResponse = [UpdateDelta]
+  QueryResponse = [StreamRecord]
 \]
 where
 \[
-  UpdateDelta =
+  StreamRecord =
 \]
 \[
-  (DataItemID, [(AttributeName, AttributeValue_{old}, AttributeValue_{new})], timestampValue)
+  (DataItemID,~[(AttributeName,~AttributeValue_{old},~AttributeValue_{new})],~Timestamp)
 \]
-\todo{ensure consistent terminology}
 
+\begin{sloppypar}
 An $update$ is a triplet containing
 (1) the primary key of the data item ($DataItemID$) it refers to,
 (2) a list of triplets of the form $(AttributeName, AttributeValue_{old}, AttributeValue_{new})$ that represent the
 data item's attribute values before and after the update is applied,
-and (3) the timestamp ($timestampValue$) assigned to the update.
+and (3) the timestamp ($Timestamp$) assigned to the update.
+\end{sloppypar}
 
+\medskip
+\noindent
+\textbf{The query request's time interval.}
 Given a $QueryRequest$ that specifies an attribute predicate $Pred$ and a time interval $T$ $=$ $[t_1, t_2)$
 \begin{itemize}
 
-  \item If $t_1$ $=$ $t_2$ = $t$,
-  then for each data item $QueryResponseRecord$ contains \textit{only the latest update before $t$},
-  provided that after applying that update the data item's attributes satisfy $Pred$.
-  We term this case a \textit{snapshot query}.
-
   \item if $t_1$ $<$ $t_2$,
-  then for each data item $QueryResponseRecord$ contains any update with $t_1$ $\leq$ $timestampValue$ $<$ $t_2$,
-  provided that the data item's attributes satisfy $Pred$ \textit{either before or after applied that update}.
-  We term this case a \textit{an interval query}.
+  $QueryResponse$ contains any update $u$ with $t_1$ $\leq$ $timestamp$ $<$ $t_2$,
+  and for which one of the following is true:
+  \begin{itemize}
+    \item $u$ creates a data item $d$, and $d$'s attributes satisfy $Pred$.
+    \item $u$ deletes a data item $d$, and $d$'s attributes satisfied $Pred$ before deletion.
+    \item $u$ modifies a data item $d$, and $d$'s new attribute values after $u$ is applied satisfy $Pred$.
+    \item $u$ modifies a data item $d$, and $d$'s old attribute values before $u$ is applied satisfy $Pred$.
+  \end{itemize}
+  We term this type of query \textit{an interval query}.
+
+  \item If $t_1$ $=$ $t_2$ = $t$,
+  then among the set of all updates that the condition stated above,
+  $QueryResponse$ contains for each data item \textit{the update with the latest timestamp before $t$}, i.e:
+
+  $\nexists$ $u':$ $timestamp'$ $>$ $timestamp$ $\land$ $timestamp'$ $\leq$ $t$
+
+  We term this type of query a \textit{snapshot query}.
 
 \end{itemize}
 
-A snapshot query, therefore queries a \textit{snapshot} of the corpus that contains the effect of every update with a
-timestamp $<$ $t$.
-By returning the latest update before $t$, a snapshot query effectively returns that \textit{state} of the data items
-that satisfy $Pred$ in the snapshot defined by $t$.
+By returning the latest update before a given timestamp $t$,
+a snapshot query effectively returns the \textit{state} of each data item that satisfies $Pred$ at $t$.
+Therefore, a snapshot query refers to a \textit{snapshot} of the corpus that contains the effects of all update with
+$timestamp$ $<$ $t$.
 
-In contrast, an interval query receives for each data item any update within the specified time interval that modifies
-the data item so that either is starts of it stops satisfying $Pred$.
-By using a $t_2$ in the future, an interval query can continue receiving updates that satisfy $Pred$.
-This provides a mechanism for \textit{subscribing to notification for updates based on a given predicate}.
+In contrast, an interval query returns may return multiple updates for a specific data item,
+which have timestamps within the specified time interval and modify the data item so that either is starts of it stops satisfying $Pred$.
+
+By using a upper bound ($t_2$) in the future (a timestamp that the system has not yet reached),
+an interval query can continue receiving future updates that satisfy $Pred$.
+This provides a mechanism for \textit{subscribing to notification for updates}.
 
 \bigskip
 
 \textbf{Query Language.}
 % https://documentation.basis.com/BASISHelp/WebHelp/usr2/sql_grammar.htm
 % http://www.h2database.com/html/grammar.html#expression
-% $Query$ receives $QueryRequest$ and returns a stream of $QueryResponseRecord$:
 
-The query processing model implements an SQL-like query language,
-that supports point and range queries, logical operators, aggregation functions, and joins.
-
-We argue that these is no inherent limitation in the query processing unit model that prevents it from implementing
-more complex functionalities, such as nested queries.
+The query processing unit interface support a query language with an SQL-like syntax.
+The query language supports point and range queries, logical operators, aggregation functions, and joins.
+We argue that these is no inherent limitation in the QPU model that prevents it from supporting a more complex
+query language (for example supporting nested queries).
 However, we consider additional functionalities to be out of the scope of this work.
-We believe this query language can effectively demonstrate that the query processing unit model can be used as building
+We believe this query language can effectively demonstrate that the QPU model can be used as building
 block for constructing fully-functional query processing systems.
 
+\medskip
+\noindent
 The QPU model's query language has following syntax:
 
 {\obeylines\obeyspaces
@@ -340,7 +358,7 @@ SelectExpressionItem  ::=  SUM(attributeName) | AVG(attributeName) |
 
 {\obeylines\obeyspaces
 \texttt{
-TableExpression       ::=  tableName JoinType tableName USING attributeName |
+TableExpression       ::=  tableName JoinType tableName On tableName.attributeName = tableName.attributeName |
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~tableName
 }}
 
@@ -391,209 +409,174 @@ TimestampTerm         ::= SYSTEM START | LATEST | timestampValue
 
 ~ \bigskip
 
-In practice, each QPU class can only process a subset of the queries that can be expressed by this query language,
-according to its functionality.
-For example, a QPU class that implements a join operator can perform a only join over two input streams.
-Performing an aggregation or applying a predicate over the result of the join requires this use of other QPU classes.
+In practice, each QPU instance can only process a subset of the queries that can be expressed by this query language,
+according to the functionality supported by its class.
+For example, a QPU class that implements a join operator can perform join over two input streams,
+but not evaluate a $PredicateExpression$, or perform an $SUM$ on an attribute of the join result.
+This can be achieved by connecting ``join'', ``filter'', and ``aggregator'' QPUs.
+We present in detail these QPU classes in section~\ref{sec:qpu_classes},
+and how they are composed to provide complex query processing functionalities in section~\ref{sec:query_processing_system}.
 
-\todo{references: QPU classes, composition / query execution}
-
-Moreover, individual QPUs of a certain class may support different subsets of the query language according to their
+Moreover, instances of a certain class may support different parts of the query language according to their
 configuration.
-For example, two instances of a filter operator QPU class may provide predicate queries for different tables.
-
-% % ---- QPUs are able to send query requests to other units (their child nodes in the QPU graph) by invoking their API.
+For example, two instances of a filter operator QPU class may support predicate queries for different tables.
 
 \subsubsection{QPU State}
 
-A query processing unit maintains the following types of state:
-
-\medskip
-\noindent
-\textbf{Query processing state}
-The QPU's query processing state can be used to implement derived state structures, such as indexes, materialized views and
-caches.
-In addition it can be use for storing intermediate state used in query processing computations.
-
-We model the query processing state as ordered key/value map, in which keys are string values, and values are lists of
-data items, represented as:
-\[
-  (DataItemID, [(AttributeName, AttributeValue)], timestampValue)
-\]
-
-Using pseudocode, we can represent the query processing state as follows:
-
-\begin{lstlisting}[caption={Pseudocode for the QPU's query processing state},captionpos=b,label={lst:qpustate}]
-type DataItem {
-  dataItemID  string
-  attributes  [(AttributeName, AttributeValue)]
-  ts          timestamp
-}
-
-class QueryProcessingState
-  function Get(Key_low, Key_high) [(Key, [DataItem])]
-  function Put(Key, [DataItem])
-\end{lstlisting}
-
-$Get$ retrieves the query processing state entries with $Key_low$ $<$ $key$ $\leq$ $Key_high$.
-$Put$ modifies the value of the query processing state for a given key.
-It can be used with a non-existing key to create a new entry, or with an empty value to delete an entry.
+The query processing unit's state is divided into the following parts:
 
 \medskip
 \noindent
 \textbf{Configuration state.}
-The configuration state represents the configuration parameters passed to a query processing unit when it is created.
+Upon initialization, each QPU receives is given a set of configuration parameters.
+These parameters are represented as key-value pairs.
+The configuration state represents these parameters.
 
-The configuration state consists of two types parameters:
+Configuration parameters can be divided to the following parts:
 \begin{itemize}
-  \item Connection parameters.
-  The QPU configuration specifies the endpoints of the unit's downstream connections in the QPU graph.
+  \item Topology configuration.
+  This part of the configuration consists of the endpoints of the QPU's downstream connections in the QPU graph.
 
-  \item Class-specific parameters.
-  Instances of a QPU class can have different properties.
-  For example, different instances a QPU class that implements a query cache can have different cache sizes.
-  These characteristics are defined by the QPU's class-specific configuration.
-
-This includes graph topology configuration, such as the endpoints of the QPU's downstream connections, and
-class-specific configuration, such as the view definition in a materialized view QPU.
-
-
-which include their class, and their query processing capabilities (section~\ref{sec:qpc_tree})
-
-This information is used by the for creating and generating and sending downstream query requests in order to initiate
-input streams that it can use during query processing \todo{ref}.
-
-
+  \item Class-specific configuration.
+  The part of the configuration specifies parameters such as cache size or the definition of a materialized view.
 \end{itemize}
-% % This is the part of the state that defines the QPU's behavior (includes its type
-% % and neighborhood).
-% % Passed as argument during initialization.
-% % This type of state is composed of configuration parameters, such as the endpoint of its downstream neighbors.
 
-\begin{lstlisting}[caption={Pseudocode for the QPU's configuration state},captionpos=b,label={lst:qpuconfigstate}]
-class ConfigurationState
-  function GetConfigParameter(Key) ConfigParameterValue
-\end{lstlisting}
-
-\todo{..}
+% \begin{lstlisting}[caption={Pseudocode for the QPU's configuration state},captionpos=b,label={lst:qpuconfigstate}]
+% class ConfigurationState
+%   function GetConfigParameter(Key) ConfigParameterValue
+% \end{lstlisting}
 
 \medskip
 \noindent
 \textbf{Local graph view.}
-% This is the part of the state that describes the QPU's knowledge/view of the
-% sub-graphs it is connected to.
-% It is initialized using the ``getConfig'' API method.
-% Each QPU maintains metadata that represent information about its downstream neighbors, such as their QPU class,
-% and their capabilities \todo{ref}.
-% These metadata is used during query processing for generating downstream query requests \todo{ref}.
+For each of its downstream connections, a query processing unit maintains a data structure that represents the
+\textit{set of queries that this connection can process}, which we term \textit{query processing capabilities}.
+It the query processing capabilities of its neighbors in order to: (1) validate if it can process a given
+query, and (2) generate downstream queries for a given query.
 
-%  shemata
-%  example with join
-\todo{..}
+The data structures for the query processing capabilities of a QPU's downstream connections compose it local graph view
+state.
 
+In section~\ref{sec:qpc_tree} we present query processing capabilities data structure as well as its use in detail.
 
-% Every QPU implements a function that is called when its query interface is invoked, and is responsible for processing
-% the given query and writing to the query result stream.
+\medskip
+\noindent
+\textbf{Query processing state.}
+Query processing units that encapsulate derived state structures such as indexes, materialized views and
+caches, store these data structures in the part of their state that we call \textit{query processing state}.
+Additionally, streaming operator QPUs such as joins use this part of the state to store intermediate state.
 
-% The implementation of this computation is specific to each QPU class.
+We model the query processing state as set of key/value, ordered by key;
+Keys are string values, and values are lists of data items, represented as:
+\[
+  (DataItemID, [(AttributeName, AttributeValue, AttributeValue)], Timestamp)
+\]
 
-% Two capabilities are available for the implementation of the query processing function:
-% accessing the QPU's state, and initiating input streams by sending query requests to downstream connections.
+Using pseudocode, we can represent the query processing state's API as follows:
 
+\begin{lstlisting}[caption={Pseudocode for the QPU's query processing state},captionpos=b,label={lst:qpustate}]
 
-% \medskip
-% \noindent
-% \textbf{Input stream callback function.}
-% Each QPU implements a callback function that is called for each record received through an input stream.
-% Similarly to the query processing function, the implementation to callback function is part of the definition of each
-% QPU class.
+type AttributeName string
+
+type AttributeValue union {
+  string
+  float
+  int
+  dateTime
+  timestamp
+}
+
+type StreamRecord {
+  dataItemID  string
+  attributes  [(AttributeName, AttributeValue, AttributeValue)]
+  ts          timestamp
+}
+
+class QueryProcessingState
+  function Get(Key_low, Key_high) [(Key, [StreamRecord])]
+  function Put(Key, [StreamRecord])
+
+\end{lstlisting}
+
+$Get$ retrieves the query processing state entries with $Key_low$ $<$ $key$ $\leq$ $Key_high$.
+$Put$ modifies the value of the query processing state for a given key.
+Put can be used with a non-existing key to create a new entry, or with an empty value to delete an entry.
+
 
 \subsubsection{Initialization function}
 \label{sec:initialization_func}
 
+Each QPU invokes an initialization function when it starts its execution.
 
-\subsubsection{Query processing function}
-\label{sec:query_processing_func}
-multi-threaded
+\begin{lstlisting}[caption={Initialization function signature},captionpos=b,label={lst:init_func}]
+type DownstreamConnection {
+  endpoint sting
+  capabilities QPCapabilities
+}
 
-
-\subsubsection{Input stream callback function}
-\label{sec:callback_func}
-also multi-threaded
-
-% % \begin{algorithm}
-% % \caption{Query processing function signature}
-% % \label{func:query_processing}
-% % \begin{algorithmic}
-% % \Function{ProcessQuery}{QueryRequest, State, DownstreamNeigbors, ResponseStream}
-% % \end{algorithmic}
-% % \end{algorithm}
-% Every QPU implements a function that is responsible for processing queries request received by the QPU.
-% The query processing function is the core to the query processing unit's functionality.
-% As different QPU classes have implement different functionalities, the query processing function's implementation is
-% class-specific.
-
-
-\begin{lstlisting}[caption={Query processing function signature},captionpos=b,label={lst:query_processing_func}]
-function ProcessQuery(QueryRequest, State, DownstreamConnections, ResponseStream)
+function Init(QPState, [DownstreamConn])
 \end{lstlisting}
 
 \noindent
-Listing~\ref{lst:query_processing_func} shows the query processing function's signature.
-$ProcessQuery$ receives the following arguments:
+Listing~\ref{lst:init_func} shows the initialization function's signature.
+$ProcessQuery$ receives as arguments:
 \begin{itemize}
+  \item $QPState$, which is a handler that enables $Init$ to read from and write to QPU's query processing state.
 
-  \item $QueryRequest$, which represent the received query request.
-  \item $State$, which allows $ProcessQuery$ to access QPU's state.
-%   Listing~\ref{lst:state_object} blah
-
-%     \begin{lstlisting}[caption={The QPU's $State$ object},captionpos=b,label={lst:state_object}]
-%     type State {
-%       qpState                 QPState
-%       config                  Configuration
-%       downstreamCapabilities  map[downstreamQPU]Capabilities
-%     }
-
-%     type DataItem {
-%       dataItemID  string
-%       attributes  [(AttributeName, AttributeValue)]
-%       ts          timestamp
-%     }
-
-%     function (QPState) Get(Key_low, Key_high) [(Key, [DataItem])]
-%     function (QPState) Put(Key, [DataItem])
-
-%     function (Configuration) GetConfigParameter(Key) ConfigParameterValue
-
-%     \end{lstlisting}
-
-
-  \item aaa
+  \item A list of $DownstreamConn$, each consisting of the endpoint of a downstream connection and a data structure
+  representing the connection's query processing capabilities (section~\ref{sec:qpc_tree}).
+  $Init$ can therefore send downstream query requests.
 \end{itemize}
 
 
-% % The query processing function's implementation is specific to each QPU class
-% % the given query and writing to the query result stream.
+\subsubsection{Query processing function}
+\label{sec:query_processing_func}
 
-% The implementation of this computation is specific to each QPU class.
+The query processing function is responsible for processing a given query and emitting the results to the output stream.
 
-% Two capabilities are available for the implementation of the query processing function:
-% accessing the QPU's state, and initiating input streams by sending query requests to downstream neighbors.
+For each query $q$ being processing, the QPU initiates an output stream, $R_q$,
+and executed an instance of the query processing function, $QPF_q$.
+$QPF_q$ is responsible for emitting records to $R_q$.
+Moreover, if $QPF_q$ initiates input streams $I_{q-1}$, $I_{q-2}$, ..., then $QPF_q$ is responsible for handing the return
+values of callback functions for records received through $I_{q-i}$.
 
+\begin{lstlisting}[caption={Query processing function signature},captionpos=b,label={lst:query_processing_func}]
+function ProcessQuery(QueryRequest, QPState, [DownstreamConn],
+                      ResponseStream)
+\end{lstlisting}
 
-% \subsubsection{Input stream callback function}
+\noindent
+\begin{sloppypar}
+Listing~\ref{lst:query_processing_func} shows the query processing function's signature.
+In addition to $QPState$ and $[DownstreamConn]$, $ProcessQuery$ receives:
+\end{sloppypar}
+\begin{itemize}
+  \item $QueryRequest$, which represents the received query request.
 
-% Each QPU implements a callback function that is called for each record received through an input stream.
+  \item $ResponseStream$, a handler it can use to emit result to the output stream.
 
-% ... The implementation of this computation is may differ between QPU classes ...
+\end{itemize}
 
-% % \begin{algorithm}
-% % \caption{Input stream callback function}
-% % \label{func:callback}
-% % \begin{algorithmic}
-% % % \Function{ProcessQuery}{QueryRequest, State, DownstreamNeigbors, ResponseStream}
-% % \end{algorithmic}
-% % \end{algorithm}
+An instance of the query processing function is executed for each received query request,
+therefore query processing unit can run multiple instances of the query processing function in parallel.
+
+\subsubsection{Input stream callback function}
+\label{sec:callback_func}
+
+The input stream callback function is responsible for processing a record received through an input stream.
+The callback function can read from and write to the query processing unit state,
+and a (potentially empty) list of $StreamRecord$ to the query processing function.
+
+\begin{lstlisting}[caption={Input stream callback function signature},captionpos=b,label={lst:callback_func}]
+function ProcessInputRecord(StreamRecord, QPState, DownstreamConn)
+          returns [StreamRecord]
+\end{lstlisting}
+
+\noindent
+Listing~\ref{lst:callback_func} shows the query processing function's signature.
+
+An instance of the callback function is executed for each record received through an input stream.
+
 
 \subsection{QPU classes}
 \label{sec:qpu_classes}
@@ -714,13 +697,28 @@ We categorize QPU classes in three groups, according to their general characteri
 
 \textbf{Filter}
 
+
+% % \begin{algorithm}
+% % \caption{Query processing function signature}
+% % \label{func:query_processing}
+% % \begin{algorithmic}
+% % \Function{ProcessQuery}{QueryRequest, State, DownstreamNeigbors, ResponseStream}
+% % \end{algorithmic}
+% % \end{algorithm}
+% Every QPU implements a function that is responsible for processing queries request received by the QPU.
+% The query processing function is the core to the query processing unit's functionality.
+% As different QPU classes have implement different functionalities, the query processing function's implementation is
+% class-specific.
+
+
+
 \bigskip
 \noindent
 \textbf{Secondary index}
 
 
 \section{QPU-based query processing systems}
-
+\label{sec:query_processing_system}
 
 \subsection{Query processing system architecture}
 
