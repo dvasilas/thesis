@@ -568,7 +568,7 @@ The callback function can read from and write to the query processing unit state
 and a (potentially empty) list of $StreamRecord$ to the query processing function.
 
 \begin{lstlisting}[caption={Input stream callback function signature},captionpos=b,label={lst:callback_func}]
-function ProcessInputRecord(StreamRecord, QPState, DownstreamConn)
+function ProcessInputRecord(StreamRecord, QueryRequest, QPState)
           returns [StreamRecord]
 \end{lstlisting}
 
@@ -581,140 +581,226 @@ An instance of the callback function is executed for each record received throug
 \subsection{QPU classes}
 \label{sec:qpu_classes}
 
-As described in the previous section, the query processing unit model has the role of ``template'',
+As described in the previous section, the query processing unit component model has the role of ``template'',
 defining unified semantics that every QPU conforms with.
-This ensures that query processing units can be arbitrarily interconnected and interoperate to implement query processing
-tasks.
+This ensures that QPU instance with different functionalities (classes) and configurations can be interconnected and
+can interoperate to perform query processing tasks.
 
-A QPU class is an \textit{instantiation} of the query processing unit model, which defines implementations for
-the \textbf{query processing function} and the \textbf{input stream callback function}.
+A QPU class is an \textit{instantiation} of the query processing unit model:
+it defines the implementations of the \textbf{initialization}, \textbf{query processing} and \textbf{input stream callback}
+functions.
 
 In this section, we present a categorization of QPU classes according to their general characteristics,
-and demonstrate some specific examples of QPU classes.
-We intentionally do not present a more extended list of QPU classes as it is out of the scope of this chapter.
+and demonstrate some examples of QPU classes.
 We present additional QPU classes in chapters~\ref{ch:case_studies}, \ref{ch:proteus}, \ref{ch:evaluation}.
 
 We categorize QPU classes in three groups, according to their general characteristics:
 \begin{itemize}
-  \item \textbf{Relational operator QPUs}.
-  Classes in this group can be viewed as \textit{streaming relational operators}.
-  They receive input data streams and perform filtering or transformation of these streams.
-  Every input stream record, results in the QPU emitting zero or one records in the output stream.
+  \item \textbf{Relational operator classes}.
+  Classes in this group encapsulate \textit{streaming relational operators}.
+  A relational operator QPU receives one or more input data streams, and perform a transformation over these streams.
+  For every record received through one of the input streams, the QPU emits zero or one record at the output stream.
 
-  Conforming to the QPU specification, every input stream is the output stream of another QPU,
-  and every output stream is the response to a query request.
+  Every input stream of relational operator QPU is the output stream of another QPU, and has been establish as a response
+  to a query request.
 
-  Some examples QPU classes in this group are:
+  Examples of QPU classes in this group are:
   \begin{itemize}
     \item \textbf{Filter:}
-    A filter QPU implements a streaming filter operator.
-    \todo{more details in example}
+    A filter QPU receives records from an input stream, and  emits at its output those records satisfy a given condition.
+
     \item \textbf{Join}:
-    A join QPU implements a streaming join operator.
-    Given a query with a join operator,
-    the join QPU is responsible for initiating input streams by sending the appropriate query requests to downstream QPUs,
-    performing a streaming join operation on the input streams, and emitting the result at its output stream.
-    \item \textbf{Aggregator}:
-    An aggregator QPU implements a aggregation function over an input stream, such as count, sum, average, min or max.
-    The aggregator QPU emits an record at the output stream for each input record that changes the aggregation value.
+    A join QPU encapsulates a streaming join operator.
+    It receives records from two or more input streams, and performs a join operation one those stream, according
+    to parameters specified by a given query request.
+    The join QPU initiates input streams by sending the appropriate query requests to its downstream connections,
+    and emits ths join operation result as its output stream.
+
+    \item \textbf{Aggregator classes}:
+    Aggregator QPU classes encapsulate aggregation function such as count, sum, average, and min or max.
+    An aggregator QPU performs a streaming aggregation over an input stream;
+    It emits a record at its output stream for each input record that changes the computed aggregation value.
   \end{itemize}
 
-  \item \textbf{Derived state QPUs}.
-  Classes in this group implement derived state structures, such as indexes, caches, and materialized views.
+  \item \textbf{Derived state classes}.
+  Classes in this group encapsulate derived state structures, such as indexes, caches, and materialized views.
 
-  QPU classes of this group make use of the same use of the ``query request - output stream'' semantics to implement
-  their functionality:
+  This group includes the following classes:
+  % QPUs of derived state classes make use of the same use of the ``query request - output stream'' semantics to implement their functionality:
   \begin{itemize}
-    \item \textbf{Secondary index and Materialized View:}
-    An secondary index (or materialized view) QPU initiates an input steam by sending a query request with an \textit{interval query without
-    an upper bound timestamp}.
-    In that way, the QPU effectively \textit{subscribes to notifications} for updates to the corpus.
+    \item \textbf{Secondary index and Materialized view:}
+    A secondary index (or materialized view) QPU receives its index or view definition as a configuration parameter.
 
-    For each input record, the QPU's callback function updates the QPU's query processing state accordingly.
-    When receiving a query request, the unit computes the results by reading from its query processing state,
+    The QPU's initialization function establishes an input steam by sending an \textit{interval} query
+    (a query without an upper bound timestamp) to its downstream connection:
+    In that way, the QPU effectively \textit{subscribes to notifications} for updates to the corpus.
+    For each record received through the input stream, the callback function updates the query processing state accordingly.
+    When a query request is received,
+    the query processing function computes the results by reading from the query processing state,
     and emits them to the output stream.
 
-    For simplicity we assume that a secondary index QPU maintains an index for a single attribute
-    (and the same for materialized view QPUs respectively).
-
-    
+    % For simplicity we assume that a secondary index QPU maintains an index for a single attribute (and the same for materialized view QPUs respectively).
     \item \textbf{Cache:}
-    A cache QPU stores query results at its query processing state.
-    When receiving a query request, the QPU's query processing function first determines it has stored the query result,
-    and if yes it retrieves and emits it at the output stream.
-    Alternatively, the query processing function sends query request at a downstream connection, forwarding the same query.
-    The callback function the stores each received record at the query processing state, and then emits it at the output
-    stream.
+    When receiving a query request, a cache QPU's query processing function first determines if the query result is stored
+    in the query processing state.
+    If yes, the function retrieves the corresponding query results and emits them at the output stream.
+    Alternatively, the query processing function sends a query request at the QPU's downstream connection,
+    with the given query.
+    The callback function stores each received record, and then returns it to the query processing function with emits it
+    at the output stream.
     \end{itemize}
 
-  \item \textbf{Routing QPUs}.
-  Classes of this group are responsible for implementing higher level functionalities, such as coordinating partitioned or
-  replicated derived data structures, or performing load balancing.
+  \item \textbf{Routing classes}.
+  Classes in this group encapsulate query processing functionalities that can be characterized as ``query routing''.
+  This includes coordinating access to partitioned or replicated derived indexes and materialized views,
+  or load balancing.
 
   Examples of classes in this group include:
   \begin{itemize}
     \item \textbf{Partition manager:}
-    A partition manager QPU is responsible for managing access to set of QPUs that implement index or materialized view
-    partitions.
-    The unit has outgoing edges in the QPU graph to a number of partitions.
-    It also maintains at its connection's capabilities state information about the partitioning scheme and the portion of
-    the partitioned space that each of its connections corresponds to.
+    A partition manager QPU is responsible for coordinating access secondary index or materialized view partitions,
+    encapsulated by the corresponding QPU classes.
 
-    When receiving a query request, the QPU's query processing function uses these information to determine which
-    partitions need to be contacted for the given query,
-    and sends query requests to the corresponding downstream connections.
-    The QPU then combines the resulting input streams and emits the combined stream as its output stream.
+    A partition manager QPU has downstream connections to a set of QPUs representing partitions.
+    When a query request is received, the QPU's query processing function determines which partitions need to be contacted,
+    generated the corresponding queries and sends them as downstream query requests.
+    To enable this, the partition manager QPU maintains information about the partitioning scheme and the portion of
+    the partitioned space that corresponds to each of its downstream connections connections at its query processing
+    capabilities spaces
+    The unit then merges the input streams and emits the result as its output stream.
 
-    \item \textbf{Load balancing and replica manager:}
-    QPUs of these classes have similar functionalities with the partition managers:
-    given a query they select the most suitable among their downstream connections, according to a certain criterion specific
-    to each class, forward the given query, and finally forward the resulting input stream to their output stream.
-
+    \item \textbf{Load balancer and replica manager:}
+    QPUs of these classes have similar functionalities with the partition manager class.
+    Given a query, the query processing function of a load balancer or replica manager QPU selects the most suitable
+    among the QPU's downstream connections according to a certain criterion (defined by QPU's class and configuration),
+    forwards the given query to that connection, and then forwards the resulting input stream to the output stream.
     \end{itemize}
 
-  \item \textbf{Database driver QPUs}
-  The database driver class is responsible for connecting the QPU graph with the corpus.
-  It is particular class, as database driver QPU do not support downstream connections to other QPUs.
-  As a result they are located at the leaves of the QPU graph.
+  \item \textbf{Corpus driver classes}.
+  Classes in this group are responsible for connecting the QPU graph with the corpus.
+  QPUs of these classes do not support downstream connections to other QPUs.
+  Because of their functionality, corpus driver QPUs are only used as leaves of the QPU graph.
+  In fact, as we explain in section~\ref{sec:graph_topology}, every leaf node of the QPU can only be a corpus driver QPU.
 
-  Database driver QPUs apply a restriction on the query language.
-  Their query interface supports queries of the form:
-  {\obeylines\obeyspaces
-  \texttt{SELECT SelectExpression from TableName TIMESTAMP TimestampExpression}}
+  When a query request is received, the query processing function of a corpus driver QPU uses the interface and mechanisms
+  of they corpus database in order to generate and emit the output stream that corresponds to the given query.
+  This can include reading from the database that stores the corpus, subscribing to update notifications,
+  or performing queries.
 
-  Given a query, the query processing function uses the interface and mechanisms of they corpus database in order to generate and emit
-  the output stream.
-
-  Database driver QPUs acts as wrappers that expose a common interface and semantics --- those defined by the QPU model --- to the
+  The corpus driver classes act as a wrappers for the corpus, exposing a common interface and semantics to the
   QPU graph, independent of how the corpus is stored and accessed.
+  As a result, corpus driver classes are database-specific.
 
-  As a result database driver classes are database-specific.
-  QPU-based query processing systems are compatible with any corpus database as long as there is a corresponding database driver class
-  to provide the interface with that database.
+  QPU-based query processing systems can be compatible with any corpus database --- or, more generally, source of updates ---
+  for which there is a corresponding corpus driver class.
 \end{itemize}
 
 \subsubsection{QPU class case studies}
 
 \textbf{Filter}
 
+Algorithms~\ref{algo:filter_query_processing_func} and~\ref{algo:filter_algorithm_func} show the query processing and
+input stream callback functions respectively for the filter QPU class using pseudocode.
 
-% % \begin{algorithm}
-% % \caption{Query processing function signature}
-% % \label{func:query_processing}
-% % \begin{algorithmic}
-% % \Function{ProcessQuery}{QueryRequest, State, DownstreamNeigbors, ResponseStream}
-% % \end{algorithmic}
-% % \end{algorithm}
-% Every QPU implements a function that is responsible for processing queries request received by the QPU.
-% The query processing function is the core to the query processing unit's functionality.
-% As different QPU classes have implement different functionalities, the query processing function's implementation is
-% class-specific.
 
+\begin{algorithm}
+\caption{Filter QPU class query processing function}
+\label{algo:filter_query_processing_func}
+\begin{algorithmic}
+\Function{ProcessQuery}{queryReq, qpState, [downstreamConn], outputStream}
+\State conn = get endpoint from [downstreamConn] \Comment{we assume one downstream connection}
+\State inStream = forward queryReq to conn
+\While{not at end of this the stream}
+\State inRecord = inStream.Recv()
+\State result = ProcessInputRecord(inRecord, queryReq, qpState)
+\If{result is not empty}
+\State outStream.Send(result)
+\EndIf
+\EndWhile
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Filter QPU class input stream callback signature}
+\label{algo:filter_algorithm_func}
+\begin{algorithmic}
+\Function{ProcessInputRecord}{inRecord, queryReq, qpState}
+\If{inRecord satisfies queryReq}
+\State \Return inRecord
+\Else
+\State \Return []
+\EndIf
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
 
 
 \bigskip
 \noindent
 \textbf{Secondary index}
+
+Algorithms~\ref{algo:index_init_func}, ~\ref{algo:index_query_processing_func}, and~\ref{algo:index_callback_func}
+show the initialization, query processing, and input stream callback functions respectively for the secondary index QPU
+class using pseudocode.
+
+\begin{algorithm}
+\caption{Secondary index QPU class initialization function}
+\label{algo:index_init_func}
+\begin{algorithmic}
+\Function{Init}{qpState, [downstreamConn]}
+\State conn = get endpoint from [downstreamConn] \Comment{we assume one downstream connection}
+\State queryReq = generate interval query
+\State inStream = send queryReq to conn
+\While{not at end of this the stream}
+\State inRecord = inStream.Recv()
+\State ProcessInputRecord(inRecord, null, qpState)
+\EndWhile
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Secondary index QPU class query processing function}
+\label{algo:index_query_processing_func}
+\begin{algorithmic}
+\Function{ProcessQuery}{null, qpState, [downstreamConn], outputStream}
+\State conn = GetEndpoint([downstreamConn]) \Comment{we assume one downstream connection}
+\State inStream = forward queryReq to conn
+\While{not at end of this the stream}
+\State inRecord = inStream.Recv()
+\State result = ProcessInputRecord(update)
+\If{result is not empty}
+\State outStream.Send(result)
+\EndIf
+\EndWhile
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Secondary index QPU class input stream callback function}
+\label{algo:index_callback_func}
+\begin{algorithmic}
+\Function{ProcessInputRecord}{inRecord, queryReq, qpState}
+\State (dataItemID, [attributeDelta], timestamp) = parse inRecord
+\For {(attrName, attrValOld, attrValNew) in [AttributeDelta]}
+\If{attrValOld is not null}
+\State indexTerm = build index term from attrName and attrValOld
+\State postingList = qpState.Get(indexTerm, indexTerm)
+\State postingList' = remove dataItemID from postingList
+\State pState.Put(indexTerm, postingList')
+\EndIf
+\If{attrValNew is not null}
+\State indexTerm = build index term from attrName and attrValNew
+\State postingList = qpState.Get(indexTerm, indexTerm)
+\State postingList' = add dataItemID from postingList
+\State pState.Put(indexTerm, postingList')
+\EndIf
+\EndFor
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
 
 
 \section{QPU-based query processing systems}
@@ -735,7 +821,7 @@ Edges represent potential query request - response steam relations between QPUs.
 A directed edge from $QPU_a$ to $QPU_b$ indicates that $QPU_a$ can send query requests to $QPU_b$.
 When $QPU_a$ sends a $QPU_b$ a query request to $QPU_b$, a stream of query results with the opposite direction is established between them.
 
-Leaf nodes (nodes with no outgoing connections) are always database driver QPUs.
+Leaf nodes (nodes with no outgoing connections) are always corpus driver QPUs.
 Queries enter the QPU graph through root node (nodes with no incoming connections).
 \todo{ref}
 
@@ -791,6 +877,7 @@ where $SelectExpression$ and $PredicateExpression$ uses attributes from both tab
 \todo{ref}
 
 \subsubsection{QPU-graph topology rules}
+\label{sec:graph_topology}
 topology cannot be arbitrary
 
 rules that stem from the query processing units' functionalities
@@ -800,8 +887,8 @@ For each QPU class can be generalized to two types of rules:
 (1) number of downstream connections, and (2) the \textit{query processing capabilities} of the downstream connection
 
 \begin{itemize}
-  \item All QPU graphs mush have database driver QPUs as their leaves.
-  Database drivers generate the initial streams that any other QPU builds on.
+  \item All QPU graphs mush have corpus driver QPUs as their leaves.
+  Corpus drivers generate the initial streams that any other QPU builds on.
 
   \item Most QPUs in the relational operator and derived state groups must have a single downstream connection.
   Exception consists relational operator QPUs that by definition operate on more that one input streams, such as join QPUs.
@@ -863,7 +950,7 @@ downwards through the QPU graph.
 This creates a \textit{query execution sub-graph} composed of the QPUs that participate in the processing of $q$.
 
 The leaves of this sub-graph are QPU that can process their given queries without sending downward query requests.
-This includes database driver QPUs, and derived state QPUs.
+This includes corpus driver QPUs, and derived state QPUs.
 These QPUs become the leaves of $q$'s execution sub-graph.
 Leaf QPUs produce output streams that are then received as input stream at \textit{upstream QPUs}.
 Progressively, each non-leaf QPU in the query execution sub-graph receives an input stream for each query request sent,
@@ -964,9 +1051,9 @@ It is used for two purposes
 
 % As query requests requests are propagated downwards, expanding the $q$'s execution sub-graph, eventually some QPUs can
 % process their queries without sending further query requests downwards.
-% This occurs in database driver and derived state QPUs.
+% This occurs in corpus driver and derived state QPUs.
 % The leaves of this sub-graph are QPU that can process 
-% This includes database driver QPUs, and derived state QPUs.
+% This includes corpus driver QPUs, and derived state QPUs.
 % These QPUs produce output streams that are then processed as input stream at \textit{upstream QPUs}.
 
 % Progressively, each non-leaf QPU in the query sub-graph receives an input stream for each query request sent,
