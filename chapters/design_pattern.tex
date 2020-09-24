@@ -1,7 +1,7 @@
 
 In this chapter we present our main contribution,
 a \textit{design pattern} for building query processing systems with the goal of evolving query processing
-system's architecture from monolithic and static to modular and flexible.
+system architectures from monolithic and static to modular and flexible.
 
 Traditional static query processing systems are not able to cater to the needs of modern applications in which users and
 data are geo-distributed across the globe.
@@ -248,14 +248,10 @@ Query processing units expose an interface for receiving query requests:
 \end{itemize}
 
 \noindent
-\textbf{Query results as updates}.
-$QueryResponse$ records represent \textbf{updates} to the corpus (an update can be a creation, modification, or deletion
-of a data item).
-Updates are represented as \textit{deltas}:
-a delta representing an update $u$ to a data item $d$ contains the values of $d$'s attributes before $u$ is applied,
-and those after $u$ is applied.
+\textbf{Query response}.
 
-More specifically:
+\noindent
+$QueryResponse$ is a stream with the following structure:
 \[
   QueryResponse = [StreamRecord]
 \]
@@ -267,59 +263,113 @@ where
   (DataItemID,~[(AttributeName,~AttributeValue_{old},~AttributeValue_{new})],~Timestamp)
 \]
 
-\begin{sloppypar}
-An $update$ is a triplet containing
-(1) the primary key of the data item ($DataItemID$) it refers to,
-(2) a list of triplets of the form $(AttributeName, AttributeValue_{old}, AttributeValue_{new})$ that represent the
-data item's attribute values before and after the update is applied,
-and (3) the timestamp ($Timestamp$) assigned to the update.
-\end{sloppypar}
+\noindent
+A $StreamRecord$ can represent two types of information:
+\begin{itemize}
+  \begin{sloppypar}
+  \item An \textbf{update event} for a modification of a data item (a creation, modification, or deletion
+  of a data item).
+  In this case, the $StreamRecord$:
+  \[
+  (DataItemID,~[(AttributeName,~AttributeValue_{old},~AttributeValue_{new})],~Timestamp)
+  \]
+  represents an update to the the data item $DataItemID$, with timestamp $Timestamp$;
+  Each elements of $[(AttributeName$, $AttributeValue_{old}$, $AttributeValue_{new})]$ indicates that
+  the update modified the value of attribute $AttributeName$ from $AttributeValue_{old}$ to $AttributeValue_{new}$.
+  \end{sloppypar}
+
+  \begin{sloppypar}
+  \item The \textbf{state of a data item}.
+  In this case, $StreamRecord$:
+  \[
+  (DataItemID,~[(AttributeName,~AttributeValue_{old},~AttributeValue_{new})],~Timestamp)
+  \]
+  encodes that the data item $DataItemID$ at timestamp $Timestamp$;
+  Each elements of $[(AttributeName$, $AttributeValue_{old}$, $AttributeValue_{new})]$ indicates that
+  the data item is associated with an attribute $AttributeName$ with the value $AttributeValue_{new}$
+  ($AttributeValue_{new}$ is ignored).
+  \end{sloppypar}
+\end{itemize}
 
 \medskip
 \noindent
 \textbf{The query request's time interval.}
-Given a $QueryRequest$ that specifies an attribute predicate $Pred$ and a time interval $T$ $=$ $[t_1, t_2)$
+
+\noindent
+Given a $QueryRequest$ that specifies a projection $Proj$,
+an attribute predicate $Pred$
+and a time interval $T$ $=$ $[t_1, t_2)$:
 \begin{itemize}
 
-  \item if $t_1$ $<$ $t_2$,
-  $QueryResponse$ contains any update $u$ with $t_1$ $\leq$ $timestamp$ $<$ $t_2$,
-  and for which one of the following is true:
+  \item if \textbf{$t_1$ $<$ $t_2$},
+  then $QueryResponse$ contains an update event for each update $u$ with $t_1$ $\leq$ $timestamp$ $<$ $t_2$,
+  for which one of the following is true:
   \begin{itemize}
     \item $u$ creates a data item $d$, and $d$'s attributes satisfy $Pred$.
-    \item $u$ deletes a data item $d$, and $d$'s attributes satisfied $Pred$ before deletion.
-    \item $u$ modifies a data item $d$, and $d$'s new attribute values after $u$ is applied satisfy $Pred$.
-    \item $u$ modifies a data item $d$, and $d$'s old attribute values before $u$ is applied satisfy $Pred$.
+
+    \item $u$ deletes a data item $d$, and $d$'s attributes satisfy $Pred$ before deletion.
+
+    \item $u$ modifies a data item $d$, and:
+    \begin{itemize}
+      \item The state of $d$ before $u$ is applied, after, or both satisfies $Pred$, and
+      \item $Proj$ contains one of the modified attributes.
+    \end{itemize}
+
+    This covers the following cases:
+    \begin{itemize}
+      \item An update modifies a data item so that its state before the update is applied does not satisfy $Pred$,
+      but its state after the update is applied satisfies $Pred$.
+      In that case, the data item needs to be added to the posting list of an index entry, or to the results of a
+      materialized view.
+
+      \item An update modifies a data item so that its state before the update is applied satisfies $Pred$,
+      but its state after the update is applied does not satisfy $Pred$.
+      In that case, the data item needs to be removed from the posting list of an index entry, or to the results of a
+      materialized view.
+
+      \item An update modifies a data item, both its state before the update is applied and after satisfies $Pred$,
+      and the data item's state stored as part of the index entry of the materialized view (because of $Proj$) is modified.
+    \end{itemize}
   \end{itemize}
   We term this type of query \textit{an interval query}.
 
-  \item If $t_1$ $=$ $t_2$ = $t$,
-  then among the set of all updates that the condition stated above,
-  $QueryResponse$ contains for each data item \textit{the update with the latest timestamp before $t$}, i.e:
+  By using a upper bound ($t_2$) in the future (a timestamp that the system has not yet reached),
+  an interval query can continue receiving future updates that satisfy $Pred$.
+  This provides a mechanism for \textit{subscribing to notification for updates}.
 
-  $\nexists$ $u':$ $timestamp'$ $>$ $timestamp$ $\land$ $timestamp'$ $\leq$ $t$
-
+  \item If \textbf{$t_1$ $=$ $t_2$ = $t$},
+  then the query is performed on a \textit{snapshot} of the corpus that contains the effects of all updates with
+  $timestamp$ $<$ $t$.
+  For each data item $d$ that satisfies $Pred$, $QueryResponse$ contains a $StreamRecord$ that encodes the state of $d$
+  at timestamp $t$.
   We term this type of query a \textit{snapshot query}.
 
 \end{itemize}
 
-By returning the latest update before a given timestamp $t$,
-a snapshot query effectively returns the \textit{state} of each data item that satisfies $Pred$ at $t$.
-Therefore, a snapshot query refers to a \textit{snapshot} of the corpus that contains the effects of all update with
-$timestamp$ $<$ $t$.
+% By returning the latest update before a given timestamp $t$,
+% a snapshot query effectively returns the \textit{state} of each data item that satisfies $Pred$ at $t$.
+% Therefore,
+% A snapshot query refers to a \textit{snapshot} of the corpus that contains the effects of all update with $timestamp$ $<$ $t$.
 
-In contrast, an interval query returns may return multiple updates for a specific data item,
-which have timestamps within the specified time interval and modify the data item so that either is starts of it stops satisfying $Pred$.
+% An interval query returns may returns any update with timestamp within the specified time interval which modifies a
+% data item so that either its old state value before applying the update or the new value after  is starts or it stops
+% satisfying $Pred$.
 
-By using a upper bound ($t_2$) in the future (a timestamp that the system has not yet reached),
-an interval query can continue receiving future updates that satisfy $Pred$.
-This provides a mechanism for \textit{subscribing to notification for updates}.
+\medskip
+\noindent
+\textbf{Response stream mode.}
 
-\bigskip
+\noindent
+The query response stream can be either synchronous or asynchronous.
+In a synchronous stream, the sender blocks until the stream records has been received and processed by the receiver.
 
+\medskip
+\noindent
 \textbf{Query Language.}
-% https://documentation.basis.com/BASISHelp/WebHelp/usr2/sql_grammar.htm
-% http://www.h2database.com/html/grammar.html#expression
 
+\noindent
+% https://documentation.basis.com/BASISHelp/WebHelp/usr2/sql_grammar.htm
+% http://www.h2database.com/html/grammar.html#expressionz
 The query processing unit interface support a query language with an SQL-like syntax.
 The query language supports point and range queries, logical operators, aggregation functions, and joins.
 We argue that these is no inherent limitation in the QPU model that prevents it from supporting a more complex
@@ -340,6 +390,7 @@ QueryRequest          ::=  SELECT SelectExpression
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~TIMESTAMP TimestampExpression \todo{the timestamp can be just another attribute, but I think we need to have it separate for emphasis}
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~[ GROUP BY attributeName ]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~[ ORDER BY OrderByExpression \{ ASC | DESC \} ]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~\{ SYNC | ASYNC \}
 }}
 
 {\obeylines\obeyspaces
@@ -409,6 +460,7 @@ TimestampTerm         ::= SYSTEM START | LATEST | timestampValue
 
 ~ \bigskip
 
+\noindent
 In practice, each QPU instance can only process a subset of the queries that can be expressed by this query language,
 according to the functionality supported by its class.
 For example, a QPU class that implements a join operator can perform join over two input streams,
@@ -466,11 +518,21 @@ Query processing units that encapsulate derived state structures such as indexes
 caches, store these data structures in the part of their state that we call \textit{query processing state}.
 Additionally, streaming operator QPUs such as joins use this part of the state to store intermediate state.
 
-We model the query processing state as set of key/value, ordered by key;
-Keys are string values, and values are lists of data items, represented as:
+We model the query processing state as set of key-value pairs, ordered by key:
 \[
-  (DataItemID, [(AttributeName, AttributeValue, AttributeValue)], Timestamp)
+  (Key,~[State],)
 \]
+where
+\[
+  State = (DataItemID,~[(AttributeName,~AttributeValue)],~Timestamp)
+\]
+% and
+% \[
+%   Timestamp_S := \{t \in [DataItemState] : t > Timestamp_U~\forall~Timestamp_U \in [DataItemState] \}
+% \]
+
+% The timestamp $Timestamp_S$ of an entry of the query processing state is the latest of the timestamps $Timestamp_U$
+% contained in the entry's value.
 
 Using pseudocode, we can represent the query processing state's API as follows:
 
@@ -486,21 +548,27 @@ type AttributeValue union {
   timestamp
 }
 
-type StreamRecord {
+type State {
   dataItemID  string
-  attributes  [(AttributeName, AttributeValue, AttributeValue)]
+  attributes  [(AttributeName, AttributeValue)]
   ts          timestamp
 }
 
 class QueryProcessingState
-  function Get(Key_low, Key_high) [(Key, [StreamRecord])]
-  function Put(Key, [StreamRecord])
-
+  function Put(Key, State)
+  function Get(Key_low, Key_high, Timestamp_low, Timestamp_high) [(Key, [State])]
 \end{lstlisting}
 
-$Get$ retrieves the query processing state entries with $Key_low$ $<$ $key$ $\leq$ $Key_high$.
-$Put$ modifies the value of the query processing state for a given key.
-Put can be used with a non-existing key to create a new entry, or with an empty value to delete an entry.
+\begin{itemize}
+  \item $Put$ modifies the value of the query processing state's entry for the given key.
+  It can be used with a non-existing key to create a new entry.
+
+  \item $Get$ retrieves the query processing state entries with $Key_low$ $<$ $key$ $\leq$ $Key_high$.
+  For each entry, the updates with $Timestamp_low$ $<$ $Timestamp$ $\leq$ $Timestamp_high$ retrieved.
+\end{itemize}
+
+Essentially, the QPU's query processing state is versioned.
+In that way, QPU's can process queries about any timestamp that they have received updates for.
 
 
 \subsubsection{Initialization function}
@@ -577,11 +645,29 @@ Listing~\ref{lst:callback_func} shows the query processing function's signature.
 
 An instance of the callback function is executed for each record received through an input stream.
 
-\subsection{Streams}
-\todo{}
+\subsection{Stream semantics}
 
-\subsection{Ordering guarantees}
-\todo{}
+In this section we describe more detail the semantics of the stream connections between query processing units.
+
+\medskip
+\noindent
+Apart from \textit{data records} (updates), \textit{control records} can also be sent through a stream.
+Although ata records can be sent only in one direction (``upstream''), control records can be sent in both directions.
+Types of control records include acknowledgements, heartbeats, and re-send requests.
+A re-send records requests for a data record to be re-send.
+
+\medskip
+\noindent
+\label{ref:query_interface}
+Sending a data record can be either \textit{synchronous} or \textit{asynchronous}.
+A synchronous send operation blocks until an acknowledgement for the data record is received.
+
+\medskip
+\noindent
+Finally, we assume that stream connections do not drop, re-order, of duplicate messages;
+however messages may be arbitrarily delayed.
+These guarantees are not based on assumptions about the transport layer, but as we discuss in In chapter~\ref{ch:evaluation}
+are implemented by query processing units on top of potentially unreliable connections.
 
 
 \subsection{QPU classes}
@@ -1040,6 +1126,12 @@ There are the following differences between query execution and state maintenanc
 
 \medskip
 \noindent
+State maintenance can be configured to be performed either synchronously or asynchronously, depending on the type of send
+operation used for sending update records.
+Synchronous state maintenance is achieved by configuring all QPUs 
+
+\medskip
+\noindent
 Based on the above description, the computations run by a QPU-based processing system can be characterized as
 \textit{bi-directional dataflow}.
 For a given query or state maintenance execution,
@@ -1156,12 +1248,14 @@ QPU trees have two functionalities:
 \begin{itemize}
   \item A query processing unit uses its own QPC tree in order to determine it can process a given query.
   More specifically, it checks it the query's parse is a \textbf{subtree} of the QPU's QPC tree,
-  and, therefore, if the query's parse tree belongs in the set of queries represented by the QPU tree.
+  and, therefore, if the query's parse tree belongs in the set of queries represented by the QPU tree
+  (algorithm~\ref{algo:can_process_query}).
 
   \item A query processing unit uses the QPC trees of its downstream connections in order to generate downstream queries.
   Given a query $q$ with parse tree $PT_q$, received a query processing unit $Q$ that has a downstream connections $Q_d$
   with QPC tree $QPCT_{Qd}$, the parse tree of the downstream query to be sent from $Q$ to $Q_d$ for $q$ is the
-  \textbf{intersection} of $QPCT_{Qd}$ and $PT_q$.
+  \textbf{intersection} of $QPCT_{Qd}$ and $PT_q$
+  (algorithm~\ref{algo:generate_downsrream}).
 \end{itemize}
 
 \begin{algorithm}
@@ -1170,11 +1264,10 @@ QPU trees have two functionalities:
 \begin{algorithmic}
 \Function{CanProcessQuery}{queryReq, QPCTree}
 \State queryParseTree = parse queryReq
-\State \Return {isSubTree(QPCTree, queryReq)}
+\State \Return {isSubTree(QPCTree, queryReq)gs}
 \EndFunction
 \end{algorithmic}
 \end{algorithm}
-
 
 \begin{algorithm}
 \caption{Algorithm for generating downstream queries}
@@ -1190,7 +1283,116 @@ QPU trees have two functionalities:
 \end{algorithmic}
 \end{algorithm}
 
+\subsubsection{Ordering guarantees}
 
+Providing ordering guarantees is based on two mechanisms:
+For a given query $q$:
+\begin{itemize}
+  \item Leaf nodes (corpus driver and derived state classes) generate ordered output streams,
+  based on the ordering specified by $q$.
+
+  \item Relational operator classes ensure that they \textit{preserve} the ordering of
+  their input stream at their output stream.
+\end{itemize}
+
+//// Outline ////
+
+Illustrate using example:
+{\obeylines\obeyspaces
+\texttt{
+        SELECT OrderID, OrderStatus, Email, OrderDate
+        FROM Customers JOIN Orders ON Customers.CustomerID = Orders.CustomerID
+        WHERE OrderStatus = "Processing"
+        TIMESTAMP FROM LATEST TO LATEST
+        ORDER BY OrderDate
+        }}
+
+\begin{itemize}
+  \item Corpus driver for Orders Table generates output stream ordered by OrderDate
+  \item Filter table keeps only records for which OrderStatus = ``Processing''; this preserves order
+  \item Join uses input from Orders table as ``ordering guide''; this ensures that output is ordered by
+  by OrderDate
+\end{itemize}
+
+\medskip
+\noindent
+More details on how QPUs preserve ordering semantics:
+\begin{itemize}
+  \item Trivial for QPU's with one input stream
+  \item For QPUs that merge more than one input streams (for example a partition manager), since each input stream
+  is ordered, the ``mergesort'' approach can be used.
+  \item Joins can preserve ordering by using the ``ordered'' input stream as a guide.
+  \item Aggregators (TODO)
+\end{itemize}
+
+//// Outline ////
+
+\section{Discussion}
+
+\noindent
+\textbf{On the query processing unit semantics}.
+
+\noindent
+Representing a relational algebra query execution as a dataflow computation performed by a DAG of operators is a common
+technique in the state of the art \cite{cockroachdb:distsql}.
+However this technique is focused on expressing relational algebra expressions.
+It does not include the incremental maintenance of derived state, or ``systems'' functionalities such as load balancing
+and the management of access to partitioned state.
+
+Our first insight is that these three types of functionalities can be encapsulated by components with microservice semantics:
+exposing their functionality through an invocation of an interface.
+For components that encapsulate derived state components this is already the case, as for example indexes expose a
+Lookup()/Get() API.
+This can be extended to components that encapsulate relational operators and ``routing'' functionalities.
+
+Moreover, this interface can be common for all three types of components:
+\begin{itemize}
+  \item An index lookup can be expressed as a query statement for the indexed attribute.
+  \item Reading from a materialized view can be expressed by the query that consists the view's definition.
+  \item Initiating the functionality of a relational operator can be expressed by a query that represents the
+  operator's functionality.
+  For example a join operator can be initiated with a ``SELECT - FROM - JOIN'' query.
+\end{itemize}
+
+A result of this is that  individual components do not support the complete query language.
+Instead, each performs a basic operation, based on its functionality.
+It is through \textit{composition} that more complex query processing functionalities can be achieved.
+
+Composition is achieved using the microservice semantics:
+a component can invoke the interface of other components in order to obtain partial results needed for its operation.
+In addition, this characteristic achieves modularity.
+Because communication between components is performed through well-defined interfaces,
+component placement is orthogonal to the system's functionality, and components can be flexibly placed across the system.
+
+However, an additional requirement exists for indexes and materialized views:
+a mechanism for keep these structures up-to-date with the corpus by performing incremental updates.
+Our second insight is that this mechanism can be expressed as an input stream of update events.
+Therefore, the input stream semantics of relational operators can be generalized to also express incremental updates to derived state.
+
+However, streams that represent query results contain data items' \textit{state} as their records,
+while streams that represent corpus contain update events.
+Our third insight is that these two types of records can be unified by structuring stream records as
+\textit{deltas}.
+
+Finally, the above insight are combined by specifying tha the response to the invocation of a components interface is a stream.
+As a result, the query processing unit computation model combines elements from microservice architectures and stream processing systems.
+Similar to stream processing systems,
+query processing units operate on input streams, and either perform transformations on those stream creating an output
+stream, or uses to incrementally update its state.
+Similar to microservices architectures, a stream is initiated as a response to a \textit{service request}.
+
+\medskip
+\noindent
+\textbf{On QPU-based query processing systems and ad-hoc queries}.
+
+\noindent
+The goal of the QPU-based design pattern is to enable \textit{workload-driven design}.
+A QPU graph is designed based a predefined set of query patterns.
+As a result, a QPU graph does not support any ad-hoc query,
+but rather \textit{the set of queries it has been designed for}.
+More specifically, as described in section~\ref{sec:qpc_tree}, a QPU graph supports the set of queries represent by the QPC trees of its root nodes.
+Supporting additional query patterns, not supported by a certain QPU graph requires designing and deploying a
+new QPU graph.
 
 % Given $q$, the query processing function of a QPU $Q$ at the root of the QPU graph sends query request to some its
 % downstream connection, in order to initialize input stream required for processing the query.
@@ -1219,10 +1421,6 @@ QPU trees have two functionalities:
 %         ~~~~WHERE Orders.OrderDate >= 2020-08-20 AND Orders.OrderDate < 2020-09-02
 %         ~~~~TIMESTAMP FROM LATEST TO LATEST
 %         }}
-
-
-
-
 
 % - queries / control messages flow downwards.
 % - responses flow upwards through the sub-graph defined by the queries
@@ -1266,14 +1464,6 @@ QPU trees have two functionalities:
 % These results are incrementally processed, potentially updating the state of different QPUs, and eventually
 % produce the initial query results, which are returned to the client.
 
-
-
-
-
-
-
-
-
 % \section{QPU Composition: Constructing QPU-based query engines}
 % Here, describe how query engines are constructed using instances of QPU classes.
 
@@ -1302,19 +1492,6 @@ QPU trees have two functionalities:
 % % TODO: What mechanism are needed so that QPUs can guarantee internal consistency?
 % % What about session consistency guarantees?
 
-% \section{Discussion}
-
-% discussion: input output disconnected here
-    % discussion: input output disconnected here
-
-% % -- point to make -- unified subscription and snapshot and routing
-% graph topology is decentralized
-
-% The query processing unit computation model combines elements from microservice architectures and stream processing systems.
-% Similar to stream processing systems,
-% query processing units operate on input streams, and either perform transformations on those stream creating an output
-% stream, or uses to incrementally update its state.
-% Similar to microservices architectures, a stream is initiated as a response to a \textit{service request}.
 
 
 % % It is known that query execution can be represented as a tree.
