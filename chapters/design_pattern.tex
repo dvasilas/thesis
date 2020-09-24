@@ -389,7 +389,7 @@ QueryRequest          ::=  SELECT SelectExpression
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~WHERE PredicateExpression
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~TIMESTAMP TimestampExpression \todo{the timestamp can be just another attribute, but I think we need to have it separate for emphasis}
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~[ GROUP BY attributeName ]
-~~~~~~~~~~~~~~~~~~~~~~~~~~~[ ORDER BY OrderByExpression \{ ASC | DESC \} ]
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~[ ORDER BY OrderByExpression \{ ASC | DESC \} ]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~\{ SYNC | ASYNC \}
 }}
 
@@ -442,12 +442,11 @@ Value                 ::= stringValue | floatValue | intValue |
 ~~~~~~~~~~~~~~~~~~~~~~~~~~dateTimeValue | timestampValue
 }}
 
-{\obeylines\obeyspaces
-\texttt{
-OrderByExpression     ::= attributeName , OrderByExpression |
-~~~~~~~~~~~~~~~~~~~~~~~~~~attributeName
-}}
-
+% {\obeylines\obeyspaces
+% \texttt{
+% OrderByExpression     ::= attributeName , OrderByExpression |
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~attributeName
+% }}
 {\obeylines\obeyspaces
 \texttt{
 TimestampExpression   ::= FROM TimestampTerm [ TO TimestampTerm ]
@@ -668,6 +667,52 @@ Finally, we assume that stream connections do not drop, re-order, of duplicate m
 however messages may be arbitrarily delayed.
 These guarantees are not based on assumptions about the transport layer, but as we discuss in In chapter~\ref{ch:evaluation}
 are implemented by query processing units on top of potentially unreliable connections.
+
+
+\subsection{Query processing unit consistency semantics}
+
+//// Outline ////
+
+\noindent
+Internal consistency
+
+\noindent
+We refer to a derived state QPU as \textit{internally consistent} in time $t$ if its query processing state
+reflects all updates with timestamp $\leq$ $t$ and no updates with timestamp $>$ $t$.
+
+Since the query processing storage is multi-versioned, with each version corresponding to an update,
+the query processing state with version $T$ $\in$ $StateVersions$
+\[
+  \nexists~T' \in StateVersions : T' > T \land T < t
+\]
+by definition reflects only updates with timestamps $\leq$ $t$ and no updates timestamp $>$ $t$.
+In order to guarantee that this version is internally consistent, the QPU must ensure that this version reflects
+\textbf{all} updates with timestamp $\leq$ $t$.
+
+Showing that this is ensured consists of three parts.
+\begin{itemize}
+  \item Updates entering the QPU graph in-order according to their timestamp.
+  We can assume the interface between database and corpus driver QPU guarantees that.
+  \item Updates are not reordered by the stream connections.
+  This is part of our assumptions about the stream semantics.
+  \item Updates are not reordered by relational operator QPUs.
+  This is trivial for QPUs with a single input stream.
+  We need to show that QPUs that merge more that one stream produce ordered streams ...
+\end{itemize}
+
+If these three conditions are true then each QPU receives and processes updates in order.
+Therefore, is has processed an update with timestamp $t$ then it has also processed all updates with timestamp $\leq$ $t$.
+
+\medskip
+\noindent
+Query consistency
+
+\noindent
+We refer to a query with time interval $[t_1, t_2)$ as \textit{consistent} if all corpus driver and derived state QPUs
+that take part in its execution are internally consistent at time $t_2$.
+
+\noindent
+//// Outline ////
 
 
 \subsection{QPU classes}
@@ -1283,49 +1328,49 @@ QPU trees have two functionalities:
 \end{algorithmic}
 \end{algorithm}
 
-\subsubsection{Ordering guarantees}
+% \subsubsection{Ordering guarantees}
 
-Providing ordering guarantees is based on two mechanisms:
-For a given query $q$:
-\begin{itemize}
-  \item Leaf nodes (corpus driver and derived state classes) generate ordered output streams,
-  based on the ordering specified by $q$.
+% Providing ordering guarantees is based on two mechanisms:
+% For a given query $q$:
+% \begin{itemize}
+%   \item Leaf nodes (corpus driver and derived state classes) generate ordered output streams,
+%   based on the ordering specified by $q$.
 
-  \item Relational operator classes ensure that they \textit{preserve} the ordering of
-  their input stream at their output stream.
-\end{itemize}
+%   \item Relational operator classes ensure that they \textit{preserve} the ordering of
+%   their input stream at their output stream.
+% \end{itemize}
 
-//// Outline ////
+% //// Outline ////
 
-Illustrate using example:
-{\obeylines\obeyspaces
-\texttt{
-        SELECT OrderID, OrderStatus, Email, OrderDate
-        FROM Customers JOIN Orders ON Customers.CustomerID = Orders.CustomerID
-        WHERE OrderStatus = "Processing"
-        TIMESTAMP FROM LATEST TO LATEST
-        ORDER BY OrderDate
-        }}
+% Illustrate using example:
+% {\obeylines\obeyspaces
+% \texttt{
+%         SELECT OrderID, OrderStatus, Email, OrderDate
+%         FROM Customers JOIN Orders ON Customers.CustomerID = Orders.CustomerID
+%         WHERE OrderStatus = "Processing"
+%         TIMESTAMP FROM LATEST TO LATEST
+%         ORDER BY OrderDate
+%         }}
 
-\begin{itemize}
-  \item Corpus driver for Orders Table generates output stream ordered by OrderDate
-  \item Filter table keeps only records for which OrderStatus = ``Processing''; this preserves order
-  \item Join uses input from Orders table as ``ordering guide''; this ensures that output is ordered by
-  by OrderDate
-\end{itemize}
+% \begin{itemize}
+%   \item Corpus driver for Orders Table generates output stream ordered by OrderDate
+%   \item Filter table keeps only records for which OrderStatus = ``Processing''; this preserves order
+%   \item Join uses input from Orders table as ``ordering guide''; this ensures that output is ordered by
+%   by OrderDate
+% \end{itemize}
 
-\medskip
-\noindent
-More details on how QPUs preserve ordering semantics:
-\begin{itemize}
-  \item Trivial for QPU's with one input stream
-  \item For QPUs that merge more than one input streams (for example a partition manager), since each input stream
-  is ordered, the ``mergesort'' approach can be used.
-  \item Joins can preserve ordering by using the ``ordered'' input stream as a guide.
-  \item Aggregators (TODO)
-\end{itemize}
+% \medskip
+% \noindent
+% More details on how QPUs preserve ordering semantics:
+% \begin{itemize}
+%   \item Trivial for QPU's with one input stream
+%   \item For QPUs that merge more than one input streams (for example a partition manager), since each input stream
+%   is ordered, the ``mergesort'' approach can be used.
+%   \item Joins can preserve ordering by using the ``ordered'' input stream as a guide.
+%   \item Aggregators (TODO)
+% \end{itemize}
 
-//// Outline ////
+% //// Outline ////
 
 \section{Discussion}
 
