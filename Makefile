@@ -1,6 +1,6 @@
 TEX = pdflatex
 BIB = bibtex
-DOC = main
+DOC = thesis
 
 .PHONY: help all $(DOC).pdf clean
 

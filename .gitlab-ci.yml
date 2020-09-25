@@ -5,9 +5,9 @@ build:
     - apt-get update
     - apt-get install -y curl
   script:
-    - latexmk -pdf main.tex
+    - latexmk -pdf thesis.tex
   after_script:
-    - curl -u $NUAGE_LIP6_U:$NUAGE_LIP6_P -T main.pdf https://nuage.lip6.fr/remote.php/dav/files/$NUAGE_LIP6_U/main.pdf
+    - curl -u $NUAGE_LIP6_U:$NUAGE_LIP6_P -T thesis.pdf https://nuage.lip6.fr/remote.php/dav/files/$NUAGE_LIP6_U/thesis.pdf
   artifacts:
     paths:
-      - main.pdf
+      - thesis.pdf
