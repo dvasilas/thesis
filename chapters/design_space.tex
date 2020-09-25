@@ -14,16 +14,16 @@ and how they affect the behavior of the query processor.
 \section{The use of derived state in query processing}
 
 Secondary indexing, caching, and the use of materialized views are all instances of a common technique:
-creating derived state by applying a transformation to the data stored in the database in order to speed up a particular
-read access to the data.
+creating derived state by applying a transformation to the data stored in the database in order to accelerate particular
+read access patterns to the data.
 
 At an abstract level, derived state can be described by a \textit{write path} and a \textit{read path}
 \cite{kleppmann:designing}.
 \todo{illustrate with figure}
 The write path is the process of creating the derived state, and keeping it up-to-date with the base data.
-The read path is the process of reading from the derived in order to perform a query processing task.
+The read path is the process of reading from the derived state in order to perform a query processing task.
 In other words, the write path is the pre-computation that takes place when a change to the base data occurs,
-regardless if the results are going to be consumed;
+without knowing if the results are going to be consumed;
 the read path is the computation that takes place only when it is needed for query processing.
 
 \medskip
@@ -41,17 +41,17 @@ $WHERE$ $tags.predominantColor$ $BETWEEN$ $\#0a6fb6$ $AND$ $\#52aca2$ \\
 \noindent
 (this query could for example be part of a service that automatically creates slideshows from the image dataset).
 
-A secondary index on the $predominantColor$ tag can be used to speed up this type of queries.
+A secondary index on the $predominantColor$ tag can be used to facilitate this type of queries.
 In this case, the write path consists of updating the secondary index when an image is inserted or deleted in the database.
-The read path consists of performing an index lookups for the $predominantColor$ values in a given query,
+The read path consists of performing an index lookup for the $predominantColor$ values in a given query,
 and combining the results.
 
 When serving the query without the use of the secondary index, the read path consists of scanning the images in $photo-album$,
 while no tasks need to be performed when an image is inserted of deleted in the database.
 
-Using an index, therefore, moves an amount of work from the read to the write path:
+Using an index moves an amount of work from the read to the write path:
 less work is required for serving the query (an index lookup rather than scanning the dataset), at the expense of performing
-some work at each change in the dataset.
+work at each change in the dataset.
 
 Another option for serving this query is to maintain pre-computed search results for the most common queries.
 This can be implemented either as a cache, or as a materialized view.
@@ -59,7 +59,7 @@ In the case of a cache, if the query result is stored in the cache then the read
 results from the cache;
 otherwise, the read path falls back to serving the query using one of the methods described above,
 and then stores the query results in the cache;
-The write path may consist on invalidating cache entries, depending on the caching policy being used.
+The write path may invalidate cache entries, depending on the caching policy being used.
 In the case of a materialized view, the read path consists of retrieving the query results from the view,
 and the write path consists of updating the view to reflect changes to the dataset.
 
@@ -71,13 +71,14 @@ They allow the query processor to perform more work on the write path in order t
 \section{Design decisions and trade-offs in derive state based query processing systems}
 
 Choosing between the derived state techniques described in the previous sections,
-poses a trade-off between work required on the read and work required on the write path,
+poses a trade-off between work required on the read, and work required on the write path,
 and between work on the read path and the memory and storage overhead of maintaining derived state.
 These trade-offs have been studied extensively \cite{valentin:db2advisor, chaudhuri:decadeselftuning}.
 Database systems provide mechanisms for managing this trade-off at runtime, by allowing the database administrator
 to select indexes and materialized views to be created, and by providing mechanisms to automate this choice.
 
-However, the use of derived state for speeding up query processing involves a number of additional design choices:
+However, the use of derived state for optimizing query processing involves a number of additional design choices:
+\todo{add CAP issues}
 \begin{itemize}
 
   \item Given a change in the base data, when is the derive state updated to reflect this change?
@@ -93,7 +94,7 @@ including query performance, overhead to write operation, relevance of query res
 
 We can reason about how these design choices interact and how they affect the query processing system's behavior
 using the read and write path framework.
-To do so, we first describe in more detail the tasks involved in the read and write path.
+To do so, we first describe the tasks involved in the read and write path.
 \todo{here we need a visualization}
 
 \medskip
@@ -107,11 +108,11 @@ query manager component) and a query processing computation (for example in inde
 For simplicity, we assume here simple predicate queries that do not involve more complex operations such as joins.
 
 In a distributed database, both the base data as well as the derived state are partitioned;
-this entails that, both the write and read path may involve communication among multiple derived state and base data
+both the write and read paths may involve communication among multiple derived state and base data
 partitions (section~\ref{sec:index_partitioning}).
 
-Finally, in a geo-distributed database in which base data and derived state is distributed across multiple data centers,
-both the write and read path may involve inter- data center communication, with latencies orders of magnitude
+Finally, in a geo-distributed database in which base data and derived state are distributed across multiple data centers,
+both the write and read paths may involve inter- data center communication, with latencies, therefore, orders of magnitude
 higher that intra- data center communication.
 
 
@@ -120,18 +121,22 @@ higher that intra- data center communication.
 
 \todo{Figure~\ref{fig:maintenance_schemes} (temporary; borrowed) redo}
 
-Given an update to a data item $d$ that changes the value of one of $d.attributeA$, from $x$ to $y$,
-updating derived state (an index or materialized view) that is affected by this update consists of the following steps:
+Given the following update to a data item $d$:
+\[
+d.predominantColor = \#c78f83
+\]
+updating a secondary index on the $predominantColor$ attributes consists of the following steps:
 \begin{enumerate}
-  \item Insert $d$ to index entries or materialized query results that correspond to $attributeA$ $=$ $y$,
-  \item Retrieve the value of $attributeA$ in $d$ before the change from the base data, $x$, and
-  \item Remove $d$ from the index entries or materialized query results that correspond to $attributeA$ $=$ $y$,
+  \item Insert $d$ to the posting list of the index entry that corresponds to $predominantColor$ $=$ $\#c78f83$.
+  \item Retrieve the previous value $d.predominantColor$, for example $\#424a69$.
+  \item Remove $d$ from the posting list of the index entry that corresponds to $predominantColor$ $=$ $\#424a69$.
 \end{enumerate}
 
-In practice, the derived state subscribe to the change log of the base data.
-If the change log contains the information about the value of $d.attributeA$ before the change, then steps (2) and (3)
-are not needed.
+In practice, the derived state subscribes to the change log of the base data.
+If the change log contains the information about the value of $d.attributeA$ before the change, then step (2) is not
+required.
 
+The tasks for updating a materialized view for a query on $predominantColor$ are similar.
 \medskip
 
 Given a write operation to the database,
@@ -148,7 +153,7 @@ operation has been acknowledged to the client.
 This reduces the overhead to write latency, but also has the implication that for each write operation
 there is a time window when a data item has been updated, but the update has not been reflected in the derived state,
 i.e. the derived state is stale.
-Serving queries from derived that is stale relative to the base data may result in query results with false-positives
+Serving queries from derived state that is stale relative to the base data may result in query results with false-positives
 and false-negatives.
 
 Amazon's DynamoDB maintains its global secondary indexes asynchronously \cite{dynamodb:async}.
@@ -196,7 +201,7 @@ Leaving stale entries in the derived state for a time window means that query re
 The sync-insert scheme is often complemented with a read-repair mechanism.
 After reading from the derived state, the system removes false-positives by validating the retrieved results against
 the base data.
-The read-repair mechanism is a technique for shifting an amount of work from the write to the read path.
+The read-repair mechanism is a technique for shifting some work from the write to the read path.
 
 \subsection{Async-simple}
 Another asynchronous scheme, termed \textit{async-simple}, consists of acknowledging the write operation to
@@ -207,7 +212,7 @@ write operation are acknowledged as soon as they are logged in the queue;
 a background process ingests the queue and performs derived state maintenance.
 
 This scheme incurs no overhead to write operations.
-However, it permits more anomalies due to applying base data changes to the in an eventually consistent fashion.
+However, it permits more anomalies due to applying base data changes to the derived state in an eventually consistent fashion.
 More specifically, considering an update that changes $d.attributeA$ from $x$ to $y$:
 \begin{itemize}
   \item If none of the state maintenance steps have been performed, $x$ will appears as the value of $d.attributeA$
@@ -246,8 +251,8 @@ Briefly, the main index partitioning schemes are:
 \end{itemize}
 
 The same partitioning schemes can be applied to a materialized view.
-Therefore, while in the rest of this section we refer to secondary indexes, the same results apply to Materialized
-views.
+In the rest of this section we refer to secondary indexes.
+The same results apply to Materialized views.
 
 \medskip
 
@@ -269,8 +274,8 @@ item may involve updating index entries located on different nodes.
 \bigskip
 
 These observations can be grouped under the framework of derived state's read and write path.
-Partitioning-by-document guarantees local-only communication on the write path, but requires a large volume amount of
-communication on the write path (a scatter/gather operation involving all partitions);
+Partitioning-by-document guarantees local-only communication on the write path, but requires a large volume of
+communication on the read path (a scatter/gather operation involving all partitions);
 Partitioning-by-term involves communication across nodes on the write path (a change to data item may need to be sent to
 an index partition on another node),
 but requires less communication on the read path in the general case
@@ -303,7 +308,7 @@ which approach is more suitable depends on a number of different workload charac
 In \cite{dsilva:tworings}, D`silva et al. perform an extensive experimental comparison of the two approaches,
 implemented in HBase, and show how various workload characteristic affect the index partitioning scheme's performance.
 
-The factors that affect index lookup performance are:
+Key factors that affect index lookup performance are:
 \begin{itemize}
 
   \item The distribution of the values of the indexed attribute:
@@ -456,7 +461,7 @@ The downside of this approach is that it significantly increases the storage cos
 More recently, the concept of multi-cloud data storage has emerged.
 Organizations spread their data across private data centers and public cloud services in order to reduce costs and
 ensure fault-tolerance.
-Moreover, they distribute data across multiple cloud providers in order to avoid dependence from a to single
+Moreover, they distribute data across multiple cloud providers in order to avoid dependence on a single
 cloud provider, take advantage of diverse storage and computing services, and improve reliability.
 
 The advent of data distributed across multiple independent storage systems has created the need for unified access and
@@ -467,6 +472,10 @@ For simplicity, we assume that a multi-cloud platform consists of multiple, inde
 system.
 Under there assumptions, the same design decisions and trade-offs as in the case of geo-partitioning apply to query
 federation across multiple clouds.
+
+The same observations can be generalized to heterogeneous systems composed of different database system.
+However, federated query processing includes additional challenges linked to the heterogeneous data models of these
+systems.
 
 \bigskip
 
@@ -479,8 +488,8 @@ query processing based on derived state
 
 \begin{itemize}
   \item The use of derived state to speed-up query processing moves query processing work from the read path to the write
-  path, while also incurring the memory and storage overhead.
-  Moreover, different derived state schemes (indexes, materialized views, caching) shift the balance between work
+  path, while also incurring memory and storage overhead.
+  Moreover, different derived state schemes (indexes, materialized views, caching) entail different amount of work
   on the read and write path.
 
   \item The choice of derived state maintenance scheme controls the impact of work on the write path:
@@ -504,9 +513,17 @@ query processing based on derived state
   of communication on the read versus the write path.
 
   \item When base data and client are distributed across different geographic locations,
-  the choice of topology pattern affect the communication latency (intra versus inter data center communication).
-  Often, this creates a trade-off between low latency, intra- data center communication, and the overheads of
-  maintaining a derived state replica on each data center.
+  the choice of topology pattern affects the communication latency (intra versus inter data center communication).
+  This creates a number of trade-offs, that steam from the basic trade-off of requiring intra data center communication
+  on the read versus the write path.
+  These trade-offs include:
+  \begin{itemize}
+    \item Low latency on the read path versus increased latency on the write path in the case of synchronous maintenance,
+    or decreased freshness in the case of asynchronous maintenance.
+    \item Low latency on the read path versus increased resource utilization for maintaining derived state replicas,
+    and increased volume of write path communication.
+    \item Low data transfer cost oo inter data center on the read path versus on the write path.
+  \end{itemize}
 
 \end{itemize}
 
