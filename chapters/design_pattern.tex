@@ -3,35 +3,32 @@ We have so far established that query processing involves requirements that are 
 As a result, there can be no general-purpose solution to query processing.
 Rather, achieving efficient query processing requires the ability to \textit{tune} the system to the requirements
 and characteristics of specific use cases.
-Existing query processing system provide some tunning capabilities, for example index and materialized view selection,
-and provide mechanisms for adjusting query execution to individual queries (query optimization).
+Existing query processing systems provide some tunning capabilities, for example index and materialized view selection.
 
-However, in the context of modern, global-scale systems, in which clients and data are geo-distributed, the
-\textit{placement} of derived state (index, materialized views) creates additional trade-offs and magnifies the effects
-of existing trade-offs.
-Existing query processing systems do not provide mechanisms for configuring the placement of derived state.
-
+However, as discussed in section~\ref{sec:topology_patterns} in modern, global-scale systems in which clients and data
+are geo-distributed,
+design decisions about \textit{placement} of derived state (indexes, caches, materialized views) involve additional
+trade-offs and magnifies the effects of existing trade-offs.
+Existing query processing systems do not provide mechanisms for controlling the placement of derived state.
 
 \medskip
 \noindent
-The goal 
-(The proposed approach is based on the following requirements):
+The design of a geo-distributed query processing system presents the several unique design issues:
 \begin{itemize}
 
   \item \textbf{Tunability.}
-  Achieving efficient query processing requires the ability to adjust the query processing system
+  Achieving efficient geo-distributed query processing requires the ability to adjust the query processing system
   to the workload characteristics, data and access distribution patterns, and requirements of specific use cases.
-  An efficient query processing system thus needs able to be configured along the following dimensions:
+  An efficient geo-distributed query processing system should provide tunning mechanisms along the following dimensions:
 
   \begin{itemize}
     \item \textit{Flexible placement of derived state.}
     In geo-distributed environments, communication latency between sites is an order of magnitude higher than
     communication latency within a site.
     The use of secondary indexes and materialized views in this context, involves a trade-off between the requirements
-    of minimizing the inter-site communication in the read path,
-    and minimizing the inter-site communication in the write path.
-    We have analyzed the implication of this fundamental trade-off in section~\ref{sec:topology_patterns}.
-    Therefore an efficient query processing system requires fine-grained control over the placement of derived state
+    of minimizing the inter-site communication in the read path, and in the write path.
+    We have have analyzed the implication of this trade-off in section~\ref{sec:topology_patterns}.
+    Therefore, an efficient query processing system requires fine-grained control over the placement of derived state
     across the system.
 
     \item \textit{Flexible placement of query processing computations.}
@@ -42,7 +39,7 @@ The goal
 
     \item \textit{State maintenance scheme.}
     Keeping derived state up-to-date with the corpus involves a trade-off between
-    the overhead incurred to write operations and the consistency between derived state and corpus data.
+    the overhead incurred to write operations and the consistency between derived state and corpus data (section~\ref{sec:sync_async_maintenance}).
     Updating the derived state synchronously
     ensures that it is strongly consistent with the
     corpus, but introduces additional work to the write path --- potentially involving inter-site communication.
@@ -53,15 +50,14 @@ The goal
     \item \textit{Index and materialized view selection.}
     As we described in section~\ref{sec:read_write_path}, the choice of which secondary indexes and materialized views to
     materialize involves a trade-off between work on the read path on the one side,
-    and work on the write path as well as the resource required for maintaining derived state on the other side.
+    and one the other side work on the write path as well as the resource required for maintaining derived state.
     Therefore, the query processing system needs to enable configurable index and materialized view selection.
 
     \item \textit{Caching.}
     As we described in section~\ref{sec:read_write_path},
     caching, similarly to materialized views, can be viewed as a point in the design space defined by the read and write
     work framework.
-    Therefore, design decisions about caching should be unified under the same tunning mechanisms as index and materialized
-    view selection.
+    Therefore, index and view selection mechanisms should also include decisions about caching.
 
     % \item State partitioning scheme:
     % Similarly, the partitioning scheme used for secondary indexes and materialized views should be configurable in a per
@@ -73,13 +69,13 @@ The goal
   Geo-distributed applications feature a variety of diverse data distribution schemes.
   Examples include full and partial data replication across data centers, geo-partitioning, and federated systems.
   An effective geo-distributed query processing system should not be limited to a specific data distribution scheme.
-  We therefore require our design to not be based not be based on specific assumptions the corpus distribution scheme.
 
 \end{itemize}
 
 We argue that traditional monolithic query processing system architectures cannot provide the flexibility required
 to address these requirements --- notably enabling flexible derived state placement.
-We propose a \textit{framework} for constructing query processing systems in a case-by-case basis.
+In this work we take a different approach.
+We propose a framework for constructing query processing systems in a case-by-case basis.
 The key idea is a modular, composable query processing architecture:
 application developers can construct and deploy query processing systems by assembling composable building blocks that
 encapsulate primitive query processing tasks.
@@ -100,43 +96,40 @@ we focus on the \textit{mechanisms} required for enabling a modular and composab
 \section{Overview and design rationale}
 
 Our first design decision is to decouple the query processing architecture from the storage architecture.
-We view the query processing system as a \textit{middleware system} that communicates with the storage tier through
+We design the query processing system as a \textit{middleware system} that communicates with the storage tier through
 well-defined interfaces.
-This provides the query processing system with the flexibility required to enable configurable state and computation placement
-and to support diverse data distribution schemes.
+This provides the query processing system with the flexibility required to support diverse data distribution schemes.
 Moreover, it allows the query processing system to be compatible with different storage systems,
 which is required in order to support federated query processing.
 
 \medskip
 \noindent
-The second decision is to not design a \textit{specific} query processing system,
-but rather a \textit{framework} for constructing query processing systems in a case-by-case basis,
-using \textit{assembly-based modularity} \cite{leclercq:dream, bouget:pleiades}.
-The proposed framework provides a set of composable, configurable building blocks that encapsulate simple query processing tasks
+The second decision is to not focus on the design a \textit{specific} query processing system,
+but rather a \textit{framework} for constructing query processing systems in a case-by-case basis.
+% using \textit{assembly-based modularity} \cite{leclercq:dream, bouget:pleiades}.
+The proposed framework provides a set of composable building blocks that encapsulate simple query processing tasks
 such filters, aggregations, and joins, as well as derived state structures, including secondary indexes, materialized views.
 These building blocks can be composed into modular query processing architectures.
-
-We believe that modularity is essential for achieving the flexibility required to provide the tunning mechanisms described above.
-Building blocks are independent components with well-defined boundaries.
+% We believe that modularity is essential for achieving the flexibility required to provide the tunning mechanisms described above.
+Moreover, we design the building blocks as independent components with well-defined boundaries.
 Because of that, their placement across the system is orthogonal to their functionality.
-This addresses the requirement for flexible state and computation placement.
+This is key insight for achieving flexible state and computation placement.
+
+% addresses the requirement for
 
 % Moreover, we use modularity to translate tunning mechanisms, such as index and view materialization, caching, and derived state partitioning,
 % to \textit{composition choices}.
 % For example, adding a caching layer to an existing query processing system can be done by extending an existing
 % architecture with additional ``caching'' building blocks.
 
-% Application developers can construct query processing systems by composing 
+% Application developers can construct query processing systems by composing
 
-% We argue that assembly-based 
+% We argue that assembly-based
 %  traditional monolithic query processing system architectures cannot provide the flexibility required
 % to address these requirements --- notably enabling flexible derived state placement.
 
 
-
-
-
-% In that way, 
+% In that way,
 % Moreover, design decisions about the placement of derived state and query processing computations translate to
 % decisions about the placement of building blocks.
 
@@ -147,8 +140,7 @@ This addresses the requirement for flexible state and computation placement.
 
 \bigskip
 \noindent
-Our modular query processing architecture design is based on a set of \textbf{observations} about the
-functionality and semantics of query processing systems.
+Our design is based on a set of \textbf{observations} about the functionality and semantics of query processing systems.
 We use these observations as a basis for breaking down the functionalities of a query processing system into a
 set of \textit{primitives}.
 We unify the semantics of these query processing primitives under a component that can be used as the building block
@@ -162,31 +154,42 @@ First, the functionality of a query processing system can be divided into three 
   \item Maintaining derived state structures (secondary indexes, materialized view, and caches).
   These are used to facilitate the execution relational algebra operations.
   \item ``Routing'' functionalities, such as the management of access to partitioned derived state,
-  and load balancing.
+  load balancing, and federation of independent corpora.
 \end{itemize}
 
 \medskip
 \noindent
-Second, each of types of functionalities can be encapsulated by a system component with microservice semantics:
-The component provides its functionality as a service through a ``service interface'';
-Other components can request the component's functionality by invoking its interface.
+Second, each of these types of functionalities can be encapsulated by a \textit{system component} with microservice semantics:
+the component provides its functionality as a service through a ``service interface'';
+other components can request the component's functionality by invoking its interface.
 For example, a secondary index can be encapsulated by a component with an interface which maps to the index's
 lookup operation.
 A filter operator can be encapsulated by a component with an interface that receives a set of items and a condition,
-and returns the only the items that satisfy the given condition.
+and returns the items that satisfy the given condition.
 
-The structure of the interface response is common for the three types of components:
-A set of data items, each composed of a primary key and a set of secondary attributes.
+The structure of the service interface's response is common for the three types of components:
+a set of data items, each composed of a primary key and a set of secondary attributes.
 For example, this can represent the response of a materialized view or cache to a given query,
 the result of an index lookup, or the result of a filter operation.
 
 Furthermore, this component might be stateful or stateless.
-Components that maintain derived state structure, and relational operators such as aggregations, are stateful.
+Components that maintain derived state structures, and relational operators such as aggregations, are stateful.
 Other components, such as filters are stateless.
-However, stateful components only require access to \textit{internal} state, and don't need to access shared state.
-For example, a partitioned index can be expressed as a set of ``index'' components representing index partitions.
+However, stateful components only require access to \textit{internal} state, and don't require shared state.
+For example, a partitioned index (Figure~\ref{fig:observations_partitioned_index}) can be expressed as a set of ``index'' components representing index partitions.
 The state of each component contains the index entries of the corresponding index partition.
 An index lookup can be performed by invoking the interfaces of the relevant index partitions.
+
+In summary, our second observation is that the three types of query processing functionalities can be encapsulated
+by a stateful or stateless microservice-like component that provides its functionality through an interface.
+The response to an invocation of this interface is a set of data items.
+
+\begin{figure}[t]
+  \centering
+    \includegraphics[width=0.5\textwidth]{./figures/design_pattern/observations_partitioned_index.pdf}
+    \caption{Example of a simple document-partitioned index.}
+    \label{fig:observations_partitioned_index}
+\end{figure}
 
 \medskip
 \noindent
@@ -196,6 +199,10 @@ The next observation is related to the \textit{input} required for the three typ
   changes to the corpus.
   For example, an secondary index provides methods for adding and removing data items from posting lists.
   This interface can be viewed as a mechanism for receiving notifications for corpus updates as input.
+  As we described in section~\ref{sec:sync_async_maintenance},
+  updating an index (or materialized view) to reflect an update to a data item $d$ consists of
+  (1) removing the information about the previous version of $d$ from the index, and
+  (2) adding the information about new current version.
 
   \item A cache, in the case of a cache miss, forwards the given query to a different component,
   and then receives the corresponding query result as input.
@@ -207,78 +214,115 @@ The next observation is related to the \textit{input} required for the three typ
   \item The functionality of routing components consists of invoking the interface of other components,
   and receive as input the corresponding responses.
   For example, given a query, a component responsible for managing access to index partitions invokes the interfaces of
-  index partition components, receives as input the corresponding index lookup results.
+  index partition components, receives as input the corresponding index lookup results (Figure~\ref{fig:observations_partitioned_index}).
 \end{itemize}
 
-We can categorize these semantics in two types of inputs:
+We can categorize inputs in two types:
 \begin{itemize}
-  \item Indexes and materialized views receive as input a \textit{continuous stream of updates},
-  throughout their operation.
+  \item An index or materialized view requires \textit{updates} representing information about modifications of the corpus as input.
+  Moreover, need to continuously receive this input throughout their operation,
+  in order to remain up-to-date with the corpus.
 
-  \item All other components receive as input a set of data item \textit{states},
-  which represents the result of a \textit{single query} or request.
+  \item Every other query processing functionality requires a set of data item \textit{states} as input.
+  Contrary to indexes and materialized view, the scope of this input is a \textit{single query or request}.
+  For example, a filter operator receives a set of data item as input that is tied to specific execution.
 \end{itemize}
 
-Our third observation is that these two types of inputs can be unified by representing the input
-to a query processing component as a \textit{stream of data item state deltas}.
-First, both types of inputs can be represent as a \textit{stream of records}.
-Second, data item state delta $D$ $=$ $\{State_0$, $State_1\}$ can represent either an update to the state of a data item
-($State_0$ is the data item's state before the update is applied,
-and $State_1$ is the data item's state before the update is applied)
-or the state itself
-($State_0$ is not used,
-and $State_1$ represents the data item's state).
+Our third observation is that these two types of input can be unified by representing the input
+that a query processing functionality requires as a \textit{stream of records}, structured as data item state deltas.
+First, both types of inputs can be represented using streaming semantics.
+The input required by an an index or materialized view can be viewed as a continuous stream of updates.
+The input required by other query can be viewed as a stream of data item states.
+Second, a data item state delta, consisting of a base state and a modification (or the new state after the modification is applied)
+can represent either an update to the state of a data item, or the state itself (by leaving empty the second part of the delta)
+
+Using this observation we can extend the query processing component described above with a ``port'' for
+receiving an input stream consisting of records structured as data item state deltas.
 
 \medskip
 \noindent
-Combining the second and third observation,
-we extend the semantics of the query processing component as follows:
+Our forth observation is that the two characteristics of the query processing component,
+the service interface and the input port,
+are not independent from each other.
+An stream being received as an input by a component,
+can be viewed as the result of that component invoking the service interface of another component.
+
+We can illustrate this using the partitioned index example shown in Figure~\ref{fig:observations_partitioned_index}.
+To process a given index lookup,
+the partition manager forwards the lookup to the index partitions (assuming a document-partitioned index);
+each index partition responds with a set data items that correspond to the given lookup.
+Finally, the partition manager merges the received responses.
+
+When the index manager and index partition functionalities are provided by query processing components, as described above,
+this task can be described as follows:
+To process a given index lookup,
+the partition manager component invokes the service interface of index partitions.
+As a result, a stream is established between each index partition and the partition manager.
+Through each of these streams, the corresponding partition sends index lookup results to the partition manager.
+The partition manager receives index lookup results from the index partition as input streams through its input port.
+
+Guided by this observation, we extend the semantics of the query processing component as follows:
 The response to an invocation of the component's service interface is a stream of records structured
 as data item state deltas.
 
+\begin{figure}[t]
+  \centering
+    \includegraphics[width=0.4\textwidth]{./figures/design_pattern/observations_composition.pdf}
+    \caption{Example of achieving higher-order functionality through composition of basic functionalities.}
+    \label{fig:observations_composition}
+\end{figure}
+
 \medskip
 \noindent
-Our forth observation is that while the functionalities of individual components are simple,
-the components can be \textit{composed} to implement higher-level query processing functionalities.
-This a common technique used in existing query engines,
-in which the execution of relational algebra expressions is represented as a dataflow computation performed by a
-directed acyclic graph of operators \cite{cockroachdb:distsql, gjengset:noria}.
+Our fifth observation is that while each individual component encapsulates a basic query processing functionality,
+we can implement higher-level functionalities be \textit{composing} components.
+This is depicted in Figure~\ref{fig:observations_composition}.
+Components with basic functionalities, such as selection, project and join, are composed to execute a more complex task.
+
+This a common technique used in existing query engines:
+the execution of relational algebra expressions is represented as a dataflow computation performed by
+a set of operators, each performing a basic functionality, connected in a directed acyclic graph \cite{cockroachdb:distsql, gjengset:noria}.
 The graph's components are relational operators that receive one or more input streams,
-perform them, and emit an output stream.
+perform an operation on them, and emit an output stream.
 Graph nodes are connected so that the output stream of one operator is the input stream of another.
 
 Our final observation is that this composition mechanism can be extended to involve relational operator components as well as
 derived state and routing components.
-A component $C_a$ can invoke the service interface of another component $C_b$ of any type.
-As a result, a $C_b$ initiate a stream with $C_a$ as the receiver.
+This is the case in the partitioned index example, in which derived state components (index partitions), and a routing component
+(partition manager) are composed to implement a partitioned index.
 
 \bigskip
 \noindent
-Combining all the observations described above,
+Combining the above,
 we define a \textit{system component} that combines properties of a streaming operator and a microservice.
 Similarly to a streaming operator, the component receives one or more input streams, performs a computation over these streams,
 and emits an output stream.
 Similarly to a microservice, the component provides its functionality as a service through an interface.
-The response to a query request is a stream.
+The response to an invocation of this interface has streaming semantics.
+Combining the two, any input stream is initiated as the response to the invocation of a component's service interface.
 We call this component a Query Processing Unit (QPU).
 
+\medskip
+\noindent
 An individual QPU provides a basic query processing functionality,
 such as filtering an input stream based on a given condition, caching query results,
 or routing query requests to index partitions.
-Higher-order query processing tasks are achieved by \textit{composing} multiple QPUs.
-For example,
-a partitioned secondary index can be expressed as a composition set of ``secondary index'' QPUs,
-that represent index partitions, along with an ``index partition'' QPU.
-\todo{figure example  join, materialized view, }
+Higher-order query processing functionalities are achieved by \textit{composing} multiple QPUs.
 
 The mechanism that enables composition is that a query processing unit is able to invoke the service interface
 of other units.
-(called \textit{query requests}).
-That QPU then receives the corresponding responses as an input stream.
-Therefore, every input stream that a QPU $Q_a$ might receive, is the output stream of another QPU $Q_b$
-More specifically, it is the response to an invocation of $Q_b$'s service interface by $Q_b$.
-We call the QPU's service interface, \textit{query interface},
-and its invocation a \textit{query request}.
+In that way, given a query, a QPU can perform ``sub-queries'' to other units,
+and retrieve the corresponding responses as input.
+It can then perform a computation on these ``partial results'' in order to compute the response to the given query.
+
+We refer to the QPU's service interface as \textit{query interface},
+and an invocation of that interface as a \textit{query request}.
+
+% That QPU then receives the corresponding responses as an input stream.
+% Therefore, every input stream that a QPU $Q_a$ might receive, is the output stream of another QPU $Q_b$
+% More specifically, it is the response to an invocation of $Q_b$'s service interface by $Q_b$.
+% We call the QPU's service interface, \textit{query interface},
+% and its invocation a \textit{query request}.
 
 \medskip
 \noindent
@@ -293,7 +337,7 @@ and client queries enter the graph through its root nodes (nodes with outgoing e
 
 \medskip
 \noindent
-The computation model of query execution emerges from the semantics of the query processing unit.
+The \textit{computation model} of query execution emerges from the semantics of the query processing unit.
 When a QPU at the root of the graph receives a query request,
 is has two mechanisms available for processing it:
 \begin{itemize}
@@ -1644,60 +1688,6 @@ QPU trees have two functionalities:
 
 \section{Discussion}
 
-\noindent
-\textbf{On the query processing unit semantics}.
-
-\noindent
-Representing a relational algebra query execution as a dataflow computation performed by a DAG of operators is a common
-technique in the state of the art \cite{cockroachdb:distsql, gjengset:noria}.
-However this technique is focused on expressing relational algebra expressions.
-It does not include the incremental maintenance of derived state, or ``systems'' functionalities such as load balancing
-and the management of access to partitioned state.
-
-Our first insight is that these three types of functionalities can be encapsulated by components with microservice semantics:
-exposing their functionality through an invocation of an interface.
-For components that encapsulate derived state components this is already the case, as for example indexes expose a
-Lookup()/Get() API.
-This can be extended to components that encapsulate relational operators and ``routing'' functionalities.
-
-Moreover, this interface can be common for all three types of components:
-\begin{itemize}
-  \item An index lookup can be expressed as a query statement for the indexed attribute.
-  \item Reading from a materialized view can be expressed by the query that consists the view's definition.
-  \item Initiating the functionality of a relational operator can be expressed by a query that represents the
-  operator's functionality.
-  For example a join operator can be initiated with a ``SELECT - FROM - JOIN'' query.
-\end{itemize}
-
-A result of this is that  individual components do not support the complete query language.
-Instead, each performs a basic operation, based on its functionality.
-It is through \textit{composition} that more complex query processing functionalities can be achieved.
-
-Composition is achieved using the microservice semantics:
-a component can invoke the interface of other components in order to obtain partial results needed for its operation.
-In addition, this characteristic achieves modularity.
-Because communication between components is performed through well-defined interfaces,
-component placement is orthogonal to the system's functionality, and components can be flexibly placed across the system.
-
-However, an additional requirement exists for indexes and materialized views:
-a mechanism for keep these structures up-to-date with the corpus by performing incremental updates.
-Our second insight is that this mechanism can be expressed as an input stream of update events.
-Therefore, the input stream semantics of relational operators can be generalized to also express incremental updates to derived state.
-
-However, streams that represent query results contain data items' \textit{state} as their records,
-while streams that represent corpus contain update events.
-Our third insight is that these two types of records can be unified by structuring stream records as
-\textit{deltas}.
-
-Finally, the above insight are combined by specifying tha the response to the invocation of a components interface is a stream.
-As a result, the query processing unit computation model combines elements from microservice architectures and stream processing systems.
-Similar to stream processing systems,
-query processing units operate on input streams, and either perform transformations on those stream creating an output
-stream, or uses to incrementally update its state.
-Similar to microservices architectures, a stream is initiated as a response to a \textit{service request}.
-
-\medskip
-\noindent
 \textbf{On QPU-based query processing systems and ad-hoc queries}.
 
 \noindent
