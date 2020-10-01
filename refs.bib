@@ -467,6 +467,27 @@ booktitle	= {Proceedings of the Conference on Innovative Data system Research (C
   howpublished = {\url{https://github.com/memcached/memcached/wiki}},
 }
 
+@online{coubase:mongoindexes,
+  title = {Mongo{DB} fails to perform, runs out of gas},
+  author = {{S}hane {J}ohnson},
+  howpublished = {\url{https://blog.couchbase.com/mongodb-fails-to-perform-runs-out-of-gas/}},
+  year = {2016}
+}
+
+@online{phoenix:secondaryidnexing,
+  title = {{A}pache {P}hoenix: {S}econdary {I}ndexing},
+  author = {{A}pache {S}oftware {F}oundation},
+  howpublished = {\url{https://phoenix.apache.org/secondary_indexing.html}},
+  year = {2020}
+}
+
+@online{hbase:secondaryindexes,
+  title = {Apache {HB}ase {R}eference {G}uide: {S}econdary {I}ndexes and {A}lternate {Q}uery {P}aths},
+  author = {{A}pache {HB}ase {T}eam},
+  howpublished = {\url{http://hbase.apache.org/book.html#secondary.indexes}},
+  year = {2020}
+}
+
 -- Ch: Models --
 
 @online{aws:athena,
@@ -873,8 +894,6 @@ booktitle	= {Proceedings of the Conference on Innovative Data system Research (C
   url       = {https://doi.org/10.1109/MDSO.2005.47}
 }
 
-
-
 @inproceedings{bouget:pleiades,
   author    = {Simon Bouget and
                Y{\'{e}}rom{-}David Bromberg and
@@ -886,3 +905,141 @@ booktitle	= {Proceedings of the Conference on Innovative Data system Research (C
   year      = {2018}
 }
 
+-- Ch: Related work --
+
+@inproceedings{qader:comparativestudy,
+  author    = {Mohiuddin Abdul Qader and
+               Shiwen Cheng and
+               Vagelis Hristidis},
+  title     = {A Comparative Study of Secondary Indexing Techniques in LSM-based
+               NoSQL Databases},
+  booktitle = {Proceedings of the 2018 International Conference on Management of
+               Data, {SIGMOD} Conference},
+  year      = {2018},
+  url       = {https://doi.org/10.1145/3183713.3196900}
+}
+
+@article{kohler:click,
+  author    = {Eddie Kohler and
+               Robert Tappan Morris and
+               Benjie Chen and
+               John Jannotti and
+               M. Frans Kaashoek},
+  title     = {The click modular router},
+  journal   = {{ACM} Trans. Comput. Syst.},
+  year      = {2000},
+  url       = {https://doi.org/10.1145/354871.354874}
+}
+
+@inproceedings{escriva:hyperdex,
+  author    = {Robert Escriva and
+               Bernard Wong and
+               Emin G{\"{u}}n Sirer},
+  title     = {HyperDex: a distributed, searchable key-value store},
+  booktitle = {{ACM} {SIGCOMM} 2012 Conference, {SIGCOMM} '12},
+  pages     = {25--36},
+  publisher = {{ACM}},
+  year      = {2012},
+  url       = {https://doi.org/10.1145/2342356.2342360}
+}
+
+@inproceedings{tai:replex,
+  author    = {Amy Tai and
+               Michael Wei and
+               Michael J. Freedman and
+               Ittai Abraham and
+               Dahlia Malkhi},
+  title     = {Replex: {A} Scalable, Highly Available Multi-Index Data Store},
+  booktitle = {2016 {USENIX} Annual Technical Conference, {USENIX} {ATC} 2016},
+  publisher = {{USENIX} Association},
+  year      = {2016},
+  url       = {https://www.usenix.org/conference/atc16/technical-sessions/presentation/tai}
+}
+
+@inproceedings{baezayates:multisitefeasibility,
+  author    = {Ricardo Baeza{-}Yates and
+               Aristides Gionis and
+               Flavio Junqueira and
+               Vassilis Plachouras and
+               Luca Telloli},
+  title     = {On the feasibility of multi-site web search engines},
+  booktitle = {Proceedings of the 18th {ACM} Conference on Information and Knowledge
+               Management, {CIKM}},
+  publisher = {{ACM}},
+  year      = {2009},
+  url       = {https://doi.org/10.1145/1645953.1646009}
+}
+
+@inproceedings{cambazoglu:multisitequantifying,
+  author    = {Berkant Barla Cambazoglu and
+               Vassilis Plachouras and
+               Ricardo Baeza{-}Yates},
+  title     = {Quantifying performance and quality gains in distributed web search
+               engines},
+  booktitle = {Proceedings of the 32nd Annual International {ACM} {SIGIR} Conference
+               on Research and Development in Information Retrieval, {SIGIR}},
+  publisher = {{ACM}},
+  year      = {2009},
+  url       = {https://doi.org/10.1145/1571941.1572013}
+}
+
+@inproceedings{cambazoglu:multisiteforwarding,
+  author    = {Berkant Barla Cambazoglu and
+               Emre Varol and
+               Enver Kayaaslan and
+               Cevdet Aykanat and
+               Ricardo Baeza{-}Yates},
+  title     = {Query forwarding in geographically distributed search engines},
+  booktitle = {Proceeding of the 33rd International {ACM} {SIGIR} Conference on Research
+               and Development in Information Retrieval, {SIGIR}},
+  publisher = {{ACM}},
+  year      = {2010},
+  url       = {https://doi.org/10.1145/1835449.1835467}
+}
+
+@article{ousterhout:ramcloud,
+  author    = {John K. Ousterhout and
+               Arjun Gopalan and
+               Ashish Gupta and
+               Ankita Kejriwal and
+               Collin Lee and
+               Behnam Montazeri and
+               Diego Ongaro and
+               Seo Jin Park and
+               Henry Qin and
+               Mendel Rosenblum and
+               Stephen M. Rumble and
+               Ryan Stutsman and
+               Stephen Yang},
+  title     = {The RAMCloud Storage System},
+  journal   = {{ACM} Trans. Comput. Syst.},
+  year      = {2015},
+  url       = {https://doi.org/10.1145/2806887},
+}
+
+@inproceedings{frances:multisiteimprovingefficiency,
+  author    = {Guillem Franc{\`{e}}s and
+               Xiao Bai and
+               Berkant Barla Cambazoglu and
+               Ricardo Baeza{-}Yates},
+  title     = {Improving the efficiency of multi-site web search engines},
+  booktitle = {Seventh {ACM} International Conference on Web Search and Data Mining,
+               {WSDM} 2014, New York, NY, USA, February 24-28, 2014},
+  pages     = {3--12},
+  publisher = {{ACM}},
+  year      = {2014},
+  url       = {https://doi.org/10.1145/2556195.2556249},
+  doi       = {10.1145/2556195.2556249},
+  timestamp = {Sun, 22 Sep 2019 18:15:38 +0200},
+  biburl    = {https://dblp.org/rec/conf/wsdm/FrancesBCB14.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+@inproceedings {gjengset:noria,
+  author = {Jon Gjengset and Malte Schwarzkopf and Jonathan Behrens and Lara Timb{\'o} Ara{\'u}jo and Martin Ek and Eddie Kohler and M. Frans Kaashoek and Robert Morris},
+  title = {Noria: dynamic, partially-stateful data-flow for high-performance web applications},
+  booktitle = {13th {USENIX} Symposium on Operating Systems Design and Implementation ({OSDI} 18)},
+  year = {2018},
+  url = {https://www.usenix.org/conference/osdi18/presentation/gjengset},
+  publisher = {{USENIX} Association}
+}

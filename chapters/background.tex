@@ -498,7 +498,7 @@ In our prototype
 we use of-the-shelf state of the art index data structure implementations.
 
 \subsubsection{Partitioning and Secondary Indexes}
-
+\label{sec:index_partitioning_background}
 The partitioning schemes discussed in \ref{sec:partitioning} rely on a key-value data model.
 Secondary indexes do not neatly map to these partitioning techniques:
 a secondary index usually does not uniquely identify a data item, but rather provides a way of searching for occurrences
@@ -529,7 +529,7 @@ a document is a self-contained piece of information, is composed of terms.
 In this approach, each partition is separate:
 each partition maintains its own secondary indexes, covering only documents in that partition.
 
-In a document-partitioned index (also known as a \textit{local index}),
+In a document-partitioned index
 each database write (adding, removing, or updating a document) is handled only by the partition that contains the
 corresponding document.
 Reading from a document-partitioned index requires a scatter/gather approach:
@@ -538,13 +538,16 @@ This can make index lookups quite expensive.
 Even if index lookup requests are sent to partitions in parallel, response time depends from the latency of the slowest
 index partition.
 
-This approach is widely used: MongoDB, Riak \cite{riakv:secondaryindexes}, Cassandra \cite{cassandra:secondaryindexing}
+This approach is commonly used in commercial systems, including
+MongoDB \cite{coubase:mongoindexes}, Riak \cite{riakv:secondaryindexes}, Cassandra \cite{cassandra:secondaryindexing}
 Elasticsearch \cite{elastic:docrouting}, Solr \cite{solr:indexsharding}.
+
+An index partitioned using this approach are commonly referred to as a \textit{local index}.
 
 \bigskip
 \noindent
 \textbf{Partitioning Secondary Indexes by Term.}
-An alternative approach is to construct a \textit{global index} that covers data in all partitions.
+An alternative approach is to construct a logical ``global'' index that covers data in all partitions.
 A global index, however, needs to be partitioned itself, as storing it on one node would likely become a bottleneck.
 
 To partition a global index, the indexed terms can be used as the partition key (thus the term \textit{term-partitioned}
@@ -559,9 +562,17 @@ The downside of this approach is that writes are more complicated and slower:
 a write to a single document may affect multiple partitions as the corresponding terms may correspond to multiple
 different partitions.
 
-DynamoDB supports both local and global secondary indexes \cite{dynamodb:secondaryindexes}.
+HBase \cite{hbase:secondaryindexes} uses this approach:
+Secondary indexes are stored in regular HBase tables, using the indexed attribute as primary key.
 Term-partitioned indexes have also been used in the research systems such as SLIK \cite{kejriwal:slik}
 and Diff-Index \cite{tan:diffindex}.
+
+
+An index partitioned using this approach are commonly referred to as a \textit{global index}.
+
+\medskip
+\noindent
+DynamoDB \cite{dynamodb:secondaryindexes} and Apache Phoenix \cite{phoenix:secondaryidnexing} support both local and global secondary indexes.
 
 \subsubsection{Query Planning and Execution}
 

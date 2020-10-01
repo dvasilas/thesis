@@ -12,6 +12,7 @@ and how they affect the behavior of the query processor.
 
 
 \section{The use of derived state in query processing}
+\label{sec:read_write_path}
 
 Secondary indexing, caching, and the use of materialized views are all instances of a common technique:
 creating derived state by applying a transformation to the data stored in the database in order to accelerate particular
@@ -30,7 +31,7 @@ the read path is the computation that takes place only when it is needed for que
 
 We can illustrate how the notion of the read and write path applies on different derived state techniques using an example.
 Consider a database that stores images.
-An stored image can be associated with user-defined metadata tags, and the database provides the functionality of searching
+A stored image can be associated with user-defined tags, and the database provides the functionality of searching
 images using queries on their tags.
 Consider the query \\
 
@@ -46,7 +47,7 @@ In this case, the write path consists of updating the secondary index when an im
 The read path consists of performing an index lookup for the $predominantColor$ values in a given query,
 and combining the results.
 
-When serving the query without the use of the secondary index, the read path consists of scanning the images in $photo-album$,
+When serving the query without the use of the secondary index, the read path consists of scanning the images in $photoAlbum$,
 while no tasks need to be performed when an image is inserted of deleted in the database.
 
 Using an index moves an amount of work from the read to the write path:
@@ -109,7 +110,7 @@ For simplicity, we assume here simple predicate queries that do not involve more
 
 In a distributed database, both the base data as well as the derived state are partitioned;
 both the write and read paths may involve communication among multiple derived state and base data
-partitions (section~\ref{sec:index_partitioning}).
+partitions (section~\ref{sec:index_partitioning_design_space}).
 
 Finally, in a geo-distributed database in which base data and derived state are distributed across multiple data centers,
 both the write and read paths may involve inter- data center communication, with latencies, therefore, orders of magnitude
@@ -232,7 +233,7 @@ More specifically, considering an update that changes $d.attributeA$ from $x$ to
 % This guarantees the read-your-writes property.
 
 \subsection{Derived state partitioning}
-\label{sec:index_partitioning}
+\label{sec:index_partitioning_design_space}
 
 \todo{Figures~\ref{fig:prob1_6_2} and~\ref{fig:prob1_6_1} (temporary; borrowed) redo}
 
@@ -472,7 +473,6 @@ For simplicity, we assume that a multi-cloud platform consists of multiple, inde
 system.
 Under there assumptions, the same design decisions and trade-offs as in the case of geo-partitioning apply to query
 federation across multiple clouds.
-
 The same observations can be generalized to heterogeneous systems composed of different database system.
 However, federated query processing includes additional challenges linked to the heterogeneous data models of these
 systems.
@@ -514,7 +514,7 @@ query processing based on derived state
 
   \item When base data and client are distributed across different geographic locations,
   the choice of topology pattern affects the communication latency (intra versus inter data center communication).
-  This creates a number of trade-offs, that steam from the basic trade-off of requiring intra data center communication
+  This creates a number of trade-offs, that stem from the basic trade-off of requiring intra data center communication
   on the read versus the write path.
   These trade-offs include:
   \begin{itemize}
@@ -522,7 +522,7 @@ query processing based on derived state
     or decreased freshness in the case of asynchronous maintenance.
     \item Low latency on the read path versus increased resource utilization for maintaining derived state replicas,
     and increased volume of write path communication.
-    \item Low data transfer cost oo inter data center on the read path versus on the write path.
+    \item Low data transfer cost on the read path versus on the write path.
   \end{itemize}
 
 \end{itemize}

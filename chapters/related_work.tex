@@ -1,12 +1,154 @@
-\section{Distributed query processing}
+% \section{Secondary attribute querying in NoSQL databases}
 
-\subsection{Query processing in Peer-to-Peer systems}
-DHT stuff.
+% Many large-scale key-value storage systems sacrifice features like secondary indexing and/or consistency in favor of scalability or performance. This limits the ease and efficiency of application development on such systems.
 
-\subsection{Query processing in distributed databases}
+% \subsection{Secondary index based approaches}
+
+% \textit{SLIK: Scalable Low-Latency Indexes  for a Key-Value Store}
+
+% SLIK \cite{kejriwal:slik} is a secondary indexing system designed with the design goals of
+% (1) low latency,
+% (2) horizontal throughput scalability,
+% (3) consistency, specifically the requirement of providing the same strong consistency as a centralized system,
+% and (4) availability.
+
+% SLIK partitions secondary indexes using the scheme which we refer to as partitioning by term
+% (in \cite{kejriwal:slik} the term independent partitioning is used.
+% Index partition (referred to as an indexlets) are represented by B+trees.
+% Index entries store hashes of data items' primary keys.
+% Therefore, after an index lookup each data item contains the result need to be retrieved from the storage engine.
+
+% To achieve consistent index lookups, SLIK using two techniques:
+% \begin{itemize}
+%   \item \textit{Ordered writes}.
+%   Index entries are created before updates to the corresponding data items are applied,
+%   and old index entries are removed asynchronously.
+%   This guarantees that if a data item contains a secondary attribute value, then an index lookup for that value will return the data item,
+%   by ensuring that the lifespan of each index entry spans that of the corresponding data item.
+%   \item \textit{Treating data items as ground truth and index entries as hints}.
+%   The system verifies the results of index lookups by checking the corresponding data items.
+%   This guarantees that if a data item is returned by an index lookup then this data item contains the requested secondary key.
+% \end{itemize}
+
+% Moreover, SLIK performs long-running bulk operations such as index creation, deletion and migration in the background,
+% in order to avoid blocking blocking normal operations.
+
+% SLIK is implemented in RAMCloud \cite{ousterhout:ramcloud}, a distributed in-memory key-value storage system.
+
+% This work analyses alternative approaches available in a number of aspects in the design of a secondary indexing system, and discusses the tradeoffs these approaches.
+% They make specific design decisions guided by their design goals, for example the requirement for consistency for index lookups.
+% Moreover, this work does not consider a geo-distributed setting.
+
+% \textit{Secondary Indexing Techniques for Key-Value Stores: Two Rings To Rule Them All} \cite{dsilva:tworings}
+
+% % In this paper, we explore the challenges associated with indexing modern distributed table-based data stores and investigate two secondary index approaches  which  we  have  integrated  within  HBase.
+% % Our detailed analysis and experimental results prove the bene-fits of both the approaches.  Further, we demonstrate that such  secondary  index  implementation  decisions  cannot  be made in isolation of the data distribution and that different indexing approaches can cater to different needs.
+
+% % We discuss two indexing strategies for distributed key-value  stores:  one  based  on  distributed  tables  that  is able to exploit the table model of the underlying sys-tem for index management, the other using a co-location approach allowing for efficient main-memory access
+
+% % Both  strategies  are  implemented  and  integrated  intoHBase in a non-intrusive way.
+
+% % We provide an enhanced client interface to query HBase tables  using  secondary  indexing  that  supports  both point queries and range queries.
+
+% % We present a detailed performance metrics on various database operations with secondary indices and a comparative analysis of the different approaches
+
+% % We present a thorough analysis on the effects of data distribution on different indexing approaches.
+
+% % we provided a very detailed analysis of how different data distributions warrant different indexing approaches and demonstrated a case for both implementations.
+% % Our results show that there is clearly  a  benefit  to  having  secondary  indices  in  HBase,and  that  they  can  be  often  built  with  reasonable  performance overhead.
+% % Although there has been some prior works to achieve secondary indexing in HBase, our work have been more detailed and insightful about the various alternatives and clearly shows that there is no one-stop solution to secondary indexing needs in HBase.
 
 
-\section{Modular architectures}
+
+% \textit{A Comparative Study of Secondary Indexing Techniques inLSM-based NoSQL Databases} \cite{qader:comparativestudy}
+
+% Qader et al. study the secondary indexing techniques used in state-of-the-art commercial and research NoSQL databases.
+% More specifically, they categorize secondary indexes in (1) stand-alone indexes, where indexing structures are built and maintained
+% and (2) filter indexes, where there is no separate secondary index structured, but secondary attribute index information is stored inside the original data blocks.
+% Stand-alone indexing techniques are further categorized to those that perform in-place update (i.e. for each write the index structures are accessed, updated and stored back to disk),
+% and those that perform append-only updates.
+% The authors implement a number of different secondary indexing techniques on top of LevelDB [12] and study the trade-offs between different indexing techniques on various workloads.
+% This work is mainly focused on a single server instance of LevelDB and does not consider a distributed setting.
 
 
-\section{Stream processing and Data-flow systems}
+% In this paper, we present a taxonomy of NoSQL secondary indexes,broadly split into two classes:Embedded Indexes(i.e. lightweight filters embedded inside the primary table) andStand-Alone Indexes(i.e. separate data structures).
+
+% we built LevelDB++, on top of Google’s popular open-source LevelDB key-value store.
+% There, we implemented two Embedded Indexes and three state-of-the-art Stand-Alone indexes, which cover most of the popular NoSQL databases.
+% Our comprehensive experimental study and theoretical evaluation show that none of these indexing techniques dominate the others:
+% the embedded indexes offer superior write throughput and are more space efficient, whereas the stand-alone secondary indexes achieve faster query response times.
+% Thus, the optimal choice of secondary in-dex depends on the application workload.
+% This paper provides an empirical guideline for choosing secondary indexes.
+
+% \textit{Diff-Index: Differentiated Index in Distributed Log-Structured Data Stores} \cite{tan:diffindex}
+
+% \textit{Schema-Agnostic Indexing with Azure DocumentDB} \cite{shukla:schemaagnostic}
+
+
+% \subsection{Secondary index partitioning schemes}
+% \cite{dsilva:tworings}
+
+% \cite{kejriwal:slik}
+% SLIK achieves high scalability by distributing index entries independently from their objects rather than co-locating them
+
+% % SLIK: Cassandra [20], DynamoDB [3] and Phoenix [7] on HBase [4] provide local secondary indexes which are partitioned using the co-location approach
+% % Some of the systems above like DynamoDB [3] and Phoenix [7] on HBase [4] also provide global secondary indexes, but they are only eventually consistent.
+
+% \subsection{Approaches not based on secondary indexing}
+
+% \textbf{HyperDex: A Distributed, Searchable Key-Value Store} \cite{escriva:hyperdex}
+
+% % SLIK : HyperDex [17] is a disk-based large-scale storage sys- tem that supports consistent indexing. It partitions data using a novel hyperspace hashing scheme by mapping objects’ attributes into a multidimentional space. As the number of attributes increase, the number of hyperspaces increases dramatically. HyperDex alleviates this by par- titioning tables with many attributes into multiple lower- dimensional hyperspaces called subspaces. HyperDex also replicates the entire contents of objects in each index. This means that while HyperDex provides an ef- ficient mechanism for search, it uses more storage space for the extra copies of objects. While this is acceptable for disk based systems, it would be very expensive for main-memory based systems.
+
+% \textbf{Replex: A Scalable, Highly Available Multi-Index DataStore} \cite{tai:replex}
+
+
+% \section{Multi-site Web search}
+
+% \textbf{On the Feasibility of Multi-Site Web Search Engines} \cite{baezayates:multisitefeasibility}
+
+% \textbf{Quantifying Performance and Quality Gains in Distributed Web Search Engines} \cite{cambazoglu:multisitequantifying}
+
+% \textbf{Query Forwarding inGeographically Distributed Search Engines} \cite{cambazoglu:multisiteforwarding}
+
+% \textbf{Improving the Efficiency of Multi-site Web Search Engines} \cite{frances:multisiteimprovingefficiency}
+
+% \section{Modular - Flexible architectures}
+
+% \textbf{The Click Modular Router} \cite{kohler:click}
+
+% Click is a new software architecture for building flexible and configurable routers.
+
+% A Click router is assembled from packet processing modules called elements.
+% Individual elements implement simple router functions like packet classification, queueing, scheduling, and interfacing with network devices.
+% A router configuration is a directed graph with elements at the vertices;
+% packets flow along the edges of the graph.
+% Several features make individual elements more powerful and complex configurations easier to write, including pull connections,
+% which model packet flow driven by transmitting hardware devices, and flow-based router context, which helps an element locate other interesting elements.
+
+% This paper presents Click, a flexible, modular software architecture for creating routers.
+% Click routers are built from fine-grained components;
+% this supports fine-grained extensions throughout the forwarding path.
+% The components are packet processing modules called elements.
+
+% A Click element represents a unit of router processing.
+% An element represents a conceptually simple computation,such as decrementing an IP packet’s time-to-live field,
+% rather than a large, complex computation, such as IP routing.
+% A Click router configuration is a directed graph with elements at the vertices.
+% An edge, or connection, between two elements represents a possible path for packet transfer.
+
+% \bibliographystyle{plainnat}
+% \bibliography{refs}
+
+% \section{Distributed query processing}
+
+% \subsection{Query processing in Peer-to-Peer systems}
+% DHT stuff.
+
+% \subsection{Query processing in distributed databases}
+
+
+% \section{Modular architectures}
+
+
+% \section{Stream processing and Data-flow systems}

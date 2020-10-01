@@ -1,154 +1,412 @@
 
-In this chapter we present our main contribution,
-a \textit{design pattern} for building query processing systems with the goal of evolving query processing
-system architectures from monolithic and static to modular and flexible.
+We have so far established that query processing involves requirements that are in tension and create trade-offs.
+As a result, there can be no general-purpose solution to query processing.
+Rather, achieving efficient query processing requires the ability to \textit{tune} the system to the requirements
+and characteristics of specific use cases.
+Existing query processing system provide some tunning capabilities, for example index and materialized view selection,
+and provide mechanisms for adjusting query execution to individual queries (query optimization).
 
-Traditional static query processing systems are not able to cater to the needs of modern applications in which users and
-data are geo-distributed across the globe.
-Our vision is to enable query processing systems that are designed and deployed on a case-by-case basis,
-with the workload characteristics, data and access distribution patterns, and requirements of specific applications in
-mind.
+However, in the context of modern, global-scale systems, in which clients and data are geo-distributed, the
+\textit{placement} of derived state (index, materialized views) creates additional trade-offs and magnifies the effects
+of existing trade-offs.
+Existing query processing systems do not provide mechanisms for configuring the placement of derived state.
 
-As a first step towards this vision, we focus on the \textit{mechanisms} required for enabling a flexible and configurable
-query processing system architecture.
 
-The design pattern that we propose is based on the following objectives:
+\medskip
+\noindent
+The goal 
+(The proposed approach is based on the following requirements):
 \begin{itemize}
-  \item \textbf{Decoupling between storage and query processing architecture.}
-  The design pattern should be based on architecture, mechanism or interface of a specific data storage tier.
-  Instead, it should enable query processing system to work as middleware systems on top of existing database systems.
-
-  \item \textbf{Independence from corpus partitioning and distribution schemes.}
-  The design pattern should not be based on specific a partitioning and distribution scheme for the corpus,
-  but rather enable the construction of query processing systems compatible with multiple different
-  data partitioning or distribution schemes.
 
   \item \textbf{Tunability.}
-  The query processing should be able to be configured on the following dimensions:
-  \begin{itemize}
-    \item Index and view materialization:
-    The query processing system should enable database to create secondary indexes and materialized views.
-    Additionally, the index data structure used for indexes should be configurable.
-    \item Caching:
-    Similarly, the use of caches should be configuration-based.
-    \item State maintenance scheme:
-    The mode (synchronous or asynchronous) of incrementally applying corpus update to indexes and materialized views,
-    should be configurable in a per index/view basis.
-    \item State partitioning scheme:
-    Similarly, the partitioning scheme used for secondary indexes and materialized views should be configurable in a per
-    index/view basis.
-  \end{itemize}
+  Achieving efficient query processing requires the ability to adjust the query processing system
+  to the workload characteristics, data and access distribution patterns, and requirements of specific use cases.
+  An efficient query processing system thus needs able to be configured along the following dimensions:
 
-  \item \textbf{Flexible state and computation placement.}
-  The design pattern should enable fine-grained control over the placement of the query processing system's derived state
-  and computations.
+  \begin{itemize}
+    \item \textit{Flexible placement of derived state.}
+    In geo-distributed environments, communication latency between sites is an order of magnitude higher than
+    communication latency within a site.
+    The use of secondary indexes and materialized views in this context, involves a trade-off between the requirements
+    of minimizing the inter-site communication in the read path,
+    and minimizing the inter-site communication in the write path.
+    We have analyzed the implication of this fundamental trade-off in section~\ref{sec:topology_patterns}.
+    Therefore an efficient query processing system requires fine-grained control over the placement of derived state
+    across the system.
+
+    \item \textit{Flexible placement of query processing computations.}
+    For the same reasons, achieving efficient geo-distributed query processing requires the ability to control the
+    placement of query processing computations in order to minimize the amount of inter-site communication.
+    For example, the system can accelerate the execution of a join operation between two sets of data items located in different sites
+    by performing the join in the site in which the larger set is located.
+
+    \item \textit{State maintenance scheme.}
+    Keeping derived state up-to-date with the corpus involves a trade-off between
+    the overhead incurred to write operations and the consistency between derived state and corpus data.
+    Updating the derived state synchronously
+    ensures that it is strongly consistent with the
+    corpus, but introduces additional work to the write path --- potentially involving inter-site communication.
+    Conversely, performing this task asynchronously reduces the impact to write operations,
+    but allows derived state to be stale relative to the corpus.
+    Which maintenance scheme is better suited to a specific use case depends on its workload characteristics (query or write-heavy), and consistency requirements.
+
+    \item \textit{Index and materialized view selection.}
+    As we described in section~\ref{sec:read_write_path}, the choice of which secondary indexes and materialized views to
+    materialize involves a trade-off between work on the read path on the one side,
+    and work on the write path as well as the resource required for maintaining derived state on the other side.
+    Therefore, the query processing system needs to enable configurable index and materialized view selection.
+
+    \item \textit{Caching.}
+    As we described in section~\ref{sec:read_write_path},
+    caching, similarly to materialized views, can be viewed as a point in the design space defined by the read and write
+    work framework.
+    Therefore, design decisions about caching should be unified under the same tunning mechanisms as index and materialized
+    view selection.
+
+    % \item State partitioning scheme:
+    % Similarly, the partitioning scheme used for secondary indexes and materialized views should be configurable in a per
+    % index/view basis.
+
+    \end{itemize}
+
+  \item \textbf{Independence from corpus distribution schemes.}
+  Geo-distributed applications feature a variety of diverse data distribution schemes.
+  Examples include full and partial data replication across data centers, geo-partitioning, and federated systems.
+  An effective geo-distributed query processing system should not be limited to a specific data distribution scheme.
+  We therefore require our design to not be based not be based on specific assumptions the corpus distribution scheme.
 
 \end{itemize}
 
-\section{Overview: composable query processing system architecture}
+We argue that traditional monolithic query processing system architectures cannot provide the flexibility required
+to address these requirements --- notably enabling flexible derived state placement.
+We propose a \textit{framework} for constructing query processing systems in a case-by-case basis.
+The key idea is a modular, composable query processing architecture:
+application developers can construct and deploy query processing systems by assembling composable building blocks that
+encapsulate primitive query processing tasks.
+In this chapter,
+we focus on the \textit{mechanisms} required for enabling a modular and composable query processing system architecture.
 
-The key idea for achieving the objectives described above is \textit{assembly-based modularity}
-\cite{leclercq:dream, bouget:pleiades}.
-A query processing system is constructed by interconnecting composable building blocks
-that encapsulate derived state structures, such as indexes, materialized views, and caches,
-as well as relational operators such as filters, aggregations, and joins.
-In that way, configuration choices, such as index and view materialization, cache, and derived state partitioning,
-translate to \textit{composition choices}: which building blocks are used and how they are interconnected.
-For example, adding a caching layer to an existing query processing system can be done by extending an existing
-architecture with additional ``caching'' building blocks.
+% We show how the proposed approach translates tunning mechanisms, such as index selection, to design decisions about
+% the query processing architecture's topology, and how modularity enables flexible placement of derived state and query processing
+% computations.
 
-Moreover, the query processing architecture's building blocks separate interface from implementation.
-Because the query processing system's components communicate through well-defined interfaces,
-they can be flexibly placed across the system infrastructure.
-As a result, a given query processing system architecture can support multiple different component placement schemes.
+% Decoupling between storage architecture and query processing architecture.
+% The design pattern should not be based on architecture, mechanism or interface of a specific data storage tier.
+% Instead, it should enable a query processing system to work as a middleware systems on top of an existing database system.
+
+
+% structured approach to tunning query processing systems that unifies the tunning dimensions available in existing systems with flexible derived state placement.
+
+\section{Overview and design rationale}
+
+Our first design decision is to decouple the query processing architecture from the storage architecture.
+We view the query processing system as a \textit{middleware system} that communicates with the storage tier through
+well-defined interfaces.
+This provides the query processing system with the flexibility required to enable configurable state and computation placement
+and to support diverse data distribution schemes.
+Moreover, it allows the query processing system to be compatible with different storage systems,
+which is required in order to support federated query processing.
+
+\medskip
+\noindent
+The second decision is to not design a \textit{specific} query processing system,
+but rather a \textit{framework} for constructing query processing systems in a case-by-case basis,
+using \textit{assembly-based modularity} \cite{leclercq:dream, bouget:pleiades}.
+The proposed framework provides a set of composable, configurable building blocks that encapsulate simple query processing tasks
+such filters, aggregations, and joins, as well as derived state structures, including secondary indexes, materialized views.
+These building blocks can be composed into modular query processing architectures.
+
+We believe that modularity is essential for achieving the flexibility required to provide the tunning mechanisms described above.
+Building blocks are independent components with well-defined boundaries.
+Because of that, their placement across the system is orthogonal to their functionality.
+This addresses the requirement for flexible state and computation placement.
+
+% Moreover, we use modularity to translate tunning mechanisms, such as index and view materialization, caching, and derived state partitioning,
+% to \textit{composition choices}.
+% For example, adding a caching layer to an existing query processing system can be done by extending an existing
+% architecture with additional ``caching'' building blocks.
+
+% Application developers can construct query processing systems by composing 
+
+% We argue that assembly-based 
+%  traditional monolithic query processing system architectures cannot provide the flexibility required
+% to address these requirements --- notably enabling flexible derived state placement.
+
+
+
+
+
+% In that way, 
+% Moreover, design decisions about the placement of derived state and query processing computations translate to
+% decisions about the placement of building blocks.
+
+% the query processing architecture's building blocks separate interface from implementation.
+% Because the query processing system's components communicate through composable interfaces,
+% they can be flexibly placed across the system infrastructure.
+% As a result, a given query processing system architecture can support multiple different component placement schemes.
 
 \bigskip
 \noindent
-This design pattern defines a \textbf{modular} and \textbf{composable} component-based query processing system
-architecture.
-The principal element of this architecture, is its building block, which we term Query Processing Unit (QPU).
+Our modular query processing architecture design is based on a set of \textbf{observations} about the
+functionality and semantics of query processing systems.
+We use these observations as a basis for breaking down the functionalities of a query processing system into a
+set of \textit{primitives}.
+We unify the semantics of these query processing primitives under a component that can be used as the building block
+of a composable, modular query processing architecture.
 
-A QPU is a \textit{system component} that combines properties of a streaming operator and a microservice.
-Similarly to a streaming operator, a QPU receives one or more input streams, performs a computation over these streams,
+\medskip
+\noindent
+First, the functionality of a query processing system can be divided into three parts:
+\begin{itemize}
+  \item The execution of relational algebra operations, such as filters, aggregations, and joins.
+  \item Maintaining derived state structures (secondary indexes, materialized view, and caches).
+  These are used to facilitate the execution relational algebra operations.
+  \item ``Routing'' functionalities, such as the management of access to partitioned derived state,
+  and load balancing.
+\end{itemize}
+
+\medskip
+\noindent
+Second, each of types of functionalities can be encapsulated by a system component with microservice semantics:
+The component provides its functionality as a service through a ``service interface'';
+Other components can request the component's functionality by invoking its interface.
+For example, a secondary index can be encapsulated by a component with an interface which maps to the index's
+lookup operation.
+A filter operator can be encapsulated by a component with an interface that receives a set of items and a condition,
+and returns the only the items that satisfy the given condition.
+
+The structure of the interface response is common for the three types of components:
+A set of data items, each composed of a primary key and a set of secondary attributes.
+For example, this can represent the response of a materialized view or cache to a given query,
+the result of an index lookup, or the result of a filter operation.
+
+Furthermore, this component might be stateful or stateless.
+Components that maintain derived state structure, and relational operators such as aggregations, are stateful.
+Other components, such as filters are stateless.
+However, stateful components only require access to \textit{internal} state, and don't need to access shared state.
+For example, a partitioned index can be expressed as a set of ``index'' components representing index partitions.
+The state of each component contains the index entries of the corresponding index partition.
+An index lookup can be performed by invoking the interfaces of the relevant index partitions.
+
+\medskip
+\noindent
+The next observation is related to the \textit{input} required for the three types of query processing functionalities:
+\begin{itemize}
+  \item Indexes and materialized views expose a second interface for being updated to reflect
+  changes to the corpus.
+  For example, an secondary index provides methods for adding and removing data items from posting lists.
+  This interface can be viewed as a mechanism for receiving notifications for corpus updates as input.
+
+  \item A cache, in the case of a cache miss, forwards the given query to a different component,
+  and then receives the corresponding query result as input.
+
+  \item Relational operators receive one or multiple sets of items as input, and perform a transformation on those input
+  according to their functionality.
+  For example, a join operator receives the data items of two tables as input and performs a join operation on them.
+
+  \item The functionality of routing components consists of invoking the interface of other components,
+  and receive as input the corresponding responses.
+  For example, given a query, a component responsible for managing access to index partitions invokes the interfaces of
+  index partition components, receives as input the corresponding index lookup results.
+\end{itemize}
+
+We can categorize these semantics in two types of inputs:
+\begin{itemize}
+  \item Indexes and materialized views receive as input a \textit{continuous stream of updates},
+  throughout their operation.
+
+  \item All other components receive as input a set of data item \textit{states},
+  which represents the result of a \textit{single query} or request.
+\end{itemize}
+
+Our third observation is that these two types of inputs can be unified by representing the input
+to a query processing component as a \textit{stream of data item state deltas}.
+First, both types of inputs can be represent as a \textit{stream of records}.
+Second, data item state delta $D$ $=$ $\{State_0$, $State_1\}$ can represent either an update to the state of a data item
+($State_0$ is the data item's state before the update is applied,
+and $State_1$ is the data item's state before the update is applied)
+or the state itself
+($State_0$ is not used,
+and $State_1$ represents the data item's state).
+
+\medskip
+\noindent
+Combining the second and third observation,
+we extend the semantics of the query processing component as follows:
+The response to an invocation of the component's service interface is a stream of records structured
+as data item state deltas.
+
+\medskip
+\noindent
+Our forth observation is that while the functionalities of individual components are simple,
+the components can be \textit{composed} to implement higher-level query processing functionalities.
+This a common technique used in existing query engines,
+in which the execution of relational algebra expressions is represented as a dataflow computation performed by a
+directed acyclic graph of operators \cite{cockroachdb:distsql, gjengset:noria}.
+The graph's components are relational operators that receive one or more input streams,
+perform them, and emit an output stream.
+Graph nodes are connected so that the output stream of one operator is the input stream of another.
+
+Our final observation is that this composition mechanism can be extended to involve relational operator components as well as
+derived state and routing components.
+A component $C_a$ can invoke the service interface of another component $C_b$ of any type.
+As a result, a $C_b$ initiate a stream with $C_a$ as the receiver.
+
+\bigskip
+\noindent
+Combining all the observations described above,
+we define a \textit{system component} that combines properties of a streaming operator and a microservice.
+Similarly to a streaming operator, the component receives one or more input streams, performs a computation over these streams,
 and emits an output stream.
-Similarly to a microservice, a QPU provides its functionality by exposing an interface for receiving requests
-(called \textit{query requests})
-and can interoperate with other QPUs by sending query requests to them.
-The response to query request is a stream:
-every input stream that one QPU $A$ receives is the output stream of another QPU $B$, and is the response to a query request
-that $A$ has sent to $B$.
+Similarly to a microservice, the component provides its functionality as a service through an interface.
+The response to a query request is a stream.
+We call this component a Query Processing Unit (QPU).
+
+An individual QPU provides a basic query processing functionality,
+such as filtering an input stream based on a given condition, caching query results,
+or routing query requests to index partitions.
+Higher-order query processing tasks are achieved by \textit{composing} multiple QPUs.
+For example,
+a partitioned secondary index can be expressed as a composition set of ``secondary index'' QPUs,
+that represent index partitions, along with an ``index partition'' QPU.
+\todo{figure example  join, materialized view, }
+
+The mechanism that enables composition is that a query processing unit is able to invoke the service interface
+of other units.
+(called \textit{query requests}).
+That QPU then receives the corresponding responses as an input stream.
+Therefore, every input stream that a QPU $Q_a$ might receive, is the output stream of another QPU $Q_b$
+More specifically, it is the response to an invocation of $Q_b$'s service interface by $Q_b$.
+We call the QPU's service interface, \textit{query interface},
+and its invocation a \textit{query request}.
 
 \medskip
 \noindent
-A query processing unit can encapsulate a \textit{relational operator}.
-For example, a ``join operator'' QPU receives input streams that represent the tables to be joined,
-and emits an output stream that represents the results of the join operation on these tables.
-
-Moreover, a QPU can encapsulate a \textit{derived state structure}, such as an index, a materialized view, or a cache.
-For example, a ``secondary index'' QPU receives an input stream that represents notifications for updates to that table
-at the corpus.
-It maintains a secondary index data structure, which it stores as internal state.
-When it receives a query request, it reads from its internal state and emits the result as an output stream.
-
-Finally, a QPU can encapsulate a responsible for managing access to components of the query processing system, such as
-a partition or replica manager, or a load balancer.
-For example ``partition manager'' QPU, responsible for managing access to the partitions of a partitioned secondary index
-(each index partition being encapsulated by a QPU), sends query requests to the appropriate index partitions for a given
-query, and merges the resulting streams.
-
-Our key insight is that all three of the described QPU types --- relational operators, derived state, and routing operators ---
-can be generalized to a system component with common semantics, and thus can be composed in order to implement higher-level
-query processing computations.
-
-\medskip
-\noindent
-QPUs are organized in a directed acyclic graph.
-The edges of the graph represent potential query request - response steam relations.
-For example, an edge from a QPU $A$ to $B$ indicates that $A$ can send query requests to
---- and therefore establish input streams from --- $B$.
-We call $B$ a \textit{downstream connection} of $A$, and a query request sent from $A$ to $B$ a \textit{downstream query}.
-Base data are the leaves of the graph (nodes with only incoming edges),
+The query processing unit is the building block of the proposed query processing system architecture.
+A query processing system is a directed acyclic graph with QPUs as its vertices.
+The graph's vertices represent potential query request --- response stream relations.
+An edge from $Q_a$ to $Q_b$ indicates that $Q_a$ can send query requests to
+--- and therefore establish input streams from --- $Q_b$.
+We call $Q_b$ a \textit{downstream connection} of $Q_a$, and a query request sent from $Q_a$ to $Q_b$ a \textit{downstream query}.
+The corpus is located the leaves of the graph (nodes with only incoming edges),
 and client queries enter the graph through its root nodes (nodes with outgoing edges).
 
-When a QPU receives a query, it can either process it by reading from its internal state, or establish input streams
-by sending query requests to its some of its downstream connections and produce query results by performing a
-computation over these streams,
-or a combination of the two.
-As each QPU send query requests to its downstream connections,
+\medskip
+\noindent
+The computation model of query execution emerges from the semantics of the query processing unit.
+When a QPU at the root of the graph receives a query request,
+is has two mechanisms available for processing it:
+\begin{itemize}
+  \item In the case of a stateful QPU it can process the given query, by reading from its internal state.
+  For example, this is the case in a secondary index or materialized view component.
+
+  \item It can establish input streams by invoking the interface one or more downstream connections,
+  and perform a computation over these streams.
+  For example, given a query, a QPU that implements a filter operator invokes the interface of a downstream connection.
+  This initiates an input stream.
+  The operator filters the input stream based on the condition specified by the query,
+  and emits the item that satisfy the condition as the response stream.
+\end{itemize}
+
+These mechanisms are not mutually exclusive.
+A cache QPU first reads from its internal state.
+In case the results of the given query are not present in the cache,
+the QPU forwards the the query to a downstream connection, and receives the results as an input stream.
+
+When the downstream query mechanism is used,
 this process is repeated at each QPU that receives a query request.
-In that way, a client query results to query requests flowing downwards through the query processing system's QPU graph,
-defining a \textit{query execution sub-graph}.
-Query result stream flow upwards through the edge of this sub-graph.
+A client query, submitted at the root of the graph, progressively spawns sub-queries that flow downwards through
+graph, defining a \textit{query execution sub-graph}.
+Query results flow upwards through the edges of this sub-graph,
+and are progressively combined to produce the final result.
+
+Query execution is therefore \textit{decentralized}:
+Each QPU takes \textit{local decisions} based on its functionality and a given query request.
+The result of these local decisions is a distributed computation that performs query execution.
 
 
-\section{Query processing unit: a building block for composable query processing architectures}
+% and can interoperate with other QPUs by sending query requests to them.
+
+
+% Representing a relational algebra query execution as a dataflow computation performed by a DAG of operators is a common
+% technique in the state of the art \cite{cockroachdb:distsql, gjengset:noria}
+
+% the execution of relational algebra operations can be expressed as dataflow computation performed by a
+% directed
+
+
+% This design pattern defines a \textbf{modular} and \textbf{composable} component-based query processing system architecture.
+% We refer to the building block of this architecture as the
+
+% A QPU is a \textit{system component} that combines properties of a streaming operator and a microservice.
+% Similarly to a streaming operator, a QPU receives one or more input streams, performs a computation over these streams,
+% and emits an output stream.
+% Similarly to a microservice, a QPU provides its functionality by exposing an interface for receiving requests
+% (called \textit{query requests})
+% and can interoperate with other QPUs by sending query requests to them.
+% The response to query request is a stream:
+% every input stream that one QPU $A$ receives is the output stream of another QPU $B$, and is the response to a query request
+% that $A$ has sent to $B$.
+
+% \medskip
+% \noindent
+% A query processing unit can encapsulate a \textit{relational operator}.
+% For example, a ``join operator'' QPU receives input streams that represent the tables to be joined,
+% and emits an output stream that represents the results of the join operation on these tables.
+
+% Moreover, a QPU can encapsulate a \textit{derived state structure}, such as an index, a materialized view, or a cache.
+% For example, a ``secondary index'' QPU receives an input stream that represents notifications for updates to that table
+% at the corpus.
+% It maintains a secondary index data structure, which it stores as internal state.
+% When it receives a query request, it reads from its internal state and emits the result as an output stream.
+
+% Finally, a QPU can encapsulate component responsible for managing access to components of the query processing system, such as
+% a partition or replica manager, or a load balancer.
+% For example ``partition manager'' QPU, responsible for managing access to the partitions of a partitioned secondary index
+% (each index partition being encapsulated by a QPU), sends query requests to the appropriate index partitions for a given
+% query, and merges the resulting streams.
+
+% Our key insight is that all three of the described QPU types --- relational operators, derived state, and routing operators ---
+% can be generalized to a system component with common interface, and thus can be composed in order to implement higher-level
+% query processing computations.
+
+
+
+\section{The query processing unit: a building block for composable query processing architectures}
 
 \subsection{The Query Processing Unit component model}
 
-The key requirement for the query processing unit is \textit{composability}:
-QPUs should be able to be interconnected in various topologies,
-and to interoperate in the execution of query processing tasks.
+In the previous section, we discussed our insights for unifying the semantics of the different types
+of query processing tasks under a common component
+that can be used as the building block of a modular query processing architecture.
+Building on a set of observations,
+we described an overview of the semantics of this component, called the query processing unit.
 
-To achieve this, we define a common set of properties that every query processing unit should conform to.
-This properties include the QPU's interface for receiving query requests, and the query request - response stream semantics.
-We call this set of properties the query processing unit \textit{component model} (QPU model for short).
-Using object-oriented programming terminology, the QPU model can be viewed as an \textit{abstract class}
+In this section, we formalize the query processing unit specification.
+To achieve that, we introduce the query processing unit \textit{component model} (QPU Model for short).
+The QPU Model defines the set of common properties that every query processing unit conforms to.
+This includes the QPU's query interface, and the query request --- response stream semantics.
+Using object-oriented programming terminology, the QPU Model can be viewed as an \textit{abstract class}
 that defines a set of method signatures, but not their implementation.
-Implementations of the QPU model define \textit{QPU classes} with specific functionalities, for example
-filter, join or materialized view QPU classes.
-Using the object-oriented programming analogy, QPU classes can be viewed as classes that implement the QPU
-abstract class.
-Finally, specific \textit{QPU instances} can be viewed as objects of a specific QPU class, for example a secondary
-index QPU for the attribute $predominantColor$ of the table $photoAlbum$.
-According to the proposed design pattern, query processing systems are composed of QPU instances.
 
-In the rest of this thesis we use the terms query processing unit, QPU, and unit interchangeably to refer to QPU instances.
+We user the QPU model as a \textit{template} for defining \textit{QPU classes} with specific functionalities.
+For example ``cache'', ``join'', and ``index partition manager'' classes provide different query processing functionalities,
+but all conform to the properties of the QPU Mode.
+QPU classes can be viewed as classes that implement the QPU abstract class.
+
+Finally, \textit{QPU instances} can be viewed as specific instances of a QPU class,
+with a specific configuration.
+For example, different instances of the ``secondary index'' class can be used to
+implement the partitions of a partitioned index,
+or indexes on different attributes.
+As another example, a specific materialized view is implemented by an instance of the
+``materialized view'' class,
+with the view's definition as a configuration parameter.
+
+In the rest of this thesis, we use the terms query processing unit, QPU, and unit interchangeably to refer to QPU instances.
 
 \bigskip
 \noindent
-In this section we present an overview of the QPU model, with the goal of introducing the main concepts.
-In section~\ref{ref:specification} we present the detailed specification of the QPU model.
-
 The query processing unit component model defines a \textit{system component} with the following properties:
 
 \begin{figure}[t]
@@ -167,10 +425,10 @@ As a result, a QPU can send query requests to other QPUs, regardless of their cl
 This is the mechanism with which QPUs interoperate to perform query processing tasks,
 and forms the basis of the query processing system's computation model (section~\ref{sec:computation_model}).
 
-However different QPUs may be able to process only a subset of the queries that can be expressed by the interface's query
+However each QPU instance specializes in only a subset of the queries that can be expressed by the interface's query
 language.
 For example, a QPU may only serve queries about a specific database table.
-We call the set of queries that a unit can process its \textit{query processing capabilities}.
+The set of queries that a QPU instance can process is the query interface's \textit{domain}.
 
 The QPU's query interface has \textit{streaming semantics}.
 An invocation of the query interface initiates a stream between the QPU that sent the query request and the one that
@@ -181,7 +439,18 @@ We present the query interface in more detail in section \ref{ref:query_interfac
 
 \medskip
 \noindent
-\textbf{State.}
+\textbf{Configuration}
+
+\medskip
+\noindent
+\textbf{Local view}
+We call this part of the state \textit{local graph view}.
+Finally, query processing units that implement derived state structures and QPUs that store intermediate query processing
+results, for example in streaming join computations, maintain \textit{query processing state}.
+
+\medskip
+\noindent
+\textbf{Query Processing State.}
 Each QPU maintains \textit{internal} state, that is accessible only by that QPU.
 
 We distinguish the QPU state in three parts according to its functionality.
@@ -209,8 +478,8 @@ The functionality of a query processing unit can be modeled using three function
 
 \end{itemize}
 
-The QPU model defines the signatures of these functions, but a specific implementation.
-Each QPU class provides implementations for these functions.
+The QPU model defines the signatures of these functions, and each QPU class provides implementations for them.
+The functionality of a QPU class is defined by the implementations that the class provides for the three QPU functions.
 
 \bigskip
 
@@ -264,8 +533,20 @@ where
 \]
 
 \noindent
-A $StreamRecord$ can represent two types of information:
+A $StreamRecord$ can be of the two following types of information:
 \begin{itemize}
+  \begin{sloppypar}
+  \item The \textbf{state of a data item}.
+  In this case, $StreamRecord$:
+  \[
+  (DataItemID,~[(AttributeName,~AttributeValue_{old},~AttributeValue_{new})],~Timestamp)
+  \]
+  encodes that the state of the data item $DataItemID$ at timestamp $Timestamp$.
+  Each elements of $[(AttributeName$, $AttributeValue_{old}$, $AttributeValue_{new})]$ indicates that
+  the data item is associated with an attribute $AttributeName$ with the value $AttributeValue_{new}$
+  ($AttributeValue_{new}$ is ignored).
+  \end{sloppypar}
+
   \begin{sloppypar}
   \item An \textbf{update event} for a modification of a data item (a creation, modification, or deletion
   of a data item).
@@ -276,18 +557,6 @@ A $StreamRecord$ can represent two types of information:
   represents an update to the the data item $DataItemID$, with timestamp $Timestamp$;
   Each elements of $[(AttributeName$, $AttributeValue_{old}$, $AttributeValue_{new})]$ indicates that
   the update modified the value of attribute $AttributeName$ from $AttributeValue_{old}$ to $AttributeValue_{new}$.
-  \end{sloppypar}
-
-  \begin{sloppypar}
-  \item The \textbf{state of a data item}.
-  In this case, $StreamRecord$:
-  \[
-  (DataItemID,~[(AttributeName,~AttributeValue_{old},~AttributeValue_{new})],~Timestamp)
-  \]
-  encodes that the data item $DataItemID$ at timestamp $Timestamp$;
-  Each elements of $[(AttributeName$, $AttributeValue_{old}$, $AttributeValue_{new})]$ indicates that
-  the data item is associated with an attribute $AttributeName$ with the value $AttributeValue_{new}$
-  ($AttributeValue_{new}$ is ignored).
   \end{sloppypar}
 \end{itemize}
 
@@ -370,7 +639,7 @@ In a synchronous stream, the sender blocks until the stream records has been rec
 \noindent
 % https://documentation.basis.com/BASISHelp/WebHelp/usr2/sql_grammar.htm
 % http://www.h2database.com/html/grammar.html#expressionz
-The query processing unit interface support a query language with an SQL-like syntax.
+The interface supports a query language with an SQL-like syntax.
 The query language supports point and range queries, logical operators, aggregation functions, and joins.
 We argue that these is no inherent limitation in the QPU model that prevents it from supporting a more complex
 query language (for example supporting nested queries).
@@ -387,7 +656,7 @@ The QPU model's query language has following syntax:
 QueryRequest          ::=  SELECT SelectExpression
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~FROM TableExpression
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~WHERE PredicateExpression
-~~~~~~~~~~~~~~~~~~~~~~~~~~~TIMESTAMP TimestampExpression \todo{the timestamp can be just another attribute, but I think we need to have it separate for emphasis}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~INTERVAL IntervalExpression
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~[ GROUP BY attributeName ]
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~~[ ORDER BY OrderByExpression \{ ASC | DESC \} ]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~\{ SYNC | ASYNC \}
@@ -449,7 +718,7 @@ Value                 ::= stringValue | floatValue | intValue |
 % }}
 {\obeylines\obeyspaces
 \texttt{
-TimestampExpression   ::= FROM TimestampTerm [ TO TimestampTerm ]
+IntervalExpression   ::= FROM TimestampTerm [ TO TimestampTerm ]
 }}
 
 {\obeylines\obeyspaces
@@ -500,10 +769,11 @@ Configuration parameters can be divided to the following parts:
 \medskip
 \noindent
 \textbf{Local graph view.}
-For each of its downstream connections, a query processing unit maintains a data structure that represents the
-\textit{set of queries that this connection can process}, which we term \textit{query processing capabilities}.
-It the query processing capabilities of its neighbors in order to: (1) validate if it can process a given
-query, and (2) generate downstream queries for a given query.
+For each of its downstream connections, a query processing unit maintains a data structure that represents
+its query interface domain, i.e. the set of queries that the connection can process.
+A unit uses the query interface domains of its neighbors to:
+(1) validate if it can process a given query, and
+(2) generate downstream queries for a given query.
 
 The data structures for the query processing capabilities of a QPU's downstream connections compose it local graph view
 state.
@@ -535,8 +805,7 @@ where
 
 Using pseudocode, we can represent the query processing state's API as follows:
 
-\begin{lstlisting}[caption={Pseudocode for the QPU's query processing state},captionpos=b,label={lst:qpustate}]
-
+\begin{lstlisting}[caption={Pseudocode for the QPU's query processing state},captionpos=b,label={lst:qpustate}, frame=tlrb]
 type AttributeName string
 
 type AttributeValue union {
@@ -555,15 +824,16 @@ type State {
 
 class QueryProcessingState
   function Put(Key, State)
-  function Get(Key_low, Key_high, Timestamp_low, Timestamp_high) [(Key, [State])]
+  function Get(Key_low, Key_high, Timestamp_low, Timestamp_high)
+      [(Key, [State])]
 \end{lstlisting}
 
 \begin{itemize}
   \item $Put$ modifies the value of the query processing state's entry for the given key.
   It can be used with a non-existing key to create a new entry.
 
-  \item $Get$ retrieves the query processing state entries with $Key_low$ $<$ $key$ $\leq$ $Key_high$.
-  For each entry, the updates with $Timestamp_low$ $<$ $Timestamp$ $\leq$ $Timestamp_high$ retrieved.
+  \item $Get$ retrieves the query processing state entries with $Key_{low}$ $<$ $key$ $\leq$ $Key_{high}$.
+  For each entry, the updates with $Timestamp_{low}$ $<$ $Timestamp$ $\leq$ $Timestamp_{high}$ retrieved.
 \end{itemize}
 
 Essentially, the QPU's query processing state is versioned.
@@ -599,10 +869,11 @@ $ProcessQuery$ receives as arguments:
 \subsubsection{Query processing function}
 \label{sec:query_processing_func}
 
-The query processing function is responsible for processing a given query and emitting the results to the output stream.
+The query processing function is responsible for processing a single query.
+It spawns a result stream and sends the results back to the requestor over that stream.
 
-For each query $q$ being processing, the QPU initiates an output stream, $R_q$,
-and executed an instance of the query processing function, $QPF_q$.
+For each query $q$ being processed, the QPU initiates an output stream, $R_q$,
+and executes an instance of the query processing function, $QPF_q$.
 $QPF_q$ is responsible for emitting records to $R_q$.
 Moreover, if $QPF_q$ initiates input streams $I_{q-1}$, $I_{q-2}$, ..., then $QPF_q$ is responsible for handing the return
 values of callback functions for records received through $I_{q-i}$.
@@ -888,7 +1159,7 @@ class using pseudocode.
 \State conn = get endpoint from [downstreamConn] \Comment{we assume one downstream connection}
 \State queryReq = generate interval query
 \State inStream = send queryReq to conn
-\While{not at end of this the stream}
+\While{not at the end of the stream}
 \State inRecord = inStream.Recv()
 \State ProcessInputRecord(inRecord, null, qpState)
 \EndWhile
@@ -1378,7 +1649,7 @@ QPU trees have two functionalities:
 
 \noindent
 Representing a relational algebra query execution as a dataflow computation performed by a DAG of operators is a common
-technique in the state of the art \cite{cockroachdb:distsql}.
+technique in the state of the art \cite{cockroachdb:distsql, gjengset:noria}.
 However this technique is focused on expressing relational algebra expressions.
 It does not include the incremental maintenance of derived state, or ``systems'' functionalities such as load balancing
 and the management of access to partitioned state.
