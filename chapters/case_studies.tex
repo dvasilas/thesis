@@ -322,7 +322,8 @@
 
 % % news aggregator application
 
-% % Lobsters stores individual votes for stories in a votes ta- ble, but also stores per-story vote counts as a column in the stories table. This speeds up read queries of vote counts, but “de-normalizes” the schema and complicates vote writes, which must update the derived counts.
+% % Lobsters stores individual votes for stories in a votes table, but also stores per-story vote counts as a column in the stories table.
+% This speeds up read queries of vote counts, but “de-normalizes” the schema and complicates vote writes, which must update the derived counts.
 % % CREATE TABLE stories (id int, author int, title text, url text);
 % % CREATE TABLE votes (user int, story_id int);
 % % CREATE TABLE users (id int, username text);

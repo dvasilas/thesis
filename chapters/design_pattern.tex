@@ -13,7 +13,7 @@ Existing query processing systems do not provide mechanisms for controlling the 
 
 \medskip
 \noindent
-The design of a geo-distributed query processing system presents the several unique design issues:
+The design of a geo-distributed query processing system presents several unique design issues:
 \begin{itemize}
 
   \item \textbf{Tunability.}
@@ -108,7 +108,7 @@ The second decision is to not focus on the design a \textit{specific} query proc
 but rather a \textit{framework} for constructing query processing systems in a case-by-case basis.
 % using \textit{assembly-based modularity} \cite{leclercq:dream, bouget:pleiades}.
 The proposed framework provides a set of composable building blocks that encapsulate simple query processing tasks
-such filters, aggregations, and joins, as well as derived state structures, including secondary indexes, materialized views.
+such selections, aggregations, and joins, as well as derived state structures, including secondary indexes, materialized views.
 These building blocks can be composed into modular query processing architectures.
 % We believe that modularity is essential for achieving the flexibility required to provide the tunning mechanisms described above.
 Moreover, we design the building blocks as independent components with well-defined boundaries.
@@ -143,127 +143,271 @@ This is key insight for achieving flexible state and computation placement.
 Our design is based on a set of \textbf{observations} about the functionality and semantics of query processing systems.
 We use these observations as a basis for breaking down the functionalities of a query processing system into a
 set of \textit{primitives}.
-We unify the semantics of these query processing primitives under a component that can be used as the building block
+We unify the semantics of these primitives under a component that can be used as the building block
 of a composable, modular query processing architecture.
 
-\medskip
-\noindent
-First, the functionality of a query processing system can be divided into three parts:
-\begin{itemize}
-  \item The execution of relational algebra operations, such as filters, aggregations, and joins.
-  \item Maintaining derived state structures (secondary indexes, materialized view, and caches).
-  These are used to facilitate the execution relational algebra operations.
-  \item ``Routing'' functionalities, such as the management of access to partitioned derived state,
-  load balancing, and federation of independent corpora.
-\end{itemize}
+In order to describe these observations, we introduce the example of a news aggregator application.
+In that application, users post and vote on news stories.
+The application stores individual votes for stories in a votes table.
+It uses a materialized view to integrate the vote count to each story:
 
-\medskip
-\noindent
-Second, each of these types of functionalities can be encapsulated by a \textit{system component} with microservice semantics:
-the component provides its functionality as a service through a ``service interface'';
-other components can request the component's functionality by invoking its interface.
-For example, a secondary index can be encapsulated by a component with an interface which maps to the index's
-lookup operation.
-A filter operator can be encapsulated by a component with an interface that receives a set of items and a condition,
-and returns the items that satisfy the given condition.
+\begin{lstlisting}[
+          language=SQL,
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent
+        ]
+TABLE stories (id int, title text, url text)
+TABLE votes (story_id int)
 
-The structure of the service interface's response is common for the three types of components:
-a set of data items, each composed of a primary key and a set of secondary attributes.
-For example, this can represent the response of a materialized view or cache to a given query,
-the result of an index lookup, or the result of a filter operation.
-
-Furthermore, this component might be stateful or stateless.
-Components that maintain derived state structures, and relational operators such as aggregations, are stateful.
-Other components, such as filters are stateless.
-However, stateful components only require access to \textit{internal} state, and don't require shared state.
-For example, a partitioned index (Figure~\ref{fig:observations_partitioned_index}) can be expressed as a set of ``index'' components representing index partitions.
-The state of each component contains the index entries of the corresponding index partition.
-An index lookup can be performed by invoking the interfaces of the relevant index partitions.
-
-In summary, our second observation is that the three types of query processing functionalities can be encapsulated
-by a stateful or stateless microservice-like component that provides its functionality through an interface.
-The response to an invocation of this interface is a set of data items.
+VIEW stories_with_voteCount
+  SELECT id, title, url, vote_count
+  FROM stories
+  JOIN (
+    SELECT story_id, SUM(*) as vote_count
+    FROM votes
+    GROUP BY story_id
+  )
+  ON stories.id = votes.story_id
+  WHERE stories.id = ?
+\end{lstlisting}
 
 \begin{figure}[t]
   \centering
-    \includegraphics[width=0.5\textwidth]{./figures/design_pattern/observations_partitioned_index.pdf}
-    \caption{Example of a simple document-partitioned index.}
-    \label{fig:observations_partitioned_index}
+    \includegraphics[width=\textwidth]{./figures/design_pattern/running_example.pdf}
+    \caption{Conceptual depiction of the news aggregator application query processing architecture.}
+    \label{fig:running_example}
 \end{figure}
+
+Moreover, this materialized view is partitioned with the partition by document approach, using the $story_id$ as partitioning key.
+
+Figure~\ref{fig:running_example} depicts a simplified version of the application's query processing architecture.
+An aggregation and a join operator incrementally compute the $stories_with_voteCount$ view as new stories and votes are added.
+The view is partitioned among multiple view partitions.
+A partition manager is used to manage access to the view partitions.
+
+We use this example as a reference for discussing our observations on the semantics of query processing systems.
+
+\vspace{12pt}
+\noindent
+\textbf{Breaking down query processing in basic primitives.}
+
+\noindent
+First, the functionality of a query processing system can be divided into three parts:
+\begin{itemize}
+  \item The execution of relational algebra operations.
+  In the news aggregator example the component that calculate the $vote\_count$ per story,
+  and perform the join with the stories table are relational operators.
+  Other examples of relational operators are selections and projections.
+
+  \item Maintaining derived state structures.
+  The materialized view partitions in the example consists derived state structures.
+  Other examples include secondary indexes and caches.
+
+  \item ``Routing'' functionalities.
+  We can describe the functionality of the partition manager in the example we the term routing.
+  This component is responsible for forwarding queries to the view's partitions and combining the return responses.
+  There are other functionalities of query processing system component that can be categorized as routing,
+  such as load balancing, and the federation of independent corpora.
+\end{itemize}
+
+\vspace{12pt}
+\noindent
+\textbf{Encapsulating query processing primitives to system components with service semantics.}
+
+\noindent
+Second, each of these types of functionalities can be encapsulated by an \textit{independent system component} with microservice semantics:
+the component provides its functionality as a service through a ``service interface'';
+other components can request the component's functionality by invoking its interface.
+In the news aggregator example,
+we can model the partition manager as a microservice that abstract the underlying architecture,
+exposing only an interface for service queries.
+Similarly,
+we can implement each view partition as an independent component that exposes an interface encapsulating the view's query method.
+The partition manager forwards a given query to each view partition by invoking its interface.
+Finally, we can also apply this to components with relational operator functionalities:
+We can model the join operator as a component that provides its join operation functionality as a service.
+Each view partition invokes the join operator's interface using the view definition.
+
+Next, we examine the service interface's response for the three types of query processing functionalities.
+In chapter~\ref{ch:models} \todo{update model}, we have modeled a data item of a corpus table as tuple of attributes.
+In the stories table, a data item is a story, with $story\_id$, $title$ and $url$ being its attributes:
+\begin{itemize}
+  \item \textit{Relational operators} \textit{transform} an input set of attribute tuples, to an output set of tuples:
+    \begin{itemize}
+    \item A projection operator discards one more attributes.
+    \item A join operator extends receives two sets of input tuples.
+    Its output is a set of tuples containing a combination of the attributes in the input tuples.
+    In the example, the join operator extends the story's attributes by adding the $vote\_count$ attribute.
+    \item An aggregation operator (such as count or sum) generates output tuples that represent groups of input tuples.
+    These output tuples contain the attributes of input tuples, extended with an additional attribute that represents the
+    result of applying a \textit{function} over the tuples in a group.
+    In the example, the count operator's response is a set of tuples,
+    each containing a unique $story\_id$, extended with the $vote\_count$ attributes
+    which is the result of applying the count function to the tuples of each group to input tuples with common $story\_id$.
+    \end{itemize}
+  We can unify these transformations by modeling the output of a relational operator component as a tuple of attributes.
+
+  \item \textit{Derived state structures} accelerate read access to a set of tuple attributes,
+  but not perform any transformations.
+  In the news aggregator example, the view partitions pre-compute the results of the join and count operation.
+  Therefore, the response to an invocation a view partition's interface is the same as the response of the join operator.
+
+  \item Similarly, \textit{routing operators} either forward the responses of other components, or combine them by merging
+  multiple input sets of tuples to a single output set.
+
+  \end{itemize}
+
+Our third observation is that we can use a common model for the responses of all three types of query processing functionalities.
+The response to the invocation of a components service interface is a set of tuples of attributes.
+These attributes might be combinations of the attributes present in the data items of the corpus,
+or the results of functions applied on those attributes.
 
 \medskip
 \noindent
-The next observation is related to the \textit{input} required for the three types of query processing functionalities:
+Combining the above observations,
+we conclude that that query processing functionalities belonging in the three categories described above
+can be encapsulated by a microservice-like component that provides its functionality through an interface.
+The response to an invocation of this interface can be modeled as is a set of data items, each structured as a tuple of attributes.
+
+% \begin{figure}[t]
+%   \centering
+%     \includegraphics[width=0.5\textwidth]{./figures/design_pattern/observations_partitioned_index.pdf}
+%     \caption{Example of a simple document-partitioned index.}
+%     \label{fig:observations_partitioned_index}
+% \end{figure}
+
+\vspace{12pt}
+\noindent
+\textbf{The query processing component's input port.}
+
+\noindent
+Our forth observation is related to the \textit{input} required for each query processing functionality type:
 \begin{itemize}
-  \item Indexes and materialized views expose a second interface for being updated to reflect
-  changes to the corpus.
-  For example, an secondary index provides methods for adding and removing data items from posting lists.
-  This interface can be viewed as a mechanism for receiving notifications for corpus updates as input.
-  As we described in section~\ref{sec:sync_async_maintenance},
-  updating an index (or materialized view) to reflect an update to a data item $d$ consists of
-  (1) removing the information about the previous version of $d$ from the index, and
-  (2) adding the information about new current version.
+  \item Indexes and materialized views expose a second interface for being updated to reflect changes to the corpus.
+  In the news aggregator example, a materialized view partition receives receives from the join operator
+  \textit{information about changes in the join operation result}.
+  The following types of changes in the can occur in the join operation result:
+  \begin{itemize}
+    \item A new story has been created.
+    \item The vote count for an existing story has changed.
+    \item A story has been deleted.
+  \end{itemize}
+
+  % For example, an secondary index provides methods for adding and removing data items from posting lists.
+  % This interface can be viewed as a mechanism for receiving notifications for corpus updates as input.
+  % As we described in section~\ref{sec:sync_async_maintenance},
+  % updating an index (or materialized view) to reflect an update to a data item $d$ consists of
+  % (1) removing the information about the previous version of $d$ from the index, and
+  % (2) adding the information about new current version.
 
   \item A cache, in the case of a cache miss, forwards the given query to a different component,
   and then receives the corresponding query result as input.
 
-  \item Relational operators receive one or multiple sets of items as input, and perform a transformation on those input
-  according to their functionality.
-  For example, a join operator receives the data items of two tables as input and performs a join operation on them.
+  \item As discussed above, relational operators receive a set of attributes tuples as input.
+  Unary operators, such as selection, receive one set of tuples,
+  and binary operators, such as joins, receive two sets.
 
-  \item The functionality of routing components consists of invoking the interface of other components,
-  and receive as input the corresponding responses.
-  For example, given a query, a component responsible for managing access to index partitions invokes the interfaces of
-  index partition components, receives as input the corresponding index lookup results (Figure~\ref{fig:observations_partitioned_index}).
+  \item By definition, because of their functionality, routing components, receive the output of other components as input.
+  The view partition manager in the example receives as input the responses of the index partitions to a given query.
 \end{itemize}
 
-We can categorize inputs in two types:
+We can categorize these inputs in two types:
 \begin{itemize}
-  \item An index or materialized view requires \textit{updates} representing information about modifications of the corpus as input.
-  Moreover, need to continuously receive this input throughout their operation,
-  in order to remain up-to-date with the corpus.
+  \item An index or materialized view requires as input information about \textit{modifications} to the corpus.
+  Moreover, the \textit{scope} of the input required by these components \textit{spans their entire operation lifetime}.
+  In the example, index partitions need to \textit{continuously} receive information about story creation and deletion of
+  stories and votes, in order to remain up-to-date with the corpus.
 
-  \item Every other query processing functionality requires a set of data item \textit{states} as input.
-  Contrary to indexes and materialized view, the scope of this input is a \textit{single query or request}.
-  For example, a filter operator receives a set of data item as input that is tied to specific execution.
+  \item Every other query processing functionality requires as input a information about the \textit{state} of the corpus.
+  Moreover, contrary to indexes and materialized views, the \textit{scope} of this input is a \textit{single session}.
+  In the example, the index partition manager receives as input the responses of view partitions for a specific query.
+  Each query corresponds to a distinct set of input, tied to the specific query.
 \end{itemize}
 
-Our third observation is that these two types of input can be unified by representing the input
-that a query processing functionality requires as a \textit{stream of records}, structured as data item state deltas.
-First, both types of inputs can be represented using streaming semantics.
-The input required by an an index or materialized view can be viewed as a continuous stream of updates.
-The input required by other query can be viewed as a stream of data item states.
-Second, a data item state delta, consisting of a base state and a modification (or the new state after the modification is applied)
-can represent either an update to the state of a data item, or the state itself (by leaving empty the second part of the delta)
+Our forth observation is that we can unify the two different \textit{type} and \textit{scope} input semantics.
+First, we can represent both input scopes using streaming semantics.
+The input required by an an index or materialized view can be viewed as a continuous stream of records encoding information about modifications to the corpus.
+The input required by other components can be viewed as a stream of records that encode parts of the state of the corpus.
+Using streaming semantics, we can couple the scope of an input to the lifetime of a stream.
+The input to a view partition in the example is \textit{long-running} stream, the lifetime of which spans the lifetime of the partition.
+An input to the partition manager is a stream that spans the processing of a specific query.
 
-Using this observation we can extend the query processing component described above with a ``port'' for
-receiving an input stream consisting of records structured as data item state deltas.
+Second, we can represent both input types by structuring stream records as \textit{deltas}.
+A delta consists of a base state, and information encoding a modification to that state.
+Applying this to the news aggregator example,
+we can represent the input to a view partition as a record with a base state part, and a modification part.
+The base state part is a tuple $(story\_id$, $title$, $url$, $vote\_count)$.
+The modification part may indicate that the story identified by the base state part is a newly created story,
+that this story has been deleted,
+or that this is an modified state of this story.
 
-\medskip
+By omitting the modification part, the delta can also represent a part of corpus' state.
+Applying this to the news aggregator example,
+we can represent the input to the partition manager for a given query with the same record structure.
+In this case, the modification part is empty.
+The base state part represents the state of story that matches a given query.
+
+Using this observation,
+we extend the query processing component described above with a ``port'' for receiving an input stream consisting of records structured as deltas.
+
+\vspace{12pt}
 \noindent
-Our forth observation is that the two characteristics of the query processing component,
-the service interface and the input port,
-are not independent from each other.
-An stream being received as an input by a component,
-can be viewed as the result of that component invoking the service interface of another component.
+\textbf{The relation between service interface and input port.}
 
-We can illustrate this using the partitioned index example shown in Figure~\ref{fig:observations_partitioned_index}.
-To process a given index lookup,
-the partition manager forwards the lookup to the index partitions (assuming a document-partitioned index);
-each index partition responds with a set data items that correspond to the given lookup.
-Finally, the partition manager merges the received responses.
-
-When the index manager and index partition functionalities are provided by query processing components, as described above,
-this task can be described as follows:
-To process a given index lookup,
-the partition manager component invokes the service interface of index partitions.
-As a result, a stream is established between each index partition and the partition manager.
-Through each of these streams, the corresponding partition sends index lookup results to the partition manager.
-The partition manager receives index lookup results from the index partition as input streams through its input port.
+\noindent
+Our fifth observation is that the service interface and the input port of the query processing component,
+are not independent from one another.
+In the example, the input that the partition manager receives from an view partition
+is the direct result of the partition manager invoking the interface of the partition.
+Moreover, the stream of modifications that a view partition receives,
+can be viewed as the result of an invocation of the join operators interface by the partition.
 
 Guided by this observation, we extend the semantics of the query processing component as follows:
-The response to an invocation of the component's service interface is a stream of records structured
-as data item state deltas.
+The response to an invocation of the component's service interface is a stream of records structured as deltas.
+
+To enable this connection between service interface and input port, we distinguish two types of interface invocations.
+A ``state'' invocation is evaluated \textit{a single time} against a specific state of the corpus and produces a set of
+\textit{state} results.
+In the example, the invocation of a view partition's interface by the partition manager is a ``state'' invocation.
+It describes a query that is evaluated once against the state of the partition, and produces a set of results.
+A ``persistent'' invocation is a long-running request that is re-evaluated upon each modification of the corpus.
+In the example, the invocation of the join operator's interface by a partition is a ``persistent'' invocation.
+It describes a query that is repeatedly re-evaluated each time join operator receives an input.
+
+The second connection between input port and service interface is that the response to an interface invocation might be
+the result of a transformation over the input.
+This directly maps to the functionality of relational operators.
+In the example, the join operator emits a new output record as a result of receiving an input record, either from the
+stories table, or the count operator.
+
+Expanding on this, we distinguish two mechanisms that query processing components use provide their exposed service:
+\begin{itemize}
+  \item A derived state component process requests by reading from its state (index, cache or materialized view).
+  This is the case for index partitions in the example.
+
+  \item Relational operator and routing components provide their functionality by performing a transformation over their inputs.
+\end{itemize}
+
+% can be viewed as the result of that component invoking the service interface of another component.
+
+% We can illustrate this using the partitioned index example shown in Figure~\ref{fig:observations_partitioned_index}.
+% To process a given index lookup,
+% the partition manager forwards the lookup to the index partitions (assuming a document-partitioned index);
+% each index partition responds with a set data items that correspond to the given lookup.
+% Finally, the partition manager merges the received responses.
+
+% When the index manager and index partition functionalities are provided by query processing components, as described above,
+% this task can be described as follows:
+% To process a given index lookup,
+% the partition manager component invokes the service interface of index partitions.
+% As a result, a stream is established between each index partition and the partition manager.
+% Through each of these streams, the corresponding partition sends index lookup results to the partition manager.
+% The partition manager receives index lookup results from the index partition as input streams through its input port.
 
 \begin{figure}[t]
   \centering
@@ -272,9 +416,12 @@ as data item state deltas.
     \label{fig:observations_composition}
 \end{figure}
 
-\medskip
+\vspace{12pt}
 \noindent
-Our fifth observation is that while each individual component encapsulates a basic query processing functionality,
+\textbf{Composition of query processing components.}
+
+\noindent
+Our sixth observation is that while each individual component encapsulates a basic query processing functionality,
 we can implement higher-level functionalities be \textit{composing} components.
 This is depicted in Figure~\ref{fig:observations_composition}.
 Components with basic functionalities, such as selection, project and join, are composed to execute a more complex task.
@@ -286,15 +433,17 @@ The graph's components are relational operators that receive one or more input s
 perform an operation on them, and emit an output stream.
 Graph nodes are connected so that the output stream of one operator is the input stream of another.
 
-Our final observation is that this composition mechanism can be extended to involve relational operator components as well as
+We can expand the composition property to also include  relational operator components as well as
 derived state and routing components.
-This is the case in the partitioned index example, in which derived state components (index partitions), and a routing component
-(partition manager) are composed to implement a partitioned index.
+In the new aggregator example, we compose derived state components (view partitions), along with a routing component
+(partition manager) to construct a partitioned materialized view.
 
-\bigskip
+\vspace{12pt}
 \noindent
-Combining the above,
-we define a \textit{system component} that combines properties of a streaming operator and a microservice.
+\textbf{Conclusion.}
+
+\noindent
+Combining the above, we define a \textit{system component} that combines properties of a streaming operator and a microservice.
 Similarly to a streaming operator, the component receives one or more input streams, performs a computation over these streams,
 and emits an output stream.
 Similarly to a microservice, the component provides its functionality as a service through an interface.
