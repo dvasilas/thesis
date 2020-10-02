@@ -14,64 +14,69 @@ Existing query processing systems do not provide mechanisms for controlling the 
 \medskip
 \noindent
 The design of a geo-distributed query processing system presents several unique design issues:
+
+\smallskip
+\noindent
+\textbf{Tunability.}
+
+\noindent
+Achieving efficient geo-distributed query processing requires the ability to adjust the query processing system
+to the workload characteristics, data and access distribution patterns, and requirements of specific use cases.
+An efficient geo-distributed query processing system should provide tunning mechanisms along the following dimensions:
+
 \begin{itemize}
+  \item \textit{Flexible placement of derived state.}
+  In geo-distributed environments, communication latency between sites is an order of magnitude higher than
+  communication latency within a site.
+  The use of secondary indexes and materialized views in this context, involves a trade-off between the requirements
+  of minimizing the inter-site communication in the read path, and in the write path.
+  We have have analyzed the implication of this trade-off in section~\ref{sec:topology_patterns}.
+  Therefore, an efficient query processing system requires fine-grained control over the placement of derived state
+  across the system.
 
-  \item \textbf{Tunability.}
-  Achieving efficient geo-distributed query processing requires the ability to adjust the query processing system
-  to the workload characteristics, data and access distribution patterns, and requirements of specific use cases.
-  An efficient geo-distributed query processing system should provide tunning mechanisms along the following dimensions:
+  \item \textit{Flexible placement of query processing computations.}
+  For the same reasons, achieving efficient geo-distributed query processing requires the ability to control the
+  placement of query processing computations in order to minimize the amount of inter-site communication.
+  For example, the system can accelerate the execution of a join operation between two sets of data items located in different sites
+  by performing the join in the site in which the larger set is located.
 
-  \begin{itemize}
-    \item \textit{Flexible placement of derived state.}
-    In geo-distributed environments, communication latency between sites is an order of magnitude higher than
-    communication latency within a site.
-    The use of secondary indexes and materialized views in this context, involves a trade-off between the requirements
-    of minimizing the inter-site communication in the read path, and in the write path.
-    We have have analyzed the implication of this trade-off in section~\ref{sec:topology_patterns}.
-    Therefore, an efficient query processing system requires fine-grained control over the placement of derived state
-    across the system.
+  \item \textit{State maintenance scheme.}
+  Keeping derived state up-to-date with the corpus involves a trade-off between
+  the overhead incurred to write operations and the consistency between derived state and corpus data (section~\ref{sec:sync_async_maintenance}).
+  Updating the derived state synchronously
+  ensures that it is strongly consistent with the
+  corpus, but introduces additional work to the write path --- potentially involving inter-site communication.
+  Conversely, performing this task asynchronously reduces the impact to write operations,
+  but allows derived state to be stale relative to the corpus.
+  Which maintenance scheme is better suited to a specific use case depends on its workload characteristics (query or write-heavy), and consistency requirements.
 
-    \item \textit{Flexible placement of query processing computations.}
-    For the same reasons, achieving efficient geo-distributed query processing requires the ability to control the
-    placement of query processing computations in order to minimize the amount of inter-site communication.
-    For example, the system can accelerate the execution of a join operation between two sets of data items located in different sites
-    by performing the join in the site in which the larger set is located.
+  \item \textit{Index and materialized view selection.}
+  As we described in section~\ref{sec:read_write_path}, the choice of which secondary indexes and materialized views to
+  materialize involves a trade-off between work on the read path on the one side,
+  and one the other side work on the write path as well as the resource required for maintaining derived state.
+  Therefore, the query processing system needs to enable configurable index and materialized view selection.
 
-    \item \textit{State maintenance scheme.}
-    Keeping derived state up-to-date with the corpus involves a trade-off between
-    the overhead incurred to write operations and the consistency between derived state and corpus data (section~\ref{sec:sync_async_maintenance}).
-    Updating the derived state synchronously
-    ensures that it is strongly consistent with the
-    corpus, but introduces additional work to the write path --- potentially involving inter-site communication.
-    Conversely, performing this task asynchronously reduces the impact to write operations,
-    but allows derived state to be stale relative to the corpus.
-    Which maintenance scheme is better suited to a specific use case depends on its workload characteristics (query or write-heavy), and consistency requirements.
-
-    \item \textit{Index and materialized view selection.}
-    As we described in section~\ref{sec:read_write_path}, the choice of which secondary indexes and materialized views to
-    materialize involves a trade-off between work on the read path on the one side,
-    and one the other side work on the write path as well as the resource required for maintaining derived state.
-    Therefore, the query processing system needs to enable configurable index and materialized view selection.
-
-    \item \textit{Caching.}
-    As we described in section~\ref{sec:read_write_path},
-    caching, similarly to materialized views, can be viewed as a point in the design space defined by the read and write
-    work framework.
-    Therefore, index and view selection mechanisms should also include decisions about caching.
+  \item \textit{Caching.}
+  As we described in section~\ref{sec:read_write_path},
+  caching, similarly to materialized views, can be viewed as a point in the design space defined by the read and write
+  work framework.
+  Therefore, index and view selection mechanisms should also include decisions about caching.
 
     % \item State partitioning scheme:
     % Similarly, the partitioning scheme used for secondary indexes and materialized views should be configurable in a per
     % index/view basis.
-
-    \end{itemize}
-
-  \item \textbf{Independence from corpus distribution schemes.}
-  Geo-distributed applications feature a variety of diverse data distribution schemes.
-  Examples include full and partial data replication across data centers, geo-partitioning, and federated systems.
-  An effective geo-distributed query processing system should not be limited to a specific data distribution scheme.
-
 \end{itemize}
 
+\noindent
+\textbf{Independence from corpus distribution schemes.}
+
+\noindent
+Geo-distributed applications feature a variety of diverse data distribution schemes.
+Examples include full and partial data replication across data centers, geo-partitioning, and federated systems.
+An effective geo-distributed query processing system should not be limited to a specific data distribution scheme.
+
+\bigskip
+\noindent
 We argue that traditional monolithic query processing system architectures cannot provide the flexibility required
 to address these requirements --- notably enabling flexible derived state placement.
 In this work we take a different approach.
