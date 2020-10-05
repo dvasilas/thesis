@@ -526,7 +526,7 @@ booktitle	= {Proceedings of the Conference on Innovative Data system Research (C
 @online{google:infra,
   title = {Google {E}dge {N}etwork},
   howpublished = {\url{https://peering.google.com/#/infrastructure}},
-  year = {accessed June 2020}
+  urldate     = {2020-10-04}
 }
 
 @online{mariadb:triggers,
@@ -1042,4 +1042,94 @@ booktitle	= {Proceedings of the Conference on Innovative Data system Research (C
   year = {2018},
   url = {https://www.usenix.org/conference/osdi18/presentation/gjengset},
   publisher = {{USENIX} Association}
+}
+
+@online{lobste:rs,
+  author = {Lobsters {D}evelopers},
+  title = {Lobsters {N}ews {A}ggregator},
+  howpublished = {\url{https://lobste.rs/}}
+}
+
+@online{lobste:stats,
+  author = {Peter {B}hat {H}arkins, {J}on {G}jengset},
+  title = {Lobsters {N}ews {A}ggregator},
+  howpublished = {\url{https://lobste.rs/s/cqnzl5/lobste_rs_access_pattern_statistics_for#c_hj0r1b}}
+}
+
+@online{aws:s3,
+  author = {Amazon {W}eb {S}ervices},
+  title = {Amazon {S3} {API} {R}eference},
+  howpublished = {\url{https://docs.aws.amazon.com/AmazonS3/latest/API/s3-api.pdf#Type_API_Reference}},
+  year = {2006}
+}
+
+@online{zenko:docs,
+  author = {Scality},
+  title = {Zenko 1.2.0 {D}ocumentation},
+  howpublished = {\url{https://zenko.readthedocs.io/en/latest/index.html}},
+  year = {2020}
+}
+
+@online{scality:bloomberg,
+  author = {Scality},
+  title = {Customer {C}ase {S}tudies: {B}loomberg {M}edia {G}roup},
+  howpublished = {\url{https://www.scality.com/customers/bloomberg/}}
+}
+
+@techreport{zhou:partiallymaterialized,
+author = {Zhou, Jingren and Larson, Paul and Goldstein, Jonathan},
+title = {Partially Materialized Views},
+year = {2005},
+month = {June},
+abstract = {We propose a new type of materialized view called a partially materialized view. A partially materialized view only materializes some of the rows, for example, the most frequently accessed rows, which reduces storage space and view maintenance effort. One or more control tables are associated with the view and define which rows are currently materialized. As a result, one can easily change which rows of the view are stored and maintained. We show how to extend view matching and maintenance algorithms to partially materialized views and outline several potential applications of the new view type. Experimental results in Microsoft SQL Server show that compared with fully materialized views, partially materialized views have lower storage requirements, better buffer pool efficiency, better query performance, and significantly lower maintenance costs.},
+url = {https://www.microsoft.com/en-us/research/publication/partially-materialized-views/},
+number = {MSR-TR-2005-77},
+}
+
+@inproceedings{zhou:dynamicmaterialized,
+  author    = {Jingren Zhou and
+               Per{-}{\AA}ke Larson and
+               Jonathan Goldstein and
+               Luping Ding},
+  title     = {Dynamic Materialized Views},
+  booktitle = {Proceedings of the 23rd International Conference on Data Engineering,
+               {ICDE} 2007, The Marmara Hotel, Istanbul, Turkey, April 15-20, 2007},
+  pages     = {526--535},
+  publisher = {{IEEE} Computer Society},
+  year      = {2007},
+  url       = {https://doi.org/10.1109/ICDE.2007.367898},
+  doi       = {10.1109/ICDE.2007.367898},
+  timestamp = {Wed, 16 Oct 2019 14:14:56 +0200},
+  biburl    = {https://dblp.org/rec/conf/icde/ZhouLGD07.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+
+@misc{lobsters:schema,
+	author = {Lobsters {D}evelopers},
+  title = {Lobsters {D}atabase {S}chema (schema.rb)},
+	howpublished = {\url{https://github.com/lobsters/lobsters/blob/df5b1e0487094405af196b6322dc09192f27ee5b/db/schema.rb#L195}},
+	year = {2020},
+  month = {August}
+  }
+
+@inproceedings{nishtala:memcachefacebook,
+  author    = {Rajesh Nishtala and
+               Hans Fugal and
+               Steven Grimm and
+               Marc Kwiatkowski and
+               Herman Lee and
+               Harry C. Li and
+               Ryan McElroy and
+               Mike Paleczny and
+               Daniel Peek and
+               Paul Saab and
+               David Stafford and
+               Tony Tung and
+               Venkateshwaran Venkataramani},
+  title     = {Scaling Memcache at Facebook},
+  booktitle = {Proceedings of the 10th {USENIX} Symposium on Networked Systems Design
+               and Implementation, {NSDI}},
+  year      = {2013},
+  url       = {https://www.usenix.org/conference/nsdi13/technical-sessions/presentation/nishtala},
 }
