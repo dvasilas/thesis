@@ -710,7 +710,8 @@ Query processing units expose an interface for receiving query requests:
 
 \begin{itemize}
   \item $QueryRequest$ specifies a predicate on the data items' \textit{attributes}, and a \textit{time interval}.
-
+  \todo{interval is simply a predicate}
+  
   \item $QueryResponse$ is a stream containing the query's results.
 \end{itemize}
 
@@ -740,9 +741,9 @@ A $StreamRecord$ can be of the two following types of information:
   (DataItemID,~[(AttributeName,~AttributeValue_{old},~AttributeValue_{new})],~Timestamp)
   \]
   encodes that the state of the data item $DataItemID$ at timestamp $Timestamp$.
-  Each elements of $[(AttributeName$, $AttributeValue_{old}$, $AttributeValue_{new})]$ indicates that
+  Each element of $[(AttributeName$, $AttributeValue_{old}$, $AttributeValue_{new})]$ indicates that
   the data item is associated with an attribute $AttributeName$ with the value $AttributeValue_{new}$
-  ($AttributeValue_{new}$ is ignored).
+  ($AttributeValue_{old}$ is ignored).
   \end{sloppypar}
 
   \begin{sloppypar}
@@ -929,8 +930,8 @@ TimestampTerm         ::= SYSTEM START | LATEST | timestampValue
 \noindent
 In practice, each QPU instance can only process a subset of the queries that can be expressed by this query language,
 according to the functionality supported by its class.
-For example, a QPU class that implements a join operator can perform join over two input streams,
-but not evaluate a $PredicateExpression$, or perform an $SUM$ on an attribute of the join result.
+For example, a QPU class that implements a join operator can perform a join over two input streams,
+but cannot evaluate a $PredicateExpression$, or perform an $SUM$ on an attribute of the join result.
 This can be achieved by connecting ``join'', ``filter'', and ``aggregator'' QPUs.
 We present in detail these QPU classes in section~\ref{sec:qpu_classes},
 and how they are composed to provide complex query processing functionalities in section~\ref{sec:query_processing_system}.
@@ -946,7 +947,7 @@ The query processing unit's state is divided into the following parts:
 \medskip
 \noindent
 \textbf{Configuration state.}
-Upon initialization, each QPU receives is given a set of configuration parameters.
+Upon initialization, each QPU is given a set of configuration parameters.
 These parameters are represented as key-value pairs.
 The configuration state represents these parameters.
 
@@ -1045,7 +1046,7 @@ Each QPU invokes an initialization function when it starts its execution.
 
 \begin{lstlisting}[caption={Initialization function signature},captionpos=b,label={lst:init_func}]
 type DownstreamConnection {
-  endpoint sting
+  endpoint string
   capabilities QPCapabilities
 }
 
@@ -1301,6 +1302,7 @@ We categorize QPU classes in three groups, according to their general characteri
 \end{itemize}
 
 \subsubsection{QPU class case studies}
+\label{sec:qpu_class_examples}
 
 \textbf{Filter}
 
@@ -1760,7 +1762,7 @@ show the query processing capabilities trees for the QPUs in the ``customers - o
 QPU trees have two functionalities:
 \begin{itemize}
   \item A query processing unit uses its own QPC tree in order to determine it can process a given query.
-  More specifically, it checks it the query's parse is a \textbf{subtree} of the QPU's QPC tree,
+  More specifically, it checks if the query's parse is a \textbf{subtree} of the QPU's QPC tree,
   and, therefore, if the query's parse tree belongs in the set of queries represented by the QPU tree
   (algorithm~\ref{algo:can_process_query}).
 

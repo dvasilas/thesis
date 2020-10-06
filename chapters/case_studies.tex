@@ -1,80 +1,97 @@
 Having presented ... ,
-\todo{add intro}
+\todo{intro}
 % the goal of this chapter is to demonstrate the use of the proposed query processing architecture in ...
 % More specifically, we present case studies ...
-% we apply 
+% we apply
 
 \section{Flexible secondary index partitioning}
-In section~\ref{sec:index_partitioning_background} we described the most common techniques for partitioning a secondary index:
+\label{sec:cs_index_partitioning}
+
+As described in section~\ref{sec:index_partitioning_background}, the two main index partitioning schemes are:
 \begin{itemize}
   \item \textbf{Partitioning by document}.
-  Each index partition is responsible for the data items of a corpus partition,
+  Each index partition is responsible for the data items of a certain corpus partition,
   and is co-located in the same node as that corpus partition.
   \item \textbf{Partitioning by term}.
-  Each index partition is responsible for a part of the \textit{value space} of the indexed attribute,
-  and its placement is independent from the corresponding corpus partition.
+  Each index partition is responsible for a partition of the \textit{value space} of the indexed attribute;
+  The placement of index partitions is independent from the placement of corpus partitions.
 \end{itemize}
 
-Experimental comparison of the two approaches has shown \cite{dsilva:tworings, kejriwal:slik} that there is no ``one-size-fits-all'' approach to secondary
-index partitioning.
+Experimental comparison of the two approaches \cite{dsilva:tworings, kejriwal:slik} has shown that there is no ``one-size-fits-all'' approach to secondary index partitioning.
 Rather, each approach caters to different needs.
 More specifically, partitioning by document is more suitable for:
 \begin{itemize}
   \item Workloads with low selectivity queries, that return large result sets.
-  \item Corpora with skewed indexed attribute distributions (a large number of data items correspond to a few attribute values).
-  \item Write-intensive workloads that require low update latency.
+  \item Skewed distributions, in which a large number of data items correspond to a few attribute values.
+  \item Write-intensive workloads that require low write latency.
 \end{itemize}
 \noindent
 On the other hand, partitioning by term is more suitable for:
 \begin{itemize}
   \item Large-scale systems with a large number of corpus partitions.
   \item High selectivity query workloads.
-  \item Corpora with normal indexed attribute distributions.
+  \item Less skewed value distributions.
 \end{itemize}
 
-Therefore, the decision about which approach to be used for an index should be based on the corpus and the workload characteristics.
+Because of that, applications can benefit from partitioning schemes adjusted to their data and workload characteristics.
 
-In most existing system, the choice of index partitioning scheme is made during the system's design phase, and is therefore \textit{static}.
+In most existing query processing systems,
+the choice of index partitioning scheme is made during the system's design, and is not configurable
+by applications.
 For example, MongoDB \cite{coubase:mongoindexes}, Cassandra \cite{cassandra:secondaryindexing} and Riak \cite{riakv:secondaryindexes}
-use the partitioning by document approach,
+only use the partitioning by document approach,
 while HBase \cite{hbase:secondaryindexes} uses the partitioning by term approach.
 
 \bigskip
 \noindent
-In this section, we demonstrate the flexibility of QPU query processing architecture by showing how it can be used to
-express both index partitioning schemes.
-The design of the QPU architectures is based on observations about the properties of the alternative
-index partitioning schemes.
+In this section, we demonstrate the flexibility of the QPU-based query processing architecture by showing how it can be used to
+be used to express both index partitioning schemes.
+More specifically,
+we present a QPU architecture that implements a document-partitioned index,
+and one that implements a term-partitioned index.
+
+The design of the QPU architectures that we present is based on observations about the properties of the two index partitioning schemes.
 We categorize these observations using the derived state read and write path framework presented in
 section~\ref{sec:read_write_path}:
 \begin{itemize}
-  \item In partitioning by document, the index \textbf{write path} is \textit{local}:
-  an index partition receives updates only from the corpus partition with which it is co-located.
-  On the hands, in partitioning by term, the write path involves a many-to-one relationship:
-  an index partition receives updates from all corpus partitions, corresponding to the value interval it is responsible for.
+  \item In the partitioning by document scheme,
+  the index \textbf{write path} is \textit{local}:
+  An index partition receives updates only from the corpus partition it is co-located with.
+  On the other hand, in the partitioning by term scheme,
+  the write path involves a many-to-one relationship:
+  An index partition receives from all corpus partitions updates that belong in the value space it is responsible for.
 
-  \item In partitioning by document, the \textbf{read path} is a \textit{broadcast} operation:
-  a query is forwarded to all index partitions.
-  On the other hand, in partitioning by term, only index partitions with relevant index terms are involved in processing a given query.
+  \item In the partitioning by document scheme,
+  the \textbf{read path} is a \textit{broadcast} operation,
+  while partitioning by term
+  only index partitions with relevant index entries are involved in processing a given query.
 \end{itemize}
 
 We present QPU architectures for the two index partitioning approaches using the photo album example of section~\ref{sec:read_write_path} as a reference.
-The corpus is composed of a set of image files, and each image can be associated with user-defined tags.
-The corpus is partitioned using a hash of the primary key as partitioning key.
+The corpus is composed of a set of image files.
+Each image is identified by a primary key, and is associated with a set of user-defined tags.
+The corpus is partitioned using a hash of the primary key as the partitioning key.
 An application needs to create a secondary index on the $predominantColor$ tag, which can be assigned values in the range $[\#000000$, $\#FFFFFF$].
 
-Figures~\ref{fig:index_partitioned_by_document} and~\ref{fig:index_partitioned_by_term} show the QPU graphs and their
-placement across system nodes for a document-partitioned index and a term-partitioned index respectively.
+Figures~\ref{fig:index_partitioned_by_document} and~\ref{fig:index_partitioned_by_term} show the QPU graphs for a
+document-partitioned index and a term-partitioned index respectively, and their placement across system nodes.
 For simplicity we assume that the number of corpus partitions is equal to the number of system nodes,
 and that a corpus partition is placed on each node.
 
-In both architectures, an index QPU is used to represent each index partition;
-A partition manager QPU, connected to all index partitions, and is responsible for coordinating query access to them.
-Moreover, a corpus driver QPU is placed on each node, and is responsible for the data items of the corpus
-partition it is co-located with.
+The two architectures have a number of general characteristic in common.
+In both architectures, a Corpus Driver QPU is placed on each node,
+and is responsible for the corresponding corpus partition.
+It provides the QPU graph with access to the data items in that corpus partition,
+as well as the updates performed on those data items.
+In addition, an Index QPU is used to represent each index partition;
+A partition Manager QPU is connected to all index partitions,
+and is responsible for coordinating query access to them.
+
+In sections~\ref{sec:cs_index_partitioning_write_path} and~\ref{sec:cs_index_partitioning_read_path} we describe
+how the two QPU architecture achieve the write and read path properties described above:
 
 \subsection{Write path}
-
+\label{sec:cs_index_partitioning_write_path}
 \begin{figure}
   \begin{minipage}{.5\textwidth}
     \centering
@@ -91,33 +108,33 @@ partition it is co-located with.
 \end{figure}
 
 The write path properties described above are achieved through (1) the QPU graph topology and the placement of graph vertices across system nodes,
-and (2) the configuration of the index QPUs (index partitions).
+and (2) the configuration of the Index QPUs (index partitions).
 
 \subsubsection{Graph topology and placement}
 
 \medskip
 \noindent
 \textbf{Partitioning by document.}
-In the partitioning by document approach, an index partition is placed on each system node, and is connected to the
-corresponding corpus driver.
-Therefore, each index partition communicates only with the corpus driver it is co-located with.
+In the partitioning by document approach, we place an Index QPU on each system node,
+and connect it to the corresponding Corpus Driver QPU.
+As a result, each index partition has access corpus partition it is co-located with,
+and therefore constructs and maintains an index containing the data items that belong in the corpus partition.
 
 \medskip
 \noindent
 \textbf{Partitioning by term.}
-In the partitioning by term approach, index partitions can be flexibly placed across nodes.
-Each index partition is connected to all corpus driver QPUs, because an index partition is responsible for data
-items in all corpus partitions.
-Moreover, a filter QPU is connected to each corpus driver.
-This permits each update to be forwarded to the relevant index partition based on the attribute value in the update.
-
+In the partitioning by term approach,
+we connect each Corpus Driver QPU to a Selection QPU,
+and connect each Index QPU to all Selection units.
+A Selection QPU forwards each update to the relevant index partition,
+based on the attribute value in the update.
+We describe in detail how this is achieved in the following section.
 \subsubsection{Index partition configuration and graph initialization}
 
 When the QPU graph for one of the partitioned index architectures is initialized,
-the initialization function of each index partition sends interval queries to the QPU's downstream connections,
-in order to establish an input stream of updates.
-The initialization function uses the index QPU's \textit{configuration} to generate the appropriate query request for each
-downstream connection.
+the initialization function of each Index QPU sends a persistent query to the QPU's downstream connection,
+in order to establish an input stream of updates (the initialization function of the Index QPU is presented in section~\ref{sec:qpu_class_examples}).
+This downstream query is generated by the initialization function according to the QPU's configuration.
 More specifically, each index QPU is configured with an attribute ($predominantColor$ in this example),
 and an \textit{interval of values} of that attribute.
 The index partition is responsible for index entries that correspond to attribute values in the specified interval.
@@ -125,16 +142,47 @@ The index partition is responsible for index entries that correspond to attribut
 \medskip
 \noindent
 In the partitioning by document approach,
-all index partitions are configured to be responsible for the entire attribute value space,
+each index partitions are configured to be responsible for the entire attribute value space,
 which in the photo album example is $[\#000000$, $\#FFFFFF$].
+As a result, upon initialization, each index partition sends the query: \todo{update query according to changes to QPU chapter}
+
+\begin{lstlisting}[
+          language=SQL,
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent
+        ]{}
+SELECT primaryKey, predominantColor
+FROM photoAlbum
+INTERVAL FROM LATEST
+\end{lstlisting}
+
+\noindent
+to the Corpus Driver QPU it is connected to.
+This initiates a stream between each Corpus Driver QPU and the corresponding Index QPU
+The Corpus Driver initially sends a snapshot of the corresponding corpus partition to the
+Index QPU, and then sends a stream record for each corpus update.
+
 Conversely, in the partitioning by term approach, each index partition is responsible for a non-overlapping subset of the
 attribute value space.
 A simplified version of the configuration of the index partitions of the term-partitioned index QPU architecture
 (figure~\ref{fig:index_partitioned_by_term}) is depicted below: \\
 
-% \noindent
-\begin{minipage}{.48\textwidth}
-\begin{lstlisting}[caption={Configuration of $index_1$ in Figure~\ref{fig:index_partitioned_by_term}},captionpos=b,frame=tlrb]{Name}
+\begin{minipage}{.45\textwidth}
+\begin{lstlisting}[
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent,
+          caption={Configuration of the $index$ $partition_1$ in Figure~\ref{fig:index_partitioned_by_term}},captionpos=b
+          ]{}
 {
   // other configuration
   // parameters
@@ -148,8 +196,17 @@ A simplified version of the configuration of the index partitions of the term-pa
 }
 \end{lstlisting}
 \end{minipage}\hfill
-\begin{minipage}{.48\textwidth}
-\begin{lstlisting}[caption={Configuration of $index_2$ in Figure~\ref{fig:index_partitioned_by_term}},captionpos=b,frame=tlrb]{Name}
+\begin{minipage}{.45\textwidth}
+\begin{lstlisting}[
+  showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent,
+          caption={Configuration of $index$ $partition_2$ in Figure~\ref{fig:index_partitioned_by_term}},captionpos=b
+          ]{}
 {
   // other configuration
   // parameters
@@ -164,106 +221,151 @@ A simplified version of the configuration of the index partitions of the term-pa
 \end{lstlisting}
 \end{minipage}
 
-\noindent
-In the case of the document partitioned index architecture, all index partitions have the same ``indexConfiguration'' with
-$lower_bound$ $=$ $\#000000$ and $higher_bound$ $=$ $\#FFFFFF$.
-Therefore, in the \textbf{document-partitioned} index architecture, upon initialization, each index partition sends the query \\
-{\obeylines\obeyspaces
-  SELECT primaryKey, predominantColor
-  FROM photoAlbum
-  INTERVAL FROM LATEST
-} ~\\
-to the corpus driver it is connected to.
-This establishes a stream between each corpus driver and the corresponding index QPU, through which the corpus driver
-sends to the index QPU notifications for updates to the data item of the corpus partition it responsible for,
-which the required read path behavior for the document-partitioned index.
-
 \medskip
 \noindent
-In the \textbf{term-partitioned} index architecture, upon initialization, $index_1$ sends the query \\
-{\obeylines\obeyspaces
-    SELECT primaryKey, predominantColor
-    FROM photoAlbum
-    WHERE predominantColor $\geq$ $\#000000$ AND predominantColor $<$ $\#7FFFFF$
-    INTERVAL FROM LATEST
-} ~\\
-to each filter QPU it is connected to, and $index_2$ \\
-{\obeylines\obeyspaces
-  SELECT primaryKey, predominantColor
-  FROM photoAlbum
-  WHERE predominantColor $\geq$ $\#7FFFFF$ AND predominantColor $leq$ $\#FFFFFF$
-  INTERVAL FROM LATEST
-} ~\\
-to each of its downstream connections.
+As a result, upon initialization, $index$ $partition_1$ sends the query: \todo{udpate according to QPU chapter}
+
+\begin{lstlisting}[
+          language=SQL,
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent
+        ]{}
+SELECT primaryKey, predominantColor
+FROM photoAlbum
+WHERE predominantColor <= #000000 AND predominantColor < #7FFFFF
+SNAPSHOT LATEST
+INTERVAL FROM LATEST
+\end{lstlisting}
 
 \noindent
-Each filter QPU in turn establishes for each received query, an input stream of data item from the corpus partition it
-is connected to, by sending the query: \\
-{\obeylines\obeyspaces
-  SELECT primaryKey, predominantColor
-  FROM photoAlbum
-  INTERVAL FROM LATEST
-} ~\\
-As a result, updates on data items of each corpus partition are sent from the corpus driver to the filter QPU corresponding
-to that partition.
-The filter QPU forwards each update to the corresponding index partition, based on the attribute value in the update.
-This achieves the required write path functionality for the term-partitioned index.
+to each downstream Selection QPU, and $index$ $partition_2$ sends the query: \todo{udpate according to QPU chapter}
 
-For example, as a result of the creation of an image file with $predominantColor$ $=$ $\#613930$, assigned to to $corpus$
-$partition_2$, $corpus$ $driver_2$ sends to $filter_2$ a record encoding that update.
-This input record matches the query \\
-{\obeylines\obeyspaces
-    SELECT primaryKey, predominantColor
-    FROM photoAlbum
-    WHERE predominantColor $geq$ $\#000000$ AND predominantColor $<$ $\#7FFFFF$
-    INTERVAL FROM LATEST
-} ~\\
-and thus the filter QPU sends the update record only to the $index_1$ partition.
+\begin{lstlisting}[
+          language=SQL,
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent
+        ]{}
+SELECT primaryKey, predominantColor
+FROM photoAlbum
+WHERE predominantColor <= #7FFFFF AND predominantColor <= #FFFFFF
+SNAPSHOT LATEST
+INTERVAL FROM LATEST
+\end{lstlisting}
+
+\noindent
+to each downstream Selection QPU.
+
+\noindent
+As a result of receiving one the above queries,
+a Selection QPU sends to each downstream Corpus Driver QPU the query:
+
+\begin{lstlisting}[
+          language=SQL,
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent
+        ]{}
+SELECT primaryKey, predominantColor
+FROM photoAlbum
+SNAPSHOT LATEST
+INTERVAL FROM LATEST
+\end{lstlisting}
+
+As a result, each Selection QPU receives an input stream from the corresponding Corpus Driver QPU,
+for each of the two above queries,
+and filters the received streams according to the predicate specified by each query.
+Therefore, $index$ $partition_1$ receives from all three corpus partitions first a snapshot and then updates
+corresponding to the $predominantColor$ in the interval $[\#000000$, $\#7FFFFF)$.
+Similarly, $index$ $partition_2$ receives stream records corresponding to the $predominantColor$ in the interval
+$[\#7FFFFF$, $\#FFFFFF)$.
+
+For example, given a update that inserts to the corpus an image file with $predominantColor$ $=$ $\#613930$, assigned to to $corpus$
+$partition_2$, $Corpus$ $Driver_2$ sends to $Selection_2$ a record encoding that update.
+This input record matches the query:
+
+\begin{lstlisting}[
+          language=SQL,
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent
+        ]{}
+SELECT primaryKey, predominantColor
+FROM photoAlbum
+WHERE predominantColor <= #000000 AND predominantColor < #7FFFFF
+SNAPSHOT LATEST
+INTERVAL FROM LATEST
+\end{lstlisting}
+
+and thus the $Selection_2$  forwards the record only to $index$ $partition_1$.
 
 \subsection{Read path}
-In both QPU architectures, the partition manager QPU is connected to all index partitions.
-As described in section~\ref{sec:qpc_tree}, given a query,
-the partition manager's query processing function determines which index partitions need to be contacted and generates
-the corresponding queries, using the query processing capabilities trees of its downstream connections.
+\label{sec:cs_index_partitioning_read_path}
 
-More specifically, the query processing function, performs an ``intersection'' between the query parse tree
-and the QPC tree of each of its downstream connections.
-The result of each intersection operation is a query parse tree representing the downstream query that the partition manager
-needs to send to the corresponding index QPU.
-If the intersection result is empty, then no query needs to be sent by the partition manager to the corresponding
+In both QPU architectures, the Partition Manager QPU is connected to all Index QPUs.
+As described in section~\ref{sec:qpc_tree}, given a query,
+the Partition Manager's query processing function determines which downstream connections need to be contacted.
+It generates the corresponding downstream queries using the query processing capabilities trees of its downstream connections.
+\todo{update the term ``query processing capabilities tree'' according to updates in the QPU chapter}
+
+More specifically, given a query,
+the query processing function, generates a query parse tree,
+and performs an intersection between the query parse tree and the QPC tree of each of its downstream connections.
+The result of each intersection operation is a query parse tree of the downstream query to be sent to the corresponding
 connection.
+If the intersection result is empty, then the QPU does not send a downstream query to that connection.
 
 \begin{figure}
   \centering
     \includegraphics[width=\textwidth]{./figures/case_studies/qpt_index_partitioning_docs.pdf}
-  \caption{Query processing tree of an index partition in the document-partitioned index QPU architecture.}
+  \caption{Query processing capabilities tree of an index partition in the document-partitioned index QPU architecture.}
   \label{fig:qpt_index_partitioning_docs}
 \end{figure}
 
 \medskip
 \noindent
-\textbf{Partitioning by document}
+\textbf{Partitioning by document.}
 The QPC tree for an index partition in the document-partitioned index QPU architecture is shown in Figure~\ref{fig:qpt_index_partitioning_docs}.
-As describe above, in the document-partitioned index each index partition is responsible for the entire attribute value space of
-for the data items of one corpus partition.
-The QPC tree for all index partitions thus  are the same.
-Moreover, because this tree corresponds to the entire attribute value domain, the intersection with any query parse tree
-is an identity function:
-the result is the same parse tree as that of the received query.
-As a result, the partition manager forwards each received query to all index partitions,
-which is the required write path behavior.
+As describe above, in the document-partitioned index, each index partition is responsible for the entire attribute value space of
+the data items of one corpus partition.
+The QPC tree of every index partition is thus are the same as the one depicted in Figure~\ref{fig:qpt_index_partitioning_docs}.
+Moreover, because this tree corresponds to the entire attribute value domain,
+the intersection with any query parse tree is an identity function:
+Performing an intersection between that QPC tree a query parse tree leaves the parse tree unchanged.
+
+Therefore,
+given a query,
+the Partition Manager QPU forwards the same query to each of its downstream connections.
+This implements the required read path behavior.
 
 \begin{figure}
 \subfloat[]{%
 \centering
-  \includegraphics[width=\textwidth]{./figures/case_studies/qpt_index_partitioning_terms_1.pdf}%
+  \includegraphics[width=0.6\textwidth]{./figures/case_studies/qpt_index_partitioning_terms_1.pdf}%
 }
 
 \subfloat[]{%
   \centering
-  \includegraphics[width=\textwidth]{./figures/case_studies/qpt_index_partitioning_terms_2.pdf}%
+  \includegraphics[width=0.6\textwidth]{./figures/case_studies/qpt_index_partitioning_terms_2.pdf}%
 }
-\caption{The query processing capabilities tree for index partitions $index\_1$ (a) and $index\_2$ (b) of the term-partitioned
+\caption{The query processing capabilities tree for $index$ $partition_1$ (a) and $index$ $partition_2$ (b) of the term-partitioned
 index in Figure~\ref{fig:index_partitioned_by_term}}
 \label{fig:qpt_index_partitioning_terms}
 \end{figure}
@@ -271,77 +373,354 @@ index in Figure~\ref{fig:index_partitioned_by_term}}
 \medskip
 \noindent
 \textbf{Partitioning by term}
-Figure~\ref{fig:qpt_index_partitioning_terms} shows the $<predicateExpression>$ subtrees of the QPC tree for $index\_1$ and $index\_2$ in the term-partitioned index QPU
-architecture.
-The QPC tree of $index\_1$ represents the set of queries in the $[\#000000$, $\#7FFFFF$) interval,
-while the QPC tree of $index\_2$ represents the interval $[\#7FFFFF$, $\#FFFFFF$].
+Figure~\ref{fig:qpt_index_partitioning_terms} shows the $<predicateExpression>$ subtrees of the QPC trees
+for $index$ $partition_1$ and $index$ $partition_2$ in the term-partitioned index architecture.
+The QPC tree of $index$ $partition_1$ represents the set of queries in the interval $[\#000000$, $\#7FFFFF)$,
+while the QPC tree of $index$ $partition_2$ represents the interval $[\#7FFFFF$, $\#FFFFFF]$.
 
-Given the query \\
-{\obeylines\obeyspaces
+We describe how the term-partitioned index architecture processes queries by running through an example query.
+Given the query:
+
+\begin{lstlisting}[
+          language=SQL,
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent
+        ]{}
 Q = SELECT primaryKey, predominantColor
     FROM photoAlbum
-    WHERE predominantColor $\geq$ $\#21B1FF$ AND predominantColor $<$ $\#ff7b75$
-    INTERVAL FROM LATEST
-} ~\\
-the intersection between the parse tree of $Q$ the QPC tree of $index_1$ results to the query \\
-{\obeylines\obeyspaces
-Q1 = SELECT primaryKey, predominantColor
-    FROM photoAlbum
-    WHERE predominantColor $\geq$ $\#21B1FF$ AND predominantColor $<$ $\#7FFFFF$
-    INTERVAL FROM LATEST
-} ~\\
-and the intersection between the parse tree of $Q$ the QPC tree of $index_2$ results to the query \\
-{\obeylines\obeyspaces
-Q2 = SELECT primaryKey, predominantColor
-    FROM photoAlbum
-    WHERE predominantColor $\geq$ $\#800000$ AND predominantColor $<$ $\#ff7b75$
-    INTERVAL FROM LATEST
-} ~\\
-The partition sends a query request for Q1 to $index_1$ and Q2 to $index_2$.
-It merges the returned streams and emits the merged stream as its output stream.
+    WHERE predominantColor >= #21B1FF
+      AND predominantColor < #ff7b75
+    SNAPSHOT LATEST
+\end{lstlisting}
 
-In summary, in the term-partitioned index QPU architecture,
-for a given query, the partition manager generates and sends downstream queries to index partitions according their corresponding
+\noindent
+the Partition Manager QPU calculates the intersection between the parse tree of $Q$ the QPC tree of $index$ $partition_1$.
+This results to the downstream query:
+
+\begin{lstlisting}[
+          language=SQL,
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent
+        ]{}
+Q1 = SELECT primaryKey, predominantColor
+     FROM photoAlbum
+     WHERE predominantColor >= #21B1FF
+       AND predominantColor < #7FFFFF
+     SNAPSHOT LATEST
+\end{lstlisting}
+
+\noindent
+Similarly, the downstream query for $index$ $partition_2$ is:
+
+\begin{lstlisting}[
+          language=SQL,
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent
+        ]{}
+Q2 = SELECT primaryKey, predominantColor
+     FROM photoAlbum
+     WHERE predominantColor >= #800000
+       AND predominantColor < #ff7b75
+     SNAPSHOT FROM LATEST
+\end{lstlisting}
+
+\noindent
+The Partition Manager QPU sends $Q1$ to $index$ $partition_1$ and $Q2$ to $index$ $partition_2$.
+It then merges resulting input streams, and emits the merged stream as its output stream.
+
+In summary, in the term-partitioned architecture,
+the Partition Manager generates and sends downstream queries to index partitions according their corresponding
 value intervals, using the QPC tree mechanism.
+
+\bigskip
+\noindent
+In conclusion, we have described how the QPU-based composable query processing architecture can be used to construct both
+document and term partitioned indexes.
+Using this flexibility, a database system can support both partitioning schemes and provide applications the ability to
+select the partitioning scheme of each indexes according the data distribution characteristics and the expected workload.
+
+\begin{figure}
+  \centering
+    \includegraphics[width=\textwidth]{./figures/case_studies/index_partitioned_two_level.pdf}
+  \caption{QPU architecture for a two-tiered partitioned index, composed of a document-partitioned, and a term-partitioned tier.}
+  \label{fig:index_partitioned_two_level}
+\end{figure}
+
+It is important to note that some existing databases,
+such as Amazon DynamoDB \cite{dynamodb:secondaryindexes} and Apache Phoenix \cite{phoenix:secondaryidnexing}
+support both index partitioning schemes.
+However, we believe that the proposed approach provides a more structured approach to the design of query processing systems,
+and enables additional flexibility.
 
 \medskip
 \noindent
+For example, using the QPU-based architecture we can construct a hybrid, two-tiered partitioned secondary index,
+consisting of a document-partitioned tier and a term-partitioned tier, as shown in Figure~\ref{fig:index_partitioned_two_level}.
+We configure the document-partitioned tier to be strongly consistent with the corpus,
+by configuring each connection between an Index QPU and the corresponding Corpus Driver to be synchronous.
+We configure the term-partitioned tier to be eventually consistent with the corpus,
+by configuring each Index --- Corpus Driver connection as asynchronous.
 
-Using ... \todo{basically say that the value here is to support select the partitioning scheme during index creation}
+The document-partitioned trades consistent query results with more limited query load scalability,
+as each query needs to be forwarded to every index partition.
+The term-partitioned index trades higher query load scalability, with potentially stale query results.
 
-It is important to note that DynamoDB \cite{dynamodb:secondaryindexes} and Apache Phoenix \cite{phoenix:secondaryidnexing}
-support index partitioning schemes.
-However, we believe that the proposed framework provides a more structured approach to the design of query processing system.
+Using this query processing architecture, individual queries are able to choose between the two tiers
+according to their requirements.
+To achieve this, we introduce the Index Selector QPU class.
+The Index Selector is responsible for managing access to the two index tiers,
+by forwarding each query to one of the Partition Manager QPUs it connected to.
+It selects between its connections based on an indication by the given query:
+Queries can select between the two partitioned index tiers using a special ``control'' attribute, called $tier$.
+The query:
 
-Furthermore, the proposed approach is more flexible, as it enables
-\todo{add hybrid}
+\begin{lstlisting}[
+          language=SQL,
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent
+        ]{}
+SELECT primaryKey, predominantColor
+FROM photoAlbum
+WHERE predominantColor == #ff7b75
+AND tier = sync
+\end{lstlisting}
+
+\noindent
+will be forwarded to the document-partitioned index, while the query:
+
+\begin{lstlisting}[
+          language=SQL,
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent
+        ]{}
+SELECT primaryKey, predominantColor
+FROM photoAlbum
+WHERE predominantColor == #ff7b75
+AND tier = async
+\end{lstlisting}
+
+will be forwarded to the term-partitioned index.
+
+This architecture trades this functionality with the resources required for maintaining
+two index replicas.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Federated secondary attribute search for multi-cloud object storage}
+
+While most enterprise data today originate from and is stored on-premises storage systems,
+use cases for hybrid and multi-cloud storage are emerging in many industries.
+For example, in the media industry, while the creation of content in on-premises private clouds is prevalent,
+the use of public cloud services for content distribution and transcoding \cite{scality:bloomberg} is growing.
+Moreover, organization increasingly choose to spread their data across multiple public cloud providers in order to avoid
+dependence on a single provider, and improve their resilience against failures.
+
+The advent of data distributed across multiple independent storage platforms has created the need for unified access to data across platforms.
+In this section, we examine Zenko \cite{zenko:docs}, a multi-cloud data controller that aims to address this need.
+Zenko provides a common namespace over a set of distinct object storage platforms,
+including Amazon S3, Microsoft Azure Blob storage, and Google Cloud Storage.
+It allows applications to access data in multiple storage locations using the AWS S3 API \cite{aws:s3}.
+
+We focus on Zenko's federated metadata search functionality.
+It is common for application to mark objects with metadata tags.
+Zenko provides applications the ability to retrieve objects based on queries on their metadata tags,
+independent from storage location.
+
+% \begin{figure}[t]
+%   \centering
+%     \includegraphics[scale=0.3]{./figures/case_studies/zenko_arch.jpg}
+%   \caption{zenko\_arch}
+%   \label{fig:zenko_architecture}
+% \end{figure}
+
+\todo{change figure to Zenko overview}
+\todo{cite zenko docs for architecture}.
+Zenko uses a warehousing approach to provide federated metadata search:
+It integrates metadata tags for objects stored on all storage platforms in a central \textit{metadata store}.
+More specifically, it uses a MongoDB deployment as this metadata store.
+MongoDB provides the ability to create indexes on document attributes,
+and to retrieve documents using queries on these attributes.
+Zenko uses this functionality to implement metadata search:
+Object metadata are stored as documents in MongoDB.
+Queries on metadata tags are translated to MongoDB find requests \todo{cite}.
+
+A typical Zenko deployment consists of Zenko deployed on-premises, along with a private storage system,
+and multiple public cloud storage platforms, each on a different data center.
+For this case study, we refer to each data center / storage system as a \todo{storage location}.
+The primary data access method is through Zenko's API:
+Application communicate with Zenko to read and write objects,
+and Zenko is responsible for storing and retrieving each object from the corresponding storage location according to a specified policy.
+In addition,
+applications can write directly to some of the storage systems.
+Zenko ingests updates performed directly to an underlying storage system through a mechanism called out-of-band updates \todo{cite}.
+
+\medskip
+\noindent
+In this case study,
+we present an alternative, decentralized approach for achieving federated metadata search on object storage platforms.
+More specifically, we demonstrate how the QPU-based composable architecture can be used to construct a federated secondary
+index over data stored on multiple storage locations.
+The main idea is to partition the index by storage location,
+and place each index partition close to the underlying data.
+
+There are two main advantages to this approach compared to the warehousing approach:
+Advantages ..
+
+We make two assumptions:
+The first is that storage platforms used in this case study have a common, object storage data model.
+Second, a corpus driver QPU, as described in chapter \todo{ref to chapter} is available for each storage platform.
+
+\medskip
+\noindent
+The QPU architecture for the multi-cloud index is shown in Figure~\todo{figure}.
+We built on the partitioned index QPU architectures presented in Section~\ref{sec:cs_index_partitioning}.
+We construct a partitioned index QPU graph for each storage system, and co-locate it in the same data center as that
+storage system.
+We refer to each of these QPU graphs as an \textit{index location}.
+Each index location is independent and can be constructed using either the partitioning by document or partitioning by
+term approach.
+In addition, a Partition Manager QPU is deployed on each storage location,
+and connected to all index locations.
+The Partition Manager QPUs consist the root nodes of the QPU graph.
+Given a query, a Partition Manager QPU forwards the same query to every index location,
+and then merges the resulting input streams.
+This approach is equivalent to the document-partitioned index approach.
+
+\medskip
+\noindent
+The downside of this approach is that the index query processing system needs to forward each query to every
+storage location.
+To address this issue we address the multi-cloud index architecture as shown in Figure~\todo{ref}.
+This architecture introduces the Remote Index QPU class.
+We define the Remote Index that combines the properties of an Index and a Cache QPU.
+The Remote Index materializes only a bounded subset of its index entries,
+using a least recently used policy to discard entries.
+
+When initially deployed, the Remote Index is empty.
+When it receives a query, its query processing function forwards the query to its downstream connection,
+which in this architecture is an index location, as a persistent query.
+The QPU then stores the corresponding index entries, and keeps them up-to-date using the established input stream.
+It processing subsequent queries using the cached index entries.
+To achieve that ...
+When a query requires non-materialized index entries and there is no available space,
+the least recently used entries are discarded until there is enough space for the queried entries.
+
+\medskip
+\noindent
+Using the Remote Index QPU reduces the cross data center communication required for query processing by
+replicating recently accessed index entries.
+However, index maintenance might still incur significant between storage locations,
+in cache index entries materialized in the Remote Index are frequently updated.
+To address that,
+we extend the Remote Index QPU with a mechanism for measuring the rate of updates to each index entry.
+If the rate for a certain entry crosses a threshold specified by the QPUs configuration,
+then the QPU stops receiving update for this entry and discards it.
+To achieve that ..
+For example ..
+
+\medskip
+\noindent
+Both functionalities provide fine-grained placement of index entries.
+
+This case study demonstrates an important property of the proposed query processing architecture.
+A QPU-based query processing architecture,
+can be viewed as a hierarchical architecture, composed of a number of distinct tiers;
+Each tier
+
+
+\subsection{Need title inspiration}
+
+In this section, we extend the multi-cloud index case study by examining a use case inspired by one a Scality's customers.
+We consider the example of a media organization that operates broadcasting and streaming services.
+The media assets (video content, images) used by these services on are stored in public cloud storage platform,
+and are tagged with metadata attributes.
+Search on metadata tags is used to support recommendation service and user search functionalities.
+Moreover, the organization operates in two geographic locations;
+A separate storage platform is used for each location.
+
+The metadata search requirement of this use case are as follows:
+Applications on each geographic location need low latency metadata search on \textit{local} data (data stored on that geographic location),
+as well as a \textit{subset} of the \textit{remote} data.
+This subset is specified by the application, and can be expressed as predicates on metadata tags.
+In other words, for an application that operates in $location_A$, there is an ``interest set'' that is a subset of the corpus
+located in $location_B$ that the application accesses frequently and needs low latency metadata search on.
+
+The state-of-the-art warehousing approach of constructing a central index with metadata tags from all objects
+on both locations, can be applied to achieve the required functionality.
+However, this approach uses more resources that required, as it includes the entire set of remote data.
+Our goal in this use case it to enable a secondary index that contains a subset of a data corpus, based on a given predicate.
+
+\medskip
+\noindent
+Figure \todo{figure} shows how we can achieve this functionality using a QPU-based architecture.
+We use a layer of Selection QPU between the corpus (Corpus Driver QPUs) and the partitioned index.
+The Selection QPUs filter that corpus, and make the data items that satisfy the specified query available to the index.
+We refer to this architecture, as an \textit{filtered index}.
+
+A property of this architecture is that it is extensible:
+Additional corpus subsets can be added to the filtered index by deploying additional Selection --- Index QPU subgraphs,
+and connecting them through a Partition Manager QPU.
+
+A federated index for this use case consists of two parts:
+A partitioned index, as shown in section \todo{ref}, responsible for the \textit{local} corpus,
+and a filtered index,
+responsible for the ``interest set'' of the \textit{remote} corpus.
 
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % \section{Materialized views at the edge}
-\section{Flexible Materialize view something something}
+\section{Materialized view middleware}
 
 In this case study, we examine an existing application that requires the use of pre-computed state,
-and study how this application can benefit by using QPU-based architecture as a backend.
+and study how it can benefit by using a QPU-based architecture for query processing.
 
 Lobsters \cite{lobste:rs} is a news aggregator web application.
-In Lobsters user post and comment on links (\textit{stories} in the Lobsters terminology).
-Moreover, users vote on stories and comments, and votes are used to rank stories.
+In Lobsters, users post and comment on links (\textit{stories} in the Lobsters terminology).
+In addition, users vote on stories and comments, and votes are used to rank stories.
 
-The Lobsters application is read-heavy.
+Lobsters a is read-heavy application.
 Traffic data for the production deployment of Lobster, provided by Lobsters' administrators \cite{lobste:stats} 88\% to 97\%
 of the users' interactions with the application are operations tha perform reads to the application's backend.
 These include viewing specific stories (55\%) and viewing the frontpage (30\%).
 
 In applications such as Lobsters in which read performance is important, application developers often implement mechanisms to optimize it.
-Lobsters, in addition to storing individual votes in a votes table, also stores per-story vote counts and story rankings as in separate table columns. \cite{lobsters:schema}
-Pre-computing and storing vote count and story rankings avoids the need re-compute them on every page load.
-However, the application needs to explicitly update the pre-computed values every time a vote is casted.
+Lobsters, in addition to storing individual votes in a votes table, also stores per-story vote counts and story rankings as additional columns of other tables \cite{lobsters:schema}.
+Pre-computing and storing vote counts and story rankings avoids the need re-compute them on every page load.
+However, the application logic needs to explicitly update the pre-computed values every time a vote is casted.
 
-Another approach that read-heavy applications employ is to use an in-memory key-value store, such Redis, memcached \cite{nishtala:memcachefacebook}
+Another approach that read-heavy applications employ to avoid expensive computation in read queries
+is to use an in-memory key-value store, such Redis or memcached \cite{nishtala:memcachefacebook}
 as a cache to speed up common-case queries.
-Using the cache reduces load the database as queries can be served from the cache when the underlying records are unchanged.
-The downside is that the application code must explicitly invalidate and replace cache entries as database records change.
+The approach reduces load to the database,
+as queries can be served from the cache when the underlying records are unchanged.
+However, the application needs to explicitly invalidate and replace cache entries as database records change.
 This requires complex application-side logic, and is error-prone.
 
 \bigskip
@@ -357,15 +736,15 @@ In this case study, we focus on a subset of Lobster's functionality that can de 
           stringstyle=\color{mymauve},
           frame=L,
           xleftmargin=\parindent
-        ]
+        ]{}
 TABLE users (id int, username text)
 TABLE stories (id int, author_id int, title text, url text);
 TABLE votes (user_id int, story_id int, vote int);
 \end{lstlisting}
 
 \noindent
-We demonstrate a QPU architecture that expresses a materialized view which pre-computed the $vote\_count$ for each story
-The goal of this view is to facilitate the query that the application executes for loading a requested story:
+We demonstrate a QPU architecture that expresses a materialized view which pre-computes the $vote\_count$ for each story.
+The goal of this view is to facilitate the query that Lobsters executes for retrieving a requested story:
 
 \begin{lstlisting}[
           language=SQL,
@@ -378,28 +757,44 @@ The goal of this view is to facilitate the query that the application executes f
           xleftmargin=\parindent,
           commentstyle = \color{gray}
         ]
-SELECT id, author_id, title, url, vote_count
-FROM stories
-JOIN (
-  SELECT story_id, SUM(vote) as vote_count
-  FROM votes
-  GROUP BY story_id
-) view
-ON stories.id = view.story_id
-/* ? is a parameter */
-WHERE stories.id = ?
+Q_story = SELECT id, author_id, title, url, vote_count
+          FROM stories
+          JOIN (
+            SELECT story_id, SUM(vote) as vote_count
+            FROM votes
+            GROUP BY story_id
+          ) view
+          ON stories.id = view.story_id
+\end{lstlisting}
+
+\noindent
+Figure~\ref{fig:lobsters_architecture_basic} shows the QPU architecture that implements this materialized view.
+We pass $Q\_story$ as configuration to the Materialized view QPU.
+Upon initialization, the Materialized view QPU sends the following as a downstream query to the Join QPU,
+with the additional predicates:
+
+\begin{lstlisting}[
+          language=SQL,
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent
+        ]
+SNAPSHOT LATEST
+INTERVAL FROM LATEST
 \end{lstlisting}
 
 \begin{figure}[t]
   \centering
     \includegraphics[scale=0.5]{./figures/case_studies/lobsters_architecture_basic.pdf}
-  \caption{Lobsters\_architecture\_basic.}
+  \caption{QPU architecture for the materialized view that integrates vote counts to stories.}
   \label{fig:lobsters_architecture_basic}
 \end{figure}
 
-Figure~\ref{fig:lobsters_architecture_basic} shows the QPU architecture that provides this functionality.
-We use a \textbf{Sum} QPU for calculating the $vote\_count$ for each story.
-It's query processing interface domain consists of a single query:
+The Join QPU in turn generates two downstream queries:
 
 \begin{lstlisting}[
           language=SQL,
@@ -409,72 +804,71 @@ It's query processing interface domain consists of a single query:
           rulecolor=\color{black},
           stringstyle=\color{mymauve},
           frame=L,
-          xleftmargin=\parindent
+          xleftmargin=\parindent,
+          commentstyle = \color{gray}
         ]
-SELECT story_id, SUM(vote)
-FROM stories votes
-SNAPSHOT LATEST
-INTERVAL FROM LATEST
+Q1 = SELECT id, author_id, title, url
+     FROM stories
+     SNAPSHOT LATEST
+     INTERVAL FROM LATEST
 \end{lstlisting}
 
-Given this query, the Sum QPU's query processing function sends a downstream query to the votes $corpus\_driver$
-in order to receive the most recent snapshot of the votes table
-and subscribe to subsequent writes to the table.
-It receives an input stream consisting of each record in the votes table snapshot,
+\begin{lstlisting}[
+          language=SQL,
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent,
+          commentstyle = \color{gray}
+        ]
+Q2 = SELECT story_id, SUM(vote)
+     FROM votes
+     GROUP BY story_id
+     SNAPSHOT LATEST
+     INTERVAL FROM LATEST
+\end{lstlisting}
+
+\noindent
+It sends $Q1$ to the stories Corpus Driver QPU and $Q2$ to the Sum QPU.
+We note that it may send the two downstream queries to the corresponding Selection QPUs;
+The two query plans are equivalent.
+
+\smallskip
+\noindent
+When Join receives $Q1$, it initiates an output stream,
+first sending a snapshot of all stories in the stories table,
+and then sending an update for each write to the table.
+
+\smallskip
+\noindent
+When Sum receives $Q2$, its query processing function sends a downstream query to the votes Corpus Driver QPU
+in order to receive the most recent snapshot of the votes table and subscribe to subsequent writes to the table.
+As a result, tt receives an input stream consisting of each record in the votes table snapshot,
 and incrementally calculates the sum of the $vote$ attribute ($vote\_count$) for each distinct $story\_id$.
-It stores $(story\_id$, $vote\_count)$ tuples at its state.
-When it completes processing the snapshot, the Sum QPU emits all $(story\_id$, $vote\_count)$ tuples at its response stream.
-At the same time, the Sum QPU also receives an input record for each insert to the votes table.
-Any update record received while still processing the snapshot, is treaded as a snapshot record;\
-It updates corresponding $vote\_count$ but does not result to an output record.
-For Each update received after the votes table snapshot has been processed, the Sum QPU updates the $vote\_count$ for the
-corresponding $story\_id$,
-and emits the updated $vote\_count$ at the output stream.
+Its state is composed of $(story\_id$, $vote\_count)$ tuples.
+When the Sum QPU completes processing the snapshot, it emits every computed $(story\_id$, $vote\_count)$ tuple
+at its output stream.
+In addition, the Sum QPU also receives an input record for each insert to the votes table.
+Any update record received while still processing the snapshot, is treaded as a snapshot record;
+It updates corresponding $vote\_count$, but does not result to an output record.
+For each update received after the votes table snapshot has been processed,
+the Sum QPU updates the $vote\_count$ for the corresponding $story\_id$,
+and emits the updated $(story\_id$, $vote\_count)$ at its output stream.
 
-\begin{figure}[t]
-  \centering
-    \includegraphics[scale=0.5]{./figures/case_studies/lobsters_architecture_basic_vote.pdf}
-  \caption{Lobsters\_architecture\_basic\_vote}
-  \label{fig:lobsters_architecture_basic_vote}
-\end{figure}
-
-\medskip
+\smallskip
 \noindent
-Moreover, we use a Join QPU in order to join $vote\_count$ with the rest of the attributes of each story.
-In the case study, we use a \textit{stateless} Join QPU.
-This Join QPU does not store intermediate state of its inputs.
-When it receives a query,
-its query processing function sends a persistent query to each $corpus\_driver$ QPUs in order to establish input streams
-for receiving notifications for updates to the corresponding tables.
-As shown in Figure~\ref{fig:lobsters_architecture_basic_vote},
-for $(story\_id$, $vote\_count)$ tuple that the Join QPU receives from the votes $corpus\_driver$,
-it performs a query to the $Selection$ QPU connected to the stories table, requesting the record with the corresponding $story\_id$.
-It then joins the received record with the $vote\_count$, and emits the join result at the output stream.
+Join stores intermediate state for each of input stream.
+When it receives an input record from one of the streams,
+it matches it with the corresponding stored record for the other stream,
+based on the $story\_id$ attribute.
 
-Similarly, for each $(story\_id$, $author\_id$, $title$, $url)$ tuple received from the stories table,
-the Join QPU sends a downstream query to $Selection$ QPU it is connected to in order to retrieve the corresponding $vote\_count$.
-
-\medskip
-\noindent
-Finally, a Materialized View QPU is connected to the Join QPU.
-It is responsible for storing the result of the join operation, and serving queries of the form
-
-\begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent
-        ]
-SELECT id, author_id, title, url, vote_count
-FROM stories_with_voteCount
-/* ? is a parameter */
-WHERE id = ?
-\end{lstlisting}
-
+In our implementation of this use case,
+the Join QPU is merged with the Materialized View QPU so that the system does not need to maintain state
+in order to perform the join operation, in addition to the materialized view state.
+We present this in more detail in section \todo{add reference to imlementation part}.
 
 \medskip
 \noindent
@@ -482,13 +876,13 @@ In summary,
 this QPU architecture provides the functionality of pre-computing story votes counts in order to avoid re-computation
 when serving user read requests.
 This is equivalent to the functionality already implemented in the Lobsters application.
-However, using shifts the responsibility of updating the vote counts from the application logic,
+However, using the QPU-based materialized view shifts the responsibility of updating the vote counts from the application logic,
 to the query processing architecture, thus simplifying the application code.
 
 
 \subsection{Partial materialization}
 
-Next, we expand the Lobsters case study be examining the operation of loading the application's frontpage.
+We expand the Lobsters case study by examining the operation of loading the application's frontpage.
 The frontpage consists of the $K$ stories with the highest vote count ($K$ being a parameter).
 
 The Lobsters implementation uses the following query to retrieve the information required for loading the frontpage:
@@ -518,7 +912,7 @@ LIMIT K
 \begin{figure}[t]
   \centering
     \includegraphics[scale=0.4]{./figures/case_studies/lobsters_architecture_materialization.pdf}
-  \caption{Lobsters\_architecture\_materialization}
+  \caption{A vote triggers the materialization of an entry of the TopK materialized view.}
   \label{fig:lobsters_architecture_materialization}
 \end{figure}
 
@@ -526,23 +920,22 @@ In this section, we show how the QPU architecture defined in the previous sectio
 functionality.
 
 To achieve that, we introduce an additional query processing unit class: the TopK Materialized View (TopK-MV) QPU.
-The TopK-MV is represents a materialized view which orders its entries based on a specified attribute,
-and only materializes the entries with the $K$ highest (or lowest, based on the configuration) values for that attribute.
+The TopK-MV represents a materialized view which orders its entries based on a specified attribute.
+In addition, it only materializes the $K$ entries with the highest (or lowest) values for that attribute.
 
 We deploy a TopK-MV QPU in the Lobster application QPU architecture (Figure~\ref{fig:lobsters_architecture_materialization}),
 and configure it as a materialized view with the same definition as the existing materialized view,
 storying entries of the form $(story\_id$, $author\_id$, $title$, $url$, $vote\_count)$.
 In addition, we configure TopK-MV QPU to order entries by $vote\_count$, and materialize the $K$ entries with the highest $vote\_count$.
 
-The TopK-MV is connected to the materialized view and the Sum QPU.
+The TopK-MV is connected to the Materialized view QPU and the Sum QPU.
 Its initialization function sends a persistent query to the Sum QPU.
-As a result, it first receives a snapshot containing the $vote\_count$ of every existing story,
-and then continues receiving an update for each change to the $vote\_count$ of a story.
+As a result, it first receives a snapshot containing the $vote\_count$ of every existing story in snapshot of the votes table;
+It subsequently receives an update for each change to the $vote\_count$ of a story.
 It stores the received snapshot as a list of $(vote\_count$, $story\_id)$ entries, ordered by $vote\_count$.
-Then for each of the $K$ entries with the highest $vote\_count$,
-it queries the materialized view in order to retrieve the remaining attributes of the corresponding story.
-Therefore, the TopK-MV \textit{materializes} only a specified number of entries,
-based on a certain criterion.
+Then, for each of the $K$ entries with the highest $vote\_count$,
+it sends a downstream query to the Materialized View QPU in order to retrieve the remaining attributes of the corresponding story.
+Therefore, the TopK-MV \textit{materializes} a bounded number of entries, based on a given criterion.
 
 Furthermore, the TopK-MV QPU continues receiving updates from the Sum QPU, and updating its
 ordered list of $(vote\_count$, $story\_id)$ entries.
@@ -550,21 +943,21 @@ When the $vote\_count$ of a non-materialized entry becomes one of the top-K,
 the unit's callback function discards the materialized entry with the lowest $vote\_count$,
 and triggers the materialization of that entry.
 
-The Top-K QPU uses the technique of \textit{partial-materialization} in order to bound the size of pre-computed state.
+The Top-K QPU uses the technique of \textit{partial materialization} in order to bound the size of pre-computed state.
 This is a well known concept for materialized views in database systems \cite{zhou:partiallymaterialized, zhou:dynamicmaterialized},
 and has been used by Noria \cite{gjengset:noria} in the context of data-flow systems.
 
-\subsection{Edge something something}
+\subsection{Placing materialized views at the edge}
 
 % The ad-serving application's users are distributed worldwide, and therefore, the communication latency between user devices and the data center may be significant.
 % Placing data geographically closer to end users is a common technique for reducing the large access latencies resulting from geo-distribution 
 
-Query response time is crucial for in user-facing read-heavy application, such as Lobsters.
+Query response time is crucial for user-facing read-heavy application, such as Lobsters.
 As discussed in chapter~\ref{ch:background}, even small increases in user-perceived latency can result in significant drops in both web traffic and sales.
-So far in this case study, we have examined how query processing latency can be decreased using pre-computed query results.
-Another factor contributing to large query processing latencies is the communication latency between the application and the clients.
+So far in this case study, we have examined how query response time can be decreased using pre-computed query results.
+Another factor contributing to query response time is the communication latency between the application and the clients.
 A client located in a different geographic region than the Lobsters application deployment might experience communication
-latency with the application backend in the order of hundreds of milliseconds.
+latency in the order of hundreds of milliseconds.
 
 A common solution to this latency problem is to place on servers geographically closer to clients using caches,
 in order to avoid costly remote round-trips to data centers.
@@ -576,7 +969,7 @@ edge nodes are largely used for caching static data, such as images and video co
 \begin{figure}[t]
   \centering
     \includegraphics[scale=0.4]{./figures/case_studies/lobsters_architecture_edge.pdf}
-  \caption{Lobsters\_architecture\_edge}
+  \caption{Distributing a QPU architecture between the data center and edge nodes.}
   \label{fig:lobsters_architecture_edge}
 \end{figure}
 
@@ -605,52 +998,7 @@ and might therefore return stale results.
 In chapter~\ref{ch:evaluation}, we evaluate the effect of placing materialized view closer to clients on query response time and
 and query result freshness.
 
-\section{Federated secondary attribute search for multi-cloud object storage}
-
-\begin{figure}[t]
-  \centering
-    \includegraphics[scale=0.3]{./figures/case_studies/zenko_arch.jpg}
-  \caption{zenko\_arch}
-  \label{fig:zenko_architecture}
-\end{figure}
-
-While most enterprise data today originate from and is stored on-premises storage systems,
-use cases for hybrid and multi-cloud storage are emerging in many industries.
-For example, in the media industry, while the creation of content in on-premises private clouds is prevalent,
-the use of public cloud services for content distribution and transcoding \cite{scality:bloomberg} is growing.
-Moreover, organization increasingly choose to spread their data across multiple cloud providers in order to avoid
-dependence on a single provider, and improve their resilience against failures.
-
-The advent of data distributed across multiple independent storage platforms has created the need for unified access to data across platforms.
-In this section, we examine a Zenko \cite{zenko:docs}, a multi-cloud data controller that aims to address this need.
-Zenko provides a unified namespace, API, and search capabilities for data stored locally,
-or in public cloud storage services, including Amazon S3, Microsoft Azure Blob storage, and Google Cloud Storage.
-We focus on Zenko's search capabilities.
-
-Zenko provides a common namespace over a set of distinct storage platforms, and supports an object storage API \cite{aws:s3}.
-It is common for application to mark objects with metadata tags.
-Zenko provides federated metadata search:
-applications can retrieve objects through searches on their metadata tags, independent from their storage location.
-
-Figure\ref{fig:zenko_architecture} show Zenko's architecture.
-
-% application can search objects based thier 
-% There exists thus a need for a centralized abstraction of multiple storage services, either on-premise or 3rd party objects torage infrastructure platforms
-
-% More recently, the concept of multi-cloud data storage has emerged.
-% Organizations spread their data across private data centers and public cloud services in order to reduce costs and
-% ensure fault-tolerance.
-% Moreover, they distribute data across multiple cloud providers in order to avoid dependence on a single
-% cloud provider, take advantage of diverse storage and computing services, and improve reliability.
-
-
-
-% Scality’s open source multi-cloud framework, Zenko 1, enables applications to transparently store and access data on multiple public and private cloud storage systems using a single storage interface. Applications can use Zenko to access multiple cloud storage systems, including cloud services such as Microsoft Azure Blob Storage, Amazon S3 and Google Cloud, as well as private on-premise storage systems, using an Amazon S3 compatible API.
-% The focus of this use case is Zenko’s capability to support federated metadata search across multiple cloud namespaces. This enables applications to retrieve data by perform- ing queries on metadata attributes, independent of the data location.
-
-%%
-In this case study, examines one of Scality's technologies and proposes alternative approaches.
-%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
