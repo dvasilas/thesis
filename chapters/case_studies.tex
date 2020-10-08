@@ -1,8 +1,35 @@
-Having presented ... ,
-\todo{intro}
-% the goal of this chapter is to demonstrate the use of the proposed query processing architecture in ...
-% More specifically, we present case studies ...
-% we apply
+Having presented an approach for constructing query processing architectures through
+assembly-based modularity,
+in this chapter we demonstrate its flexibility by applying it to a number of use cases and applications.
+More specifically:
+
+\begin{itemize}
+  \item We demonstrate how both a document and a term-partitioned secondary
+  index can be implemented using QPU-based architectures (section~\ref{sec:cs_index_partitioning}).
+  In addition,
+  we use this case study to describe in detail the construction and functionality of QPU graph,
+  including the configuration of query processing units, and the queries sent between units
+  during initialization and query processing.
+
+  \item We examine a state-of-the-art approach to providing federated metadata search over data spread
+  across multiple private and public cloud storage platforms,
+  and propose a decentralized approach that places index entries closer to the corpus in order to improve
+  freshness (section~\ref{sec:zenko}).
+  Moreover, we present a QPU architecture that implements partial index replication.
+  This approach provides fine-grained control over the placement of index entries:
+  Heavily queries index entries are placed closer to the users,
+  while heavily update are placed closer to the corpus
+
+  \item We examine a read-heavy news aggregator application,
+  and propose a QPU-based query processing system for maintaining pre-computed state in order to improve the application's performance,
+  while simplifying its code (section~\ref{sec:lobsters}).
+  To achieve that, we present a QPU that implements partial materialization in materialized views:
+  Only materialized view entries expected to be requested by the application are materialized.
+  This reduces the view's memory footprint as well as the volume communication required for keeping view entries up-to-date
+  with the corpus.
+  Furthermore, we demonstrate how a QPU-based architecture can be distributed between data center and edge nodes,
+  and use partial materialization to ensure that only heavily queried materialized view entries are placed at the edge.
+\end{itemize}
 
 \section{Flexible secondary index partitioning}
 \label{sec:cs_index_partitioning}
@@ -92,6 +119,7 @@ how the two QPU architecture achieve the write and read path properties describe
 
 \subsection{Write path}
 \label{sec:cs_index_partitioning_write_path}
+
 \begin{figure}
   \begin{minipage}{.5\textwidth}
     \centering
@@ -533,6 +561,7 @@ two index replicas.
 
 
 \section{Federated secondary attribute search for multi-cloud object storage}
+\label{sec:zenko}
 
 While most enterprise data today originate from and is stored on-premises storage systems,
 use cases for hybrid and multi-cloud storage are emerging in many industries.
@@ -547,58 +576,60 @@ Zenko provides a common namespace over a set of distinct object storage platform
 including Amazon S3, Microsoft Azure Blob storage, and Google Cloud Storage.
 It allows applications to access data in multiple storage locations using the AWS S3 API \cite{aws:s3}.
 
-We focus on Zenko's federated metadata search functionality.
+We focus on Zenko's federated metadata search functionality \cite{zenko:mdsearch}.
 It is common for application to mark objects with metadata tags.
 Zenko provides applications the ability to retrieve objects based on queries on their metadata tags,
 independent from storage location.
 
-% \begin{figure}[t]
-%   \centering
-%     \includegraphics[scale=0.3]{./figures/case_studies/zenko_arch.jpg}
-%   \caption{zenko\_arch}
-%   \label{fig:zenko_architecture}
-% \end{figure}
-
-\todo{change figure to Zenko overview}
-\todo{cite zenko docs for architecture}.
 Zenko uses a warehousing approach to provide federated metadata search:
-It integrates metadata tags for objects stored on all storage platforms in a central \textit{metadata store}.
+It integrates metadata tags for objects stored on all storage platforms in a central \textit{metadata store} \cite{zenko:architecture, zenko:mongodb}.
 More specifically, it uses a MongoDB deployment as this metadata store.
 MongoDB provides the ability to create indexes on document attributes,
 and to retrieve documents using queries on these attributes.
 Zenko uses this functionality to implement metadata search:
 Object metadata are stored as documents in MongoDB.
-Queries on metadata tags are translated to MongoDB find requests \todo{cite}.
+Queries on metadata tags are translated to MongoDB find requests.
 
-A typical Zenko deployment consists of Zenko deployed on-premises, along with a private storage system,
+A typical Zenko deployment consists of Zenko along with a private storage system deployed on-premises,
 and multiple public cloud storage platforms, each on a different data center.
-For this case study, we refer to each data center / storage system as a \todo{storage location}.
+For this case study, we refer to each data center / storage system as a \textit{storage location}.
 The primary data access method is through Zenko's API:
 Application communicate with Zenko to read and write objects,
 and Zenko is responsible for storing and retrieving each object from the corresponding storage location according to a specified policy.
 In addition,
 applications can write directly to some of the storage systems.
-Zenko ingests updates performed directly to an underlying storage system through a mechanism called out-of-band updates \todo{cite}.
+Zenko ingests updates performed directly to an underlying storage system through a mechanism called out-of-band updates \cite{zenko:outofband}.
 
 \medskip
 \noindent
 In this case study,
-we present an alternative, decentralized approach for achieving federated metadata search on object storage platforms.
-More specifically, we demonstrate how the QPU-based composable architecture can be used to construct a federated secondary
-index over data stored on multiple storage locations.
-The main idea is to partition the index by storage location,
-and place each index partition close to the underlying data.
+we present an alternative approach for supporting federated metadata search on object storage platforms.
+More specifically, we demonstrate how the QPU-based query processing architecture can be used to construct
+a \textit{decentralized} secondary index that federates data stored on multiple storage locations;
+The main idea is to partition the secondary index based on the storage location of each object,
+and place each index partition close to the corresponding data.
 
 There are two main advantages to this approach compared to the warehousing approach:
-Advantages ..
+\begin{itemize}
+  \item It ensures that the write path of the index does not require cross data center communication.
+  This means that the system can update index partitions synchronously without the prohibitive overhead of
+  cross data center communication.
+  Alternatively, if index maintenance is asynchronous,
+  the index can by updated in a more timely fashion, resulting in less stale index entries.
+  In general, a decentralized index is better suited for applications that require up-to-date query results.
+
+  \item By being distributed across multiple data centers,
+  the query processing system can remain available in the face of a data center failure.
+\end{itemize}
 
 We make two assumptions:
 The first is that storage platforms used in this case study have a common, object storage data model.
-Second, a corpus driver QPU, as described in chapter \todo{ref to chapter} is available for each storage platform.
+Second, a Corpus Driver QPU is available for each storage platform.
+This assumptions ensure that a QPU graph can be connected with multiple underlying storage systems.
 
 \medskip
 \noindent
-The QPU architecture for the multi-cloud index is shown in Figure~\todo{figure}.
+The QPU architecture for the multi-cloud index is shown in Figure~\ref{fig:federated_index} (a).
 We built on the partitioned index QPU architectures presented in Section~\ref{sec:cs_index_partitioning}.
 We construct a partitioned index QPU graph for each storage system, and co-locate it in the same data center as that
 storage system.
@@ -612,91 +643,135 @@ Given a query, a Partition Manager QPU forwards the same query to every index lo
 and then merges the resulting input streams.
 This approach is equivalent to the document-partitioned index approach.
 
+\begin{figure}
+  \begin{minipage}{.5\textwidth}
+    \centering
+    \includegraphics[scale=0.24]{./figures/case_studies/federated_index.pdf}
+  \end{minipage}%
+  \begin{minipage}{.5\textwidth}
+    \centering
+    \includegraphics[scale=0.24]{./figures/case_studies/federated_index_remote.pdf}
+  \end{minipage}
+  \caption{QPU architecture for a secondary index that federates two storage locations.
+  (a) Using a Partition Manager as a root at each storage location that forwards queries to every storage location.
+  (b) Using \textit{partial index replicas} implemented by Partial Index QPUs.}
+  \label{fig:federated_index}
+\end{figure}
+
 \medskip
 \noindent
 The downside of this approach is that the index query processing system needs to forward each query to every
 storage location.
-To address this issue we address the multi-cloud index architecture as shown in Figure~\todo{ref}.
-This architecture introduces the Remote Index QPU class.
-We define the Remote Index that combines the properties of an Index and a Cache QPU.
-The Remote Index materializes only a bounded subset of its index entries,
-using a least recently used policy to discard entries.
 
-When initially deployed, the Remote Index is empty.
-When it receives a query, its query processing function forwards the query to its downstream connection,
-which in this architecture is an index location, as a persistent query.
-The QPU then stores the corresponding index entries, and keeps them up-to-date using the established input stream.
-It processing subsequent queries using the cached index entries.
-To achieve that ...
-When a query requires non-materialized index entries and there is no available space,
-the least recently used entries are discarded until there is enough space for the queried entries.
+This can be addressed by replicating the entire index at each storage location,
+but that would multiply the storage and memory footprint of the index.
+In addition it would shift the requirement for cross data center communication to the write path;
+Every update would need to be sent to every other data center.
 
-\medskip
-\noindent
-Using the Remote Index QPU reduces the cross data center communication required for query processing by
+We propose an alternative approach, based on partial index replication.
+To achieve that, we introduce the Partial Index QPU class.
+The goal of the Partial Index class is to implement secondary index in which only a subset of index entries are materialized,
+essentially implementing a \textit{partial replica of a secondary index}.
+The insight is that some index entries are accessed more frequently than others;
+The Partial Index, similarly to a cache, materializes the most recently read index entries;
+Additionally, it does not invalidate entries, but, similarly to an index, performs incremental updates to keep them up-to-date
+with the corpus.
+This has two benefits:
+It bounds the memory footprint of the index, and reduces the cross data center communication needed by the index both in the read and the write path.
+In the read path, queries that can be processed using materialized index entries do not need to be forwarded to
+another storage location.
+In the write path
+Using the Remote Index QPU reduces the cross data center communication required for index processing by
 replicating recently accessed index entries.
-However, index maintenance might still incur significant between storage locations,
-in cache index entries materialized in the Remote Index are frequently updated.
-To address that,
-we extend the Remote Index QPU with a mechanism for measuring the rate of updates to each index entry.
-If the rate for a certain entry crosses a threshold specified by the QPUs configuration,
-then the QPU stops receiving update for this entry and discards it.
-To achieve that ..
-For example ..
+
+We use the Partial Index QPU to propose an improvement to the QPU architecture of Figure~\ref{fig:federated_index} (a).
+We deploy Partial Index QPU on each storage location, and connected to the index sub-graph of the Partial index.
+Each of these Partial Index QPUs functions as follows.
+When initially deployed, it none of its entries materialized.
+When it receives a query, its query processing function forwards the query to its downstream connection,
+which in this QPU graph is an index location, as a persistent query.
+It stores the received entries, incrementally updates them using the input stream of updates.
+A difference with the Index QPU is therefore that the Partial Index establishes an input stream for each materialized
+index entry, while the Index requires a single input stream.
 
 \medskip
 \noindent
-Both functionalities provide fine-grained placement of index entries.
+While the partial index replication can potentially reduce the write path cross data center communication of an index replica,
+it might still incur significant between storage locations,
+in cases in which materialized index entries are updated frequently.
+To address this issue,
+we extend the Partial Index class with a mechanism for measuring the rate of updates to each index entry.
+If the update rate for a certain entry crosses a threshold specified by the QPUs configuration,
+then the QPU stops receiving updates for this entry and discards it.
 
-This case study demonstrates an important property of the proposed query processing architecture.
-A QPU-based query processing architecture,
-can be viewed as a hierarchical architecture, composed of a number of distinct tiers;
-Each tier
+The Partial Index QPU provides fine-grained placement of index entries.
+Index entries that are queried more heavily are replicated, and thus placed closer to the clients,
+while index entries that are update more heavily are placed closer to the corpus.
+\todo{TODO: add paragraph discussing data transfer cost}
 
+\medskip
+\noindent
+The QPU architectures described in this case demonstrate an important property of QPU-based query processing architectures:
+A QPU graph can have a hierarchical structure,
+in which lower layers are composed composed of multiple independent sub-graphs,
+which are then connected by higher layers.
+Th federated index architecture consists the partitioned index for each storage location (lower layer),
+connected by Partition Manager QPUs (higher layer).
+Moreover, the lower layer is transparent to the higher layer.
+For example, the lower layer of the federated index architecture can used either the partitioning by term or
+partitioning by document approach without affecting the system's functionality.
 
-\subsection{Need title inspiration}
+\subsection{Predicate-based indexing}
 
-In this section, we extend the multi-cloud index case study by examining a use case inspired by one a Scality's customers.
+In this section, we extend the multi-cloud index case study by examining a use case inspired by one of Scality's customers.
 We consider the example of a media organization that operates broadcasting and streaming services.
-The media assets (video content, images) used by these services on are stored in public cloud storage platform,
-and are tagged with metadata attributes.
-Search on metadata tags is used to support recommendation service and user search functionalities.
-Moreover, the organization operates in two geographic locations;
-A separate storage platform is used for each location.
+It stores media assets (video content, images) used by these services in an object storage system.
+As described above, objects are tagged with metadata tags;
+Applications use queries on metadata tags to provide recommendation and user search functionalities.
+The organization operates in two geographic locations, and a separate storage platform is used for each location.
 
 The metadata search requirement of this use case are as follows:
-Applications on each geographic location need low latency metadata search on \textit{local} data (data stored on that geographic location),
-as well as a \textit{subset} of the \textit{remote} data.
-This subset is specified by the application, and can be expressed as predicates on metadata tags.
-In other words, for an application that operates in $location_A$, there is an ``interest set'' that is a subset of the corpus
-located in $location_B$ that the application accesses frequently and needs low latency metadata search on.
+Applications on each geographic location need low latency metadata search on \textit{local} corpus (data stored on that geographic location),
+as well as a \textit{subset} of corpus in the remote location.
+This subset is specified by the application, and is expressed as predicates on metadata tags.
+In other words, for an application that operates in $location_A$, there is an ``interest set'' in $location_B$:
+a subset of the corpus $location_B$ that the application accesses frequently and needs low latency metadata search on.
 
-The state-of-the-art warehousing approach of constructing a central index with metadata tags from all objects
-on both locations, can be applied to achieve the required functionality.
-However, this approach uses more resources that required, as it includes the entire set of remote data.
-Our goal in this use case it to enable a secondary index that contains a subset of a data corpus, based on a given predicate.
+\begin{figure}
+  \centering
+    \includegraphics[width=0.7\textwidth]{./figures/case_studies/predicate_based_index.pdf}
+  \caption{QPU architecture for a predicate-based secondary index.}
+  \label{fig:predicate_based_index}
+\end{figure}
 
 \medskip
 \noindent
-Figure \todo{figure} shows how we can achieve this functionality using a QPU-based architecture.
-We use a layer of Selection QPU between the corpus (Corpus Driver QPUs) and the partitioned index.
-The Selection QPUs filter that corpus, and make the data items that satisfy the specified query available to the index.
-We refer to this architecture, as an \textit{filtered index}.
+While the state-of-the-art warehousing approach of constructing a central index with metadata tags from all objects
+on both locations can be applied to achieve these requirements,
+that would potentially use significantly more resources that required,
+if the interest set is small compared to the corpus.
+
+Instead, we construct a secondary index that indexes only the interest set,
+by filtering the corpus based on a given predicate before indexing.
+Figure~\ref{fig:predicate_based_index} shows the QPU architecture used to achieve that.
+We use a layer of Selection QPUs between the corpus (Corpus Driver QPUs) and the partitioned index.
+The Selection QPUs apply a filter on the corpus based on the query that defines the interest set,
+making only data items that satisfy it available to the index.
+We refer to this architecture, as an \textit{predicate-based secondary index}.
 
 A property of this architecture is that it is extensible:
 Additional corpus subsets can be added to the filtered index by deploying additional Selection --- Index QPU subgraphs,
 and connecting them through a Partition Manager QPU.
 
-A federated index for this use case consists of two parts:
-A partitioned index, as shown in section \todo{ref}, responsible for the \textit{local} corpus,
-and a filtered index,
-responsible for the ``interest set'' of the \textit{remote} corpus.
-
+A federated index QPU architecture for this use case consists of two parts
+follows the same logic as the one presented in Figures~\ref{fig:federated_index} (a) and (b),
+with the addition that in one of the two storage locations we use a predicate-based index.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % \section{Materialized views at the edge}
 \section{Materialized view middleware}
+\label{sec:lobsters}
 
 In this case study, we examine an existing application that requires the use of pre-computed state,
 and study how it can benefit by using a QPU-based architecture for query processing.
