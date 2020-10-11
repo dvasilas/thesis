@@ -99,7 +99,7 @@ we focus on the \textit{mechanisms} required for enabling a modular and composab
 % structured approach to tunning query processing systems that unifies the tunning dimensions available in existing systems with flexible derived state placement.
 
 \section{Overview and design rationale}
-
+\label{sec:design_rationale}
 Our first design decision is to decouple the query processing architecture from the storage architecture.
 We design the query processing system as a \textit{middleware system} that communicates with the storage tier through
 well-defined interfaces.
@@ -663,6 +663,7 @@ results, for example in streaming join computations, maintain \textit{query proc
 \medskip
 \noindent
 \textbf{Initialization, query processing, and input stream callback function.}
+\todo{procedure / method}
 The functionality of a query processing unit can be modeled using three functions:
 \begin{itemize}
   \item The \textit{initialization function} (section~\ref{sec:initialization_func}), which is executed when the QPU is
@@ -711,7 +712,7 @@ Query processing units expose an interface for receiving query requests:
 \begin{itemize}
   \item $QueryRequest$ specifies a predicate on the data items' \textit{attributes}, and a \textit{time interval}.
   \todo{interval is simply a predicate}
-  
+
   \item $QueryResponse$ is a stream containing the query's results.
 \end{itemize}
 
