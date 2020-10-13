@@ -88,6 +88,7 @@ However, the use of derived state for optimizing query processing involves a num
 
   \item When base data is distributed across multiple data centers, how is the derived state placed across data centers?
 
+\todo{also mention availability of the derived state}
 \end{itemize}
 
 These design choices affect multiple aspects of the query processing system's behavior,
@@ -109,7 +110,7 @@ query manager component) and a query processing computation (for example in inde
 For simplicity, we assume here simple predicate queries that do not involve more complex operations such as joins.
 
 In a distributed database, both the base data as well as the derived state are partitioned;
-both the write and read paths may involve communication among multiple derived state and base data
+Both the write and read paths may involve communication among multiple derived state and base data
 partitions (section~\ref{sec:index_partitioning_design_space}).
 
 Finally, in a geo-distributed database in which base data and derived state are distributed across multiple data centers,
@@ -341,6 +342,7 @@ From the above analysis it is evident that neither of the two approaches is suit
 The choice of which approach to use should be guided by factors including the scale of the system,
 the properties of the dataset (distribution of indexed values over the data items),
 and the characteristics of the workload (query/write ratio, concurrency, query selectivity)
+\todo{note also that this work does not consider the significant latencies involved in geo-distribution. This exaggerates the effects}
 
 More specifically:
 \begin{itemize}
@@ -365,21 +367,22 @@ configuration parameter at the time of creating an index.
 We are not aware of any database system that provides this functionality.
 In existing systems, this design decision is made at design time, and every index uses the same partitioning scheme.
 \cite{kejriwal:slik, tan:diffindex, riakv:secondaryindexes, cassandra:secondaryindexing}
-In Chapter~\ref{ch:case_studies} we demonstrate how a distributed database can provide both index partitioning
+In Section~\ref{sec:cs_index_partitioning} we demonstrate how a distributed database can provide both index partitioning
 schemes.
 
 
 \subsection{Derived state topology patterns}
 \label{sec:topology_patterns}
+\todo{not a good title: should include the term ``placement''}
 
-\todo{discuss existing approaches for placement of query processing operators across servers for minimizing cross-server communication}
+% \todo{discuss existing approaches for placement of query processing operators across servers for minimizing cross-server communication}
 
-In our analysis, we have so far made the implicit assumption that base data and derived state are placed on the
+In our analysis, we have made the implicit assumption so far that base data and derived state are placed in the
 same date center, and that clients are located in the same geographic region,
-and that therefore communication latency among them is not significant.
+and that communication latency among them is not significant.
 However, in modern cloud-scale services this is often not the case.
-Users often are spread across multiple geographic locations.
-As a results, database systems distributed data across geographically distributed data centers,
+Users are often spread across multiple geographic locations.
+As a result, database systems distribute data across geographically distributed data centers,
 in order to reduce latencies and improve fault-tolerance.
 
 Long-distance inter- data center network links exhibit latencies in the order of tens to hundreds of milliseconds.
@@ -389,7 +392,7 @@ from a data center close to their location \cite{kleppmann:localfirst}.
 In this setting, design choices about the placement of derived state,
 and about the communication patterns between with base data and derived state and between derived state and clients
 determine whether the read and write path computations require intra- or inter- data center communication.
-We term these design choices \textit{topology patterns}.
+We refer to these design choices \textit{topology patterns}.
 
 Design choices related to inter- data center communication exacerbate the trade-offs presented in the previous sections,
 but also pose additional trade-offs related to derived state replication.
@@ -397,7 +400,7 @@ but also pose additional trade-offs related to derived state replication.
 In this section, we discuss a number of scenarios that involve geo-distribution, and the associated derived state
 topology patterns.
 Throughout the following sections we consider as an example the design choices involved in maintaining a secondary index,
-however the analysis can be applied to also to materialized views.
+however the analysis can also be applied to materialized views.
 
 \subsubsection{Geo-replication}
 Cloud-scale database systems rely on geo-distribution to minimize user-perceived latency and improve fault-tolerance.
@@ -407,12 +410,12 @@ in the face of network partitions between data centers, geo-replicated databases
 (CP) and high-available (AP) designs.
 In a strongly-consistent design, replicas are kept synchronized at all times.
 This provides the abstraction of single replica system which simplifies application logic, but exposes users to high
-latencies due to the need for inter- data center communication between replicas in on the critical path of each write
+latencies due to the need for inter- data center communication between replicas in the critical path of each write
 operation.
 In addition, strongly-consistent designs are susceptible to downtimes due to network partitions.
 In a highly-available design, replicas synchronize in the background, out of the critical path of write operations.
 This ensures low latency and availability under network partitions, as each replica serves write operations locally.
-Nevertheless, this allows replicas to accept concurrent conflicting updates and temporarily diverge.
+Nevertheless, this allows replicas to accept concurrent conflicting updates and temporary diverge.
 
 \medskip
 
@@ -427,7 +430,7 @@ view.
 
 An alternative approach is to have materialized view replicas only on some data centers.
 This reduces the storage overhead, but means that a query sent to a data center without a materialized view
-either needs to be forward to another data center, or processed without the use of a materialized view,
+either needs to be forwarded to another data center, or processed without the use of a materialized view,
 both of which result in slower query processing.
 This can be suitable for case in which some data centers are queried more often than others.
 Moreover, this approach can be supplemented with the use of caches in data centers without materialized
@@ -443,7 +446,7 @@ A different geo-distribution strategy is geo-partitioning.
 In geo-partitioning, data is partitioned across data centers, and partitions are placed on data centers according to
 their access patterns.
 As a result, latency read and write access to data that belong to a local partition is low.
-CockroachDB allows developers to partition data across data centers at a row-level granularity
+CockroachDB allows developers to partition data across data centers with row-level granularity
 \cite{cockroachdb:geopartitioning}.
 
 One approach for maintaining a secondary index over geo-partitioned data is to use the partitioning-by-document scheme:

@@ -1,11 +1,27 @@
-We have implemented the proposed approach as a framework that provides the mechanisms and tools for deploying modular query engines, called Proteus.
-Proteus consists of a collection of implementations of the QPU abstraction, as well as a service discovery mechanism that allows the QPU graph to self- organize with only local configuration input to each QPU.
+We have implemented the composable query processing architecture described in Chapter~\ref{ch:design_pattern} in the form
+of a framework that facilitates the definition and deployment of QPU-based query processing systems.
+We call the framework Proteus.
+Proteus consists of:
+
+\begin{itemize}
+  \item A collection of implementations of QPU classes (Section~\ref{sec:proteus_qpu_architecture}).
+
+  \item A service discovery mechanism that simplifies the configuration of a QPU architecture by allowing the QPU graph to self-organize
+  with only local configuration input to each QPU instance (Section~\ref{sec:domain_dissemination}).
+
+  \item An architecture description language that can be used to define the topology and configuration of QPU architectures
+  (Section~\ref{sec:spec_language}).
+
+  \item A mechanism for translating architecture descriptions to deployment plans (Section~\ref{sec:proteus_deployment}).
+\end{itemize}
+
+Finally, in Section~\ref{sec:implementation} we present the implementation details of Proteus.
 
 
 \section{Query processing domain dissemination}
-
+\label{sec:domain_dissemination}
 The set of queries that a query processing unit can process constitutes its query processing \textit{domain}.
-As described in section~\ref{sec:qpc_tree},
+As presented in Section~\ref{sec:qpc_tree},
 we encode the query processing domain using a tree data structure, called domain tree.
 
 The domain of a query processing unit depends on its functionality (class), its configuration, and, in most cases,
@@ -14,57 +30,67 @@ This is because QPU classes such as Join and Partition Manager process a given q
 sending these sub-queries to their downstream connections,
 and then performing a computation over the returned results.
 Essentially, a QPU of this type de-composes queries into simpler tasks, and delegates some of these tasks to their downstream connections.
-The set of queries that it can process, therefore, depends on the types of tasks that its downstream connections can perform.
+Therefore, the set of queries that it can process depends on the types of tasks that its downstream connections can perform.
 
 Because of that, a query processing unit requires the domain tree of each of its downstream connections for its operation.
-More specifically, as we described in section~\ref{sec:qpc_tree}, a QPU uses the downstream domain trees in order to:
+More specifically, as we described in Section~\ref{sec:qpc_tree}, a QPU uses the downstream domain trees in order to:
 (1) compute its own domain tree, and (2) generate downstream queries during query processing.
 In this section, we describe the mechanism through which a query processing unit acquires the domain trees
 of its downstream connections.
 
 \subsection{Domain interface}
-Query processing units expose an interface for sharing their domain tree:
+We extend the query processing unit specification with a mechanism that allows a QPU to request the domain trees of its connections.
+For that, we define an additional interface, as follows:
 
 \begin{displaymath}
   GetDomain() \rightarrow [(QPUClass, DomainTree)]
 \end{displaymath}
 
-An invocation of $GetDomain$ returns a stream that contains $DomainTree$ records, where $DomainTree$ is a serialization of a domain tree.
-When a QPU receives an invocation of its domain interface, it establishes an output stream with the caller,
-and sends a $DomainTree$ records, which represents its domain tree.
-Each time there is a change to its domain tree, the QPU sends an additional $DomainTree$ record through the stream,
+An invocation of $GetDomain$ returns a stream that contains $DomainTree$ records, where $DomainTree$ is a serialization of a QPU's domain tree.
+When a QPU receives an invocation of its domain interface, it establishes an output stream with the caller.
+It then sends a $DomainTree$ record through the stream, representing its current domain tree.
+Each time there is a change to the QPU's domain tree, it sends an additional $DomainTree$ record through the stream,
 representing the updated domain tree.
 
-Similarly to the query interface, an edge in the edge in the QPU graph between $Q_A$ and $Q_B$ indicates that $Q_A$ can
-invoke the domain interface of $Q_B$.
+Similarly to the query interface, $GetDomain$ requests follow the QPU graph topology:
+An edge in the QPU graph from $QPU_A$ to $QPU_B$ indicates that $QPU_A$ can invoke the domain interface of $QPU_B$.
 
 \medskip
 \noindent
-We design the domain interface response as a stream rather that an one-time response in order to enable propagation of
+We define the domain interface response as a stream rather than an one-time response in order to enable propagation of
 configuration, domain and topology changes through the QPU graph.
 This is a first step towards enabling \textit{dynamic reconfiguration} of QPU architectures.
-Example of dynamic reconfiguration might include the creation new indexes or materialization of view at runtime.
+Examples of dynamic reconfiguration might include the creation new indexes or materialization of views at runtime.
 We consider dynamic reconfiguration of QPU architecture out of the scope of this work.
 It is, however, a direction for future work.
 
-\subsection{Query processing domain initialization}
+\medskip
+\noindent
+In order to support the domain interface, we extend the query processing unit specification with two additional methods:
+a domain processor and a domain response processor.
+These methods are analogous to the query interface methods.
+The domain processor method is responsible for processing a GetDomain request,
+and the domain response processor method is executed for each received domain response,
+and is responsible for updating the QPU's local view accordingly.
+
+\subsection{Query processing domain discovery mechanism}
 
 The first task of the constructor of each query processing unit class is to initialize the QPU's domain tree.
-For the Corpus Driver class this is performed using the input configuration (section \todo{}).
+For the Corpus Driver class this is performed using the input configuration (Section~\ref{sec:qpc_tree}).
 Every other QPU class, as discussed above, requires the domain trees of its downstream connections in order to compute its own domain tree.
 Because of that, the constructor method of every QPU class except of the Corpus Driver starts by sending a $GetDomain$ request to each
 of its downstream connections.
-After receiving the corresponding responses, the constructor computes the QPU's domain tree, using the rules presented in section \todo{domain init rules}.
+After receiving the corresponding responses, the constructor computes the QPU's domain tree, using the rules presented in Section~\ref{sec:qpc_tree}.
 
 If a QPU receives a $GetDomain$ request while still this process is being performed, it creates the response stream,
-and sends the first response to the stream as soon it computes its domain tree.
+but sends the response only after it has finished computing its domain tree.
 
-We illustrate this process using the QPU shown in Figure~\ref{fig:domain_example_graph} as an example.
-Figure~\ref{fig:domain_sequence_diag} depicts a sequence diagram that describes the message exchanges between QPUs in the graph
-for initializing their query processing domains.
+We illustrate this process using the architecture shown in Figure~\ref{fig:domain_example_graph} as an example.
+Figure~\ref{fig:domain_sequence_diag} depicts a sequence diagram that describes the message exchanges for domain discovery
+in that QPU graph.
 Upon initialization, the $Join$, $Selection_1$ and $Selection_2$ send a $GetDomain$ request to each of their downstream
 connections,
-while the $Corpus$ $Driver_1$ and $Corpus$ $Driver_2$ compute their query processing domains using their input configuration.
+$Corpus$ $Driver_1$ and $Corpus$ $Driver_2$ compute their query processing domains using their input configuration.
 Once each $Corpus$ $Driver$ QPU computes its domain tree, it responds to the corresponding $GetDomain$ request.
 When each $Selection$ QPU receives the $GetDomain$ response, it calculates its domain tree, and then it responds to the request from $Join$.
 Finally, $Join$ receives the responses from $Selection_1$, $Selection_2$, and computes its domain tree.
@@ -74,125 +100,222 @@ Finally, $Join$ receives the responses from $Selection_1$, $Selection_2$, and co
 The goal of the domain dissemination mechanism is to reduce the input configuration required by QPU instances,
 in order to simplify the process of configuring and deploying a QPU architecture.
 Thanks to this mechanism, the configuration of a query processing unit consists of ``local'' configuration
-(configuration about that specific QPU), as well as the endpoints of its downstream connections.
-The QPU can then use domain interface of its connections to obtain information about them.
+(configuration about that specific unit), as well as the endpoints of its downstream connections.
+The QPU can then use the domain interface of its connections to obtain information about them.
+For example, a Partition Manager connected to a number of Index QPU instances requires only the endpoints of its
+connections as configuration.
 
 \begin{figure}
     \centering
     \begin{minipage}{.3\textwidth}
         \centering
         \includegraphics[scale=0.5]{./figures/design_pattern/qpu_graph_emergent_properties.pdf}
-        \caption{}
+        \caption{An example QPU architecture.}
         \label{fig:domain_example_graph}
     \end{minipage}%
     \begin{minipage}{.7\textwidth}
         \centering
         \includegraphics[scale=0.4]{./figures/proteus/domain_sequence_diag.pdf}
-        \caption{}
+        \caption{Sequence diagram for the domain discovery of the architecture in Figure~\ref{fig:domain_sequence_diag}.}
         \label{fig:domain_sequence_diag}
     \end{minipage}
 \end{figure}
 
 
-
 \section{Query processing unit service}
-
-Proteus provides an implementation of the query processing architecture presented in chapter \todo{ref chapter 5}.
-In Proteus, the query processing unit component is implemented as a service, i.e. a daemon process.
-In this section we describe the system design and architecture of Proteus' query processing unit service.
+\label{sec:proteus_qpu_architecture}
+Proteus provides an implementation of the query processing architecture presented in Chapter~\ref{ch:design_pattern}.
+We have implemented the query processing unit component as a service, i.e. a daemon process.
+In this section we describe the system design and architecture of this service.
 
 \medskip
 \noindent
-The QPU service design is guided by the principles of the query processing unit model.
+The design of the QPU service is guided by the principles of the query processing unit model.
 Instead of implementing a separate QPU service for each QPU class,
 we design the query processing unit service as a \textit{polymorphic} service:
 Different instances of the same service implement different QPU classes, based on their configuration.
-To achieve that, we separate the components that are common to every QPU class, such as the configuration and query processing domain
-component,
+To achieve that, we separate the components that are common to every QPU class,
+such as the configuration and query processing domain component,
 and the components that are class-specific.
 For the class-specific components, we provide implementations for different classes in the form a library.
-We ensure that components are separated and communicate though well-defined APIs.
+We ensure that components are separated and communicate through well-defined APIs.
 
 Our goal with this design is to make the query processing service \textit{extensible}.
-Implementing an additional QPU class consists of defining the 
+Implementing an additional QPU class consists of extending the QPU class library with component implementations
+for the additional class.
+
+\subsection{QPU service architecture}
 
 \begin{figure}
   \centering
     \includegraphics[width=0.7\textwidth]{./figures/proteus/QPU_architecture.pdf}
-  \caption{QPU architecture  ...}
+  \caption{An overview of the QPU service architecture.}
   \label{fig:qpu_arch}
 \end{figure}
 
+\medskip
+\noindent
+Figure \ref{fig:qpu_arch} depicts the components of the query processing unit service in Proteus.
+\todo{some fixes needed in figure \ref{fig:qpu_arch}}
 
 \medskip
 \noindent
-Figure \ref{fig:qpu_arch} depicts the components of the query processing unit service.
-
-The \textbf{QPU Class Library} contains a set of QPU class definitions.
-Each QPU class definition consists of three \textit{method} definitions,
-which are the QPU methods described in section \todo{}: constructor, query processor, input processor.
-
-The \textbf{API Processor} is responsible for receiving and processing incoming requests for the two open interfaces of
-the query processing unit:
-the query and the domain interface.
-When it receives a query request,
-the API Processor first parses the given query to a query parse tree \todo{ref} using the Query Language Parse.
-If the query parse tree is successfully created, the API Processor creates initiates a response stream,
-and spawns an instance of the Class Query Processor of the QPU class specified in the configuration.
-The Class Query Processor sends query result records back to the API Processor which emits them as output stream records.
-
-Similarly, when the API processor receives a GetDomain request,
-it spawns an instance of the Class Domain processor, and emits the each received response as a stream record.
-
-The API Processor can process multiple query and GetDomain requests concurrently.
-For each received request, it creates a new output thread, and spawns a new instance of the corresponding QPU class method.
-
-
-The \textbf{State} component provides any API that other components can use for storing and retrieving state.
-It is used by derived state QPU classes, such as the Index and Materialized View classes, for storing their
-derived state structures.
-The QPU design defines only the API of the State component in order to enable the component's implementation to be modular.
-We have implemented three versions of the State component: an in-memory implementation using an ordered map data structure,
-one using the MySQL \todo{ref}, and one using AntidoteDB \todo{ref}
-
-
 A configuration file is passed to the QPU service during initialization.
 The \textbf{Configuration} component is responsible for parsing the configuration file into a set of configuration parameters.
-It exposes an API that other components can use to retrieve configuration parameters.
-Configuration parameters include:
+It exposes an API that other components can use to retrieve these configuration parameters.
+Configuration parameters include the QPU class to be provided by the service,
+the endpoints of downstream connections, and class-specific configuration parameters.
+Some examples of class-specific configuration parameters are:
 
 \begin{itemize}
-  \item The QPU service's class.
-  \item The endpoints of the QPU service's connections.
-  \item Class specific configuration.
-  While presenting an exhaustive list of the configuration parameters of each QPU class is out of the scope of this
-  section, we present a few examples below.
-
-  For the Corpus Driver class, the configuration specifies the endpoint of the corpus data,
+  \item The Corpus Driver class configuration specifies endpoints of storage tier components that the Corpus Driver communicates with to provide its functionality,
   the table it is responsible for, and, optionally, the table's schema.
 
-  For the Index class, as described in section \todo{ref case study 1} the configuration specifies an attribute name
-  and an interval of values for that attribute.
-  The Index QPU is responsible for  for the indexed attribute.
+  \item The Index class configuration, as described in Section~\ref{sec:cs_index_partitioning},
+  specifies an attribute name and an interval of values for that attribute.
 
-  For the Aggregator class, the configuration specifies an aggregator
+  \item The Aggregator class configuration specifies an aggregation function, and the aggregation and grouping attributes.
 \end{itemize}
 
+\medskip
+\noindent
+The \textbf{Query Processing Domain} component is responsible for storing and providing access to QPU's domain tree as well
+as the domain tree of downstream connections.
+The QPU's domain tree is initialized by the QPU class Constructor method.
+The domain trees of the QPU's downstream connections are initialized and subsequently updated by the QPU class Domain Response Processor.
+The Query Processing Domain component provides two interfaces:
+\begin{itemize}
+  \item An interface for providing a serialization of the domain tree to the QPU class Domain processor, and
+  \item An interface for computing downstream queries based on a given query parse tree.
+\end{itemize}
+
+\medskip
+\noindent
+The \textbf{State} component is responsible for the QPU service's internal state.
+It provides a key-value interface which other components use for storing and retrieving state entries.
+The State component is used by derived state QPU classes, such as the Index and Materialized View classes,
+for storing their derived state structures.
+
+We have defined a key-value interface for the State component,
+and have implemented multiple versions of the component using different backend stores:
+an in-memory implementation using an ordered map data structure,
+an implementation that uses MariaDB \cite{mariadb:docs} as backend store,
+and one that use AntidoteDB \cite{antidotedb:docs}.
+The State component to be used by a QPU service instance is controlled by a configuration parameter.
+
+\medskip
+\noindent
+The \textbf{API Processor} is responsible for receiving and processing incoming requests for the two open interfaces of
+the query processing unit:
+the Query and the Domain interface.
+It provides a Query Processor method which is responsible for processing query requests,
+and a Domain Processor method, responsible for domain requests.
+
+When the Query Processor method is executed for query request received by the API processor,
+it first parses the given query to a query parse tree \ref{sec:query_parse_tree} using the Query Language Parser.
+If the query parse tree is successfully created, the Query Processor initiates a response stream,
+and invokes the Class Query Processor of the QPU class specified in the configuration.
+After executing the query, the Class Query Processor sends query result records back to the API Processor,
+which emits them at the response stream.
+
+Similarly, when the API Processor receives a GetDomain request,
+it executes the Domain Processor, which passes the request to instance of the Class Domain Processor,
+and emits each received response as a stream record.
+
+The API Processor can process multiple requests concurrently.
+For each received request, it creates an output stream,
+and spawns an instance of the corresponding Processor method in a new thread.
+
+\medskip
+\noindent
+The \textbf{QPU Class} component is responsible for providing the methods defined by the query processing
+unit specification (Sections~\ref{sec:QPU_model} and~\ref{sec:domain_dissemination}).
+It is implemented as a library that provides QPU class method implementations.
+Each class in the library provides five method definitions:
+a Constructor method, a Class Query Processor method, a Domain Processor method, a Query Response Processor method,
+and a Domain Response Processor method.
+In our prototype, we have implemented the following QPU classes:
+\begin{itemize}
+  \item \textbf{Selection, Secondary Index, Partition Manager, Join, and Materialized view} as defined in previous Chapters.
+
+  As an optimization, we have integrated the functionality of the Selection class to other classes,
+  such as the Corpus Driver, Secondary Index and Cache.
+  This is because the Selections QPUs are often connected to these classes in QPU architectures.
+  By integrating the selection functionality with these classes, we simplify QPU architectures
+  and reduce the overhead of message serialization and de-serialization.
+
+  Furthermore, in our current implementation, a Secondary Index QPU service is responsible for a single attribute in a single
+  continuous value interval, specified by its configuration.
+
+  \item \textbf{Cache}.
+  We have implemented a Cache QPU class that stores query responses in an in-memory ordered map data structure.
+  It uses a Least Recently Used eviction policy.
+  Moreover, we defined the cache size in terms of \textit{query result records}.
+  That is, a query result that contains $N$ data items occupies $N$ units of cache size.
+
+  Moreover, we have implemented a time-based and an notification-based invalidation policy.
+  In the time-based policy, cache entries are invalidated after an amount of time specified by the QPU's configuration.
+  In the notification-based policy, the Cache QPU performs, for each query,
+  a downstream persistent query to subscribe to notifications for updates that modify the query result;
+  When a query result changes, the Cache QPU invalidates the corresponding cache entry.
+  The invalidation policy is controlled by a configuration parameter.
+
+  \item \textbf{Aggregator.}
+  We have implemented a generic Aggregator Class that divides an input set of data items into groups based on a grouping attribute,
+  and applies a function over an aggregation attribute to the data item of each group.
+  The grouping and aggregation attributes as well as the aggregation function are configuration parameters.
+  An aggregation operation fails if any data item in the input does not have a value for  the grouping or the aggregation attribute.
+  Our current implementation provides the sum and count functions.
+
+  \item \textbf{Corpus Driver.}
+  We have implemented three versions of the Corpus Driver class, corresponding to different storage systems.:
+  a relational database (MySQL \cite{mysql:docs}), a key-value store (AntidoteDB \cite{antidotedb:docs}),
+  and an object storage system (Scality's CloudServer \cite{cloudserver:github}).
+  We present more details on the implementation of each Corpus Driver in Section~\ref{sec:implementation}.
+
+  \item \textbf{Network.}
+  We have defined and implemented an additional class, called Network.
+  A Network QPU has a single downstream connection.
+  It forwards every received query request to that connection, and then forwards the input stream as its output stream.
+  Moreover, it can be configured to delay, re-order or drop stream records, based on a specified distribution.
+  The goal of this class is to simulate various network conditions for testing purposes.
+
+  \item \todo{TODO: Query Router}
+
+\end{itemize}
+
+The QPU class library is extensible;
+Additional classes can be implemented by providing the corresponding method definitions.
+
+\medskip
+\noindent
+The \textbf{Downstream client} component is responsible for sending downstream requests to other QPU services.
+It exposes an interface other components can use to submit query and domain requests.
+The Downstream clients sends these requests to the corresponding connections,
+and for each received response records it invokes the corresponding Class Response Processor method.
+
+Moreover, the Downstream client component is responsible for delivering the records of a each stream exactly once and in-order
+to the QPU Class.
+To achieve this, the API processor assigns a sequence number to each emitted stream record.
+The Downstream client uses these stream numbers to determine if records have been lost, already received or re-ordered.
+Moreover, the Downstream client can request from downstream connections to re-transmit records that it has missed,
+using control messages in the stream.
+The API Processor in turn stores stream records after sending them in a buffer of configurable length.
 
 
-\section{Configuration language}
+\section{Architecture specification language}
+\label{sec:spec_language}
+In this section, we present a simple architecture description language for describing QPU-based query processing architectures.
 
-In this section, we present a simple language for describing QPU-based query processing architectures.
+The goal of a an architecture description is to describe a QPU graph,
+including the class and configuration of the QPUs at its vertices and the connections among them,
+as well as the placement of the graph vertices across system nodes.
 
-The goal of a program written in the language is to describe a QPU graph
---- the class and configuration of the QPUs at its vertices, and the connections among them ---
-and the placement of the graph vertices across system nodes.
-
-A Proteus program comprises a series of placement context assignments,
+An architecture description comprises a series of placement context assignments,
 a series of QPU instance declarations, and a series of declarations of connections between QPU instances.
 
-A placement context is node or collection of nodes.
-A placement context assignment has the following syntax:
+A placement context is denotes a node or collection of nodes.
+It has the following syntax:
 
 \begin{lstlisting}[
           showspaces=false,
@@ -203,13 +326,13 @@ A placement context assignment has the following syntax:
           frame=L,
           xleftmargin=\parindent
         ]{}
-PlacementCtx([endpoint], ContextName)
+PlacementCtx([endpoint], PlacementCtxName)
 \end{lstlisting}
 
 \noindent
 where $[endpoint]$ is a collection of system nodes, expressed as hostnames, or IP addresses,
-and $ContextName$ is the name of the context assigned to these nodes.
-For example, the program:
+and $PlacementCtxName$ is the name of the context assigned to these nodes.
+For example, the description:
 
 \begin{lstlisting}[
           showspaces=false,
@@ -226,14 +349,125 @@ PlacementCtx([10.200.4.56, 10.200.3.45], "dc_eu")
 \end{lstlisting}
 
 \noindent
-assigns the context ``node\_1'' to the node with address 10.200.4.56,
-the context ``node\_2'' to  the node with address 10.200.3.45 ,
-and the context ``dc\_eu'' to both nodes.
+assigns the node with address 10.200.4.56 to the context ``node\_1'' ,
+the the node with address 10.200.3.45  to context ``node\_2'',
+and both nodes to the context ``dc\_eu''.
 
 \medskip
 \noindent
 A QPU context declaration has the following syntax:
 
+\begin{lstlisting}[
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent
+        ]{}
+Configuration = {
+  config_parameter_1: value_1,
+  config_parameter_2: value_2,
+  ...
+}
+
+qpu_object = <QPU_class>(Configuration)
+\end{lstlisting}
+
+\noindent
+where $<QPU\_class>$ denotes one of the classes available in the QPU library.
+The configuration specifies the configuration parameters passed to the QPU during initialization.
+
+\medskip
+\noindent
+Specifying a connection between QPUs has the following syntax:
+\begin{lstlisting}[
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent
+        ]{}
+qpu_object_1.connectTo(qpu_object_2)
+\end{lstlisting}
+
+\noindent
+This defines that $qpu\_object\_1$ has a downstream connection to $qpu\_object\_2$.
+
+\medskip
+\noindent
+Finally, the following syntax can be used to describe the placement of QPUs across system nodes:
+
+\begin{lstlisting}[
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent
+        ]{}
+qpu_object.place([PlacementCtxName])
+\end{lstlisting}
+
+\noindent
+The $place$ method assigns a set of \textit{placement constraint} to query processing unit.
+The QPU can be placed on any node that satisfies the constraint.
+For example, based on the description:
+\begin{lstlisting}[
+          showspaces=false,
+          basicstyle=\ttfamily,
+          commentstyle=\color{gray},
+          rulecolor=\color{black},
+          stringstyle=\color{mymauve},
+          frame=L,
+          xleftmargin=\parindent
+        ]{}
+PlacementCtx([10.200.4.56], "node_1")
+PlacementCtx([10.200.4.56, 10.200.3.45], "dc_eu")
+
+q1 = Selection(config_selection)
+q2 = Cache(config_cache)
+
+q1.place("node_1")
+q2.place("dc_eu")
+\end{lstlisting}
+
+\noindent
+$q1$ is placed on the node with address 10.200.4.56,
+while $q2$ can be placed on either of the two nodes.
+
+\bigskip
+\noindent
+
+A limitation of this configuration language is that it does not explicitly express the placement of a QPU graph
+relative to the corpus and the client,
+but rather it expresses placement on system nodes.
+
+
+\section{Query processing system deployment}
+\label{sec:proteus_deployment}
+
+We have designed a Deployment Generator component in Proteus for translating QPU architectures defined using the configuration
+language presented in the previous section into deployment plans.
+
+Each QPU service runs in a Docker \cite{docker} container.
+The Deployment Generator translates an architecture description into (1) a Docker Swarm stack file
+and (2) a configuration file for each QPU service.
+The architecture is then deployed using Docker Swarm \cite{docker:swarm}
+
+Docker Swarm uses Compose files \cite{docker:composefile} as deployment specification files.
+A Compose file is a YAML \cite{yaml} file defines a set of services, a service being defined as a set of replicas of container that share the same image.
+The Deployment Generator creates a Compose file that defines a service for each QPU instance defined in the architecture description.
+A configuration file is passed to each service, using a shared volume.
+Moreover, the Deployment Generator specifies a common network that all QPU services are connected to.
+
+In order to generate the configuration file to be passed to each QPU service, the Deployment Generator translates the configuration parameters
+of each QPU instance in the architecture specification to a TOML \cite{toml} file.
+Moreover, it adds to the configuration parameters the QPU instance's downstream connections as defined in the architecture specification.
 
 % \section{Fault tolerance}
 % Describe the mechanisms provided by Proteus for tolerating faults during query
@@ -253,9 +487,13 @@ A QPU context declaration has the following syntax:
 % \end{itemize}
 
 \section{Implementation}
+\label{sec:implementation}
 
-Driver
+% \begin{itemize}
+%   \item client drivers
+%   \item (connection pool, thread pool, ..)
+% \end{itemize}
 
-connection pool
 
-thread pool
+\bibliographystyle{plainnat}
+\bibliography{refs}

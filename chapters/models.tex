@@ -53,8 +53,7 @@ Data and control flow between users and the system's tiers as follows: \todo{fig
   the user.
 \end{itemize}
 
-The bidirectional flow of data and control messages the fundamental property of the presented system model, and guides
-our query processing tier design, as discussed in section \todo{}.
+% The bidirectional flow of data and control messages the fundamental property of the presented system model, and guides our query processing tier design, as discussed in section \todo{}.
 
 \subsection{Data storage tier}
 
@@ -403,12 +402,12 @@ More specifically:
 
   \item An aggregation operator is defined as
   \[
-  Aggregation(Table,~Function,~OperandAttribute,~GroupingAttribute)
+  Aggregation(Table,~Function,~AggregationAttribute,~GroupingAttribute)
   \]
   where Function is a function in the set $\{COUNT,~SUM,~AVERAGE,~MAX,~MIN\}$,
   and $OperandAttribute$ and $GroupingAttribute$ are attribute names.
   $Aggregation$ groups the data items in $Table$ in groupings based on their value of $GroupingAttribute$,
-  and, for each group, applies $Function$ to the values of $OperandAttribute$.
+  and, for each group, applies $Function$ to the values of $AggregationAttribute$.
   The result of an aggregation function is a new table that contains a data item for each aggregation group.
   Each data item contains the result of the aggregation function as an attribute, and has the value of the grouping attribute as primary key.
 

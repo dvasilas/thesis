@@ -573,7 +573,7 @@ The result of these local decisions is a distributed computation that performs q
 \section{The query processing unit: a building block for composable query processing architectures}
 
 \subsection{The Query Processing Unit component model}
-
+\label{sec:QPU_model}
 In the previous section, we discussed our insights for unifying the semantics of the different types
 of query processing tasks under a common component
 that can be used as the building block of a modular query processing architecture.
@@ -1670,6 +1670,7 @@ More specifically, we present the data structure that represent QPUs' query proc
 and describe how this structure is used by the query processing function to generate downstream queries for a given query.
 
 \subsubsection{Query parse tree}
+\label{sec:query_parse_tree}
 
 \begin{figure}[t]
   \centering
@@ -1710,6 +1711,8 @@ is depicted in Figure~\ref{fig:parse_tree}.
 
 \subsubsection{Query processing capabilities tree}
 \label{sec:qpc_tree}
+
+\todo{change merge to rule based approach: go over corpus driver, index, partition, ... to explain how a QPU computes its domain tree based on those of its connections}
 
 In this section we present the \textit{query processing capabilities tree} (QPC tree).
 The QPC tree represents the \textbf{set of all query parse trees that a QPU can process}.
