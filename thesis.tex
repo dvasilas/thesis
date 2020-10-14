@@ -23,6 +23,19 @@
 
 \usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
 
+
+\usepackage{listings}
+\lstset{float,
+  % basicstyle=\scriptsize,
+  % language=SQL,
+  columns=fullflexible,
+  % frame=tb,
+  captionpos=b,
+  mathescape=true,
+  tabsize=2,
+  xleftmargin=\parindent,
+  escapeinside={(*@}{@*)}}
+
 \pagestyle{fancy}
 \lhead{}
 \rfoot{Compiled on \today\ at \currenttime}
@@ -44,5 +57,9 @@
 \tableofcontents
 
 \input{content.tex}
+
+\bibliographystyle{plainnat}
+\refstepcounter{chapter}
+\bibliography{refs}
 
 \end{document}

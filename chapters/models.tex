@@ -8,42 +8,27 @@ We consider a data serving system with a two-tiered architecture: a data storage
 
 \begin{itemize}
   \item The data storage tier is responsible for storing and providing access to data.
-  We use the terms \textit{storage system} or \textit{data store} to refer to the system that implement this tier.
-  \textit{base data} or  for its data.
+  We use the terms \textit{storage system} or \textit{data store} to refer to the system that implements this tier.
 
   \item The query processing tier is responsible for providing the functionality to identify and retrieve data using
   queries on secondary attributes (Section~\ref{subsec:query_prcessing_tier}).
   We refer to the system that implements this tier using the terms \textit{query engine} or \textit{query (processing) system}.
 \end{itemize}
 
-Disaggregating query processing from the storage engine is an approach used by various systems and cloud
-services such as Amazon Athena \cite{aws:athena}, Aurora \cite{aws:aurora}, and Google BigQuery
-\cite{google:bigquery}.
-In these systems, query processing is performed by a query engine independent from the storage system.
-
-This model provides several benefits:
-\begin{itemize}
-  \item Storage and query processing resources can scale independently (elasticity).
-  \item It enables ad-hoc, one-time queries on already existing data without the need to migrate data.
-  For example, performing log forensic queries to investigate an incident.
-  \item It enabling cloud providers to implement fine-grained pricing for querying services.
-\end{itemize}
-
-In this work, we focus on the design of the query processing tier and consider the data storage tier as ``imposed'';
-We consider the data storage tier's functionalities, guarantees, and data distribution schemes as input parameters in
-our design.
-
-\bigskip
+\begin{figure}
+  \centering
+    \includegraphics[width=0.5\textwidth]{./figures/models/data_flow.pdf}
+  \caption{An overview of the system model.}
+  \label{fig:high_level_dataflow}
+\end{figure}
 
 \noindent
-\textbf{Data and control flow} \\
+Figure~\ref{fig:high_level_dataflow} shows a high level overview of the system model
 
-\noindent
-Data and control flow between users and the system's tiers as follows: \todo{figure}
 \begin{itemize}
   \item A user submits an \textit{update operation} to the data storage tier.
   As a result, data flows from the user to the data storage tier, and then optionally to query processing tier.
-  The query processing tier may use this data to update data structures such as indexes or materialized views.
+  The query processing tier may use this data to update data structures such as secondary indexes and materialized views.
 
   \item A user submits a query to the query processing tier.
   As a result, control messages linked to the query execution flow through the query processing tier, and potentially
@@ -52,6 +37,34 @@ Data and control flow between users and the system's tiers as follows: \todo{fig
   Data --- in the form of intermediate or final query results flow from the storage tier to the query processing tier to
   the user.
 \end{itemize}
+
+\medskip
+\noindent
+Disaggregating query processing from the storage engine is an approach used by various systems and cloud
+services such as Amazon Athena \cite{aws:athena}, Aurora \cite{aws:aurora}, and Google BigQuery
+\cite{google:bigquery}.
+In these systems, query processing is performed by a query engine independent from the storage system.
+
+This model provides several benefits:
+\begin{itemize}
+  \item It enables application infrastructures to run a mix of different query workloads on the same data,
+  without the need to move data to different systems in order to take advantage of their query processing capabilities.
+
+  \item Storage and query processing resources can scale independently.
+  The query engine can elastically adapt to match the query processing requirements of time-varying workloads,
+  without over provisioning resources \cite{vuppalapati:elasticqueryengine}.
+
+  \item It enables ad-hoc, one-time queries on already existing data without the need to migrate data.
+  For example, performing log forensic queries for incident investigation.
+
+  \item It enables cloud providers to implement fine-grained pricing for querying services.
+\end{itemize}
+
+\medskip
+\noindent
+In this work, we focus on the design of the query processing tier and consider the data storage tier as ``imposed'';
+We consider the data storage tier's functionalities, guarantees, and data distribution schemes as input parameters in
+our design.
 
 % The bidirectional flow of data and control messages the fundamental property of the presented system model, and guides our query processing tier design, as discussed in section \todo{}.
 
@@ -76,7 +89,7 @@ Each system is responsible for storing a large dataset $D$, continuously updated
 We use the term \textit{corpus}  --- usually used in the information retrieval literature to refer to a collection of documents ---
 to refer to the entire collection of data stored by the data storage tier.
 
-We model the storage systems that can be used to implement the storage tier as distributed, replicated partitioned systems \todo{ref}.
+We model the storage systems that can be used to implement the storage tier as distributed, replicated partitioned systems \cite{agrawal:taxonomy}.
 % A Taxonomy of Partitioned Replicated Cloud-based Database Systems
 In order to improve scalability, the dataset is divided into non-overlapping parts (usually call partitions or shards),
 so that each partition can be managed by a separate system node.
@@ -237,8 +250,7 @@ For the rest of this document,
 we make the assumption that the data storage tier provides the List and Subscribe APIs as describe below.
 In section \todo{ref chapter 5}, we discuss the implications providing a subset of the APIs described in this section,
 such as providing only List or Subscribe, or not exposing data object versions.
-In section \todo{ref chapter 7} we comment on how we have implemented the dat storage system APIs using the functionalities
-of existing data storage systems.
+In section \ref{sec:implementation} we comment on the implementation the storage tier APIs using the functionalities of existing data storage systems.
 
 \bigskip
 \noindent
@@ -358,8 +370,13 @@ and finally present our query processing tier design (Chapters~\ref{ch:design_pa
 The query processing tier is responsible for providing attribute-based data retrieval.
 It provides a $Query$ operations which client can user to retrieving data items using queries on their attributes.
 
+
+\subsection{Query language}
+
 We consider a query language that supports selection, projection, aggregation and join operators.
-More specifically:
+We consider supporting an extensive query language to be out of the scope of this work.
+We argue that this query language is expressive enough to support a variety of applications,
+and simple enough to allow this work to focus on the architecture design of the query processing tier.
 
 \begin{itemize}
   \item The selection operator is defined as:
@@ -375,15 +392,7 @@ More specifically:
   Moreover, queries can combine multiple $Selection$ operators with logical operators.
   For example, the query:
 
-  \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  \begin{lstlisting}
   SELECT order_id
   FROM Orders
   WHERE status != "shipped" AND order_date <= 10-10-2020
@@ -404,22 +413,14 @@ More specifically:
   \[
   Aggregation(Table,~Function,~AggregationAttribute,~GroupingAttribute)
   \]
-  where Function is a function in the set $\{COUNT,~SUM,~AVERAGE,~MAX,~MIN\}$,
+  where $Function$ is a function in the set $\{COUNT,~SUM,~AVERAGE,~MAX,~MIN\}$,
   and $OperandAttribute$ and $GroupingAttribute$ are attribute names.
   $Aggregation$ groups the data items in $Table$ in groupings based on their value of $GroupingAttribute$,
   and, for each group, applies $Function$ to the values of $AggregationAttribute$.
   The result of an aggregation function is a new table that contains a data item for each aggregation group.
   Each data item contains the result of the aggregation function as an attribute, and has the value of the grouping attribute as primary key.
 
-  \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  \begin{lstlisting}
   SELECT customer_id, SUM(amount)
   FROM Orders
   GROUP BY customer_id
@@ -427,16 +428,29 @@ More specifically:
 
   groups the data items in Orders based on the value of the $customer\_id$ attribute,
   and applies the SUM function to the $amount$ attribute of every data item in each group.
+
+  \item The join operator is defined as
+  \[
+  Join(BaseTable,~JoinTable,~JoinAttribute)
+  \]
+  where $BaseTable$ and $JoinTable$ are two corpus tables, and $JoinAttribute$ the attribute on which to perform the join.
+  $Join$ performs a left outer join.
+  The join results contains all data items in $BaseTable$.
+  For each data item in $BaseTable$, the operation examines the $JoinTable$ for \textit{matching} data items.
+  A matching data item is one that has the same value as the base data item for the $JoinAttribute$.
+  If a matching data item existing for a base data item, then the join result for this data item contains the union of the attributes of the two.
+
+  We consider this type of join operation in our query model because it has been shown to be useful to application that
+  model their data using semi-structured data \cite{mongodb:joins}.
 \end{itemize}
 
 
-The interface supports a query language with an SQL-like syntax.
-The query language supports point and range queries, logical operators, aggregation functions, and joins.
-We argue that these is no inherent limitation in the QPU model that prevents it from supporting a more complex
-query language (for example supporting nested queries).
-However, we consider additional functionalities to be out of the scope of this work.
-We believe this query language can effectively demonstrate that the QPU model can be used as building
-block for constructing fully-functional query processing systems.
+% The interface supports a query language with an SQL-like syntax.
+% The query language supports point and range queries, logical operators, aggregation functions, and joins.
+% We argue that these is no inherent limitation in the QPU model that prevents it from supporting a more complex query language (for example supporting nested queries).
+% However, we consider additional functionalities to be out of the scope of this work.
+% We believe this query language can effectively demonstrate that the QPU model can be used as building
+% block for constructing fully-functional query processing systems.
 
 
 % As the query language, we consider the subset of SQL that supports expressions of the form: \\
@@ -454,28 +468,28 @@ block for constructing fully-functional query processing systems.
 
 % \todo{this needs some work to define exactly what is and is not supported (we now support more than previous iterations, for example some simple joins)}
 
-Given a query $Q$ = ($projection$, $table$, $predicate$)
-and a data item $d$ = ($table$, $id$, $attributes$), $d$ satisfies $Q$ if:
-\begin{itemize}
-  \item $Q.table$ = $d.table$: the data item belongs in the table referred by the query, and
-  \item $\forall$ ($AttrVal_{low}$ $\leq$ $AttrKey$ $<$ $AttrVal_{high}$) $\in$ $Q.predicate$:
-  $attrKey$ $\in$ $d.attributes$ and $AttrVal_{low}$ $\leq$ $AttrVal$ $<$ $AttrVal_{high}$:
-  the data item contains all attributes included in the query's predicate, and their values are within the ranges
-  specified by the predicate.
-\end{itemize}
+% Given a query $Q$ = ($projection$, $table$, $predicate$)
+% and a data item $d$ = ($table$, $id$, $attributes$), $d$ satisfies $Q$ if:
+% \begin{itemize}
+%   \item $Q.table$ = $d.table$: the data item belongs in the table referred by the query, and
+%   \item $\forall$ ($AttrVal_{low}$ $\leq$ $AttrKey$ $<$ $AttrVal_{high}$) $\in$ $Q.predicate$:
+%   $attrKey$ $\in$ $d.attributes$ and $AttrVal_{low}$ $\leq$ $AttrVal$ $<$ $AttrVal_{high}$:
+%   the data item contains all attributes included in the query's predicate, and their values are within the ranges
+%   specified by the predicate.
+% \end{itemize}
 
-$Predicate$ may contain expressions that refer to the $Timestamp$ predicate.
-In that case, a data item satisfies $Q$ if, in addition to the above conditions, its $Timestamp$ satisfies the
-$Timestamp$ -related expressions in $predicate$.
-If no $Timestamp$ -related predication is given, then only the latest version of each data item is considered for the
-query.
-
-We define the set of data items that satisfy a query $Q$ as $Q_r$.
-In the ideal case, $Q$'s response is $Q_r$, however, as we explain in the following section a query response may
-differ from $Q_r$. \\
+% $Predicate$ may contain expressions that refer to the $Timestamp$ predicate.
+% In that case, a data item satisfies $Q$ if, in addition to the above conditions, its $Timestamp$ satisfies the
+% $Timestamp$ -related expressions in $predicate$.
+% If no $Timestamp$ -related predication is given, then only the latest version of each data item is considered for the
+% query.
 
 \noindent
-\textbf{Derived data} \\
+We define the set of data items that satisfy a query $Q$ as $Q_r$.
+In the ideal case, $Q$'s response is $Q_r$, however, as we explain in the following section a query response may
+differ from $Q_r$.
+
+\subsection{Derived data}
 Query systems often maintain data such as indexes, materialized views, and caches.
 We refer to this data as \textit{derived} data.
 Derived data, in the general case, is obtained by performing a computation over the base data.
@@ -501,31 +515,29 @@ It involves metrics such as precision (the fraction of useful information return
 
 Finally, two other important factors in the design of query processing systems are availability and operational cost.
 Availability is important, due to the negative effects of downtime in user serving systems.
-It is especially relevant in the design of distributed systems due to the many different faults that can impact the
-operation of a distributed system \cite{kleppmann:designing}.
-
-\todo{Cost ...}
+It is especially relevant in the design of distributed query processing systems due to the multitude of faults that can
+impact the operation of a distributed system \cite{kleppmann:designing}.
+Moreover, the changes in system infrastructure brought by the cloud infrastructure model
+(fine-grained billing, independent scaling of different resources) allow more cost-effective system designs \cite{vuppalapati:elasticqueryengine}.
 
 \subsection{Evaluating Efficiency}
 
-The most visible aspect of efficiency is the \textit{response time} experienced by a user between issuing a query and
-receiving the corresponding response.
-Since the query system may need to support many simultaneous users, \textit{query throughput}, measured in queries served
-per unit of time, is an important performance metric for the query processing system.
-In addition, as response time is the measure that directly affects user experience, an important efficiency metric is
-how response time scales with query throughput.
-This measures whether the system can maintain low query response time for individual users as the number of users
-increases.
-The relations between response time and query throughput, and between throughput and system load (number of users),
-characterize the system's \textit{scalability}.
+In this work, we focus on applications that issue \textit{interactive} queries,
+in which the most visible aspect of efficiency is the \textit{response time} experienced by a client between issuing
+a query and receiving the corresponding response.
+Query processing systems that serve such applications need to be able to process large volumes of user requests,
+while keeping the response time of individual requests low.
+Because of that, an important efficiency metric is how response time scales with as the system's throughput increases.
+The relation between response time and throughput, as well as between the offered load and the throughput achieved by the system,
+characterize the query processing system's \textit{scalability}.
 
 \subsubsection{Response time}
 Response time --- the amount of time between making a request and receiving the corresponding response ---
 is among the most important metrics for the quality of a user-facing service.
 
 A number of studies and experiments have studied the effects of response time to user experience.
-Results show that response time is among the factors that have the largest effect users' subjective perception of the
-quality of a system.
+Results show that response time is among the factors with the most significant effect in users' subjective perception
+of the quality of a system.
 Users have been shown to perceive websites that load faster as more interesting \cite{ramsay/retrievaltimesinvestigation}.
 On the other hand, long response times increase user frustration \cite{ceaparu:userfrustration} and even compromise
 user's conceptions of the security of the system \cite{bouch:qualityeyebeholder}.
@@ -552,7 +564,7 @@ In information retrieval, given a user's information need, represented by a sear
 (the system responsible for query processing) computes a relevance \textit{score} for each document (e-mail message,
 webpage, news article), and returns a ranked list of results.
 
-Recall and precision are metrics often used to measure the query results' relevance:
+Recall and precision are metrics often used to quantify the relevance of query results:
 \begin{itemize}
   \item Recall is the fraction of the relevant that are returned by the query.
   A recall value equal to 1 indicates that all relevant documents are returned by the query
@@ -563,15 +575,17 @@ Recall and precision are metrics often used to measure the query results' releva
   A precision value of less than 1 indicates that some of the returned documents are not relevant (``false-positives'').
 \end{itemize}
 
-The difference between the information retrieval query model, and the query model that we consider in this work is the
-notion of relevance.
-In information retrieval, relevance is a spectrum: documents can be more or less relevant to a given query, which
-represented by their \textit{score} for that query.
-Here, relevance is binary: a data item is either relevant (satisfies the given query) or it is not.
-However, as mentioned in Section \ref{subsec:query_prcessing_tier}, similarly to information retrieval, query results
-can include non-relevant data items (false positives), or not include relevant data items (false-negatives).
-Therefore we argue that the recall and precision are useful metrics in evaluating the effectiveness of the query
-processing tier.
+The difference between the information retrieval query model, and the query model that we consider in this work is in the
+\textit{value space} of relevance.
+In information retrieval, relevance is a spectrum:
+Documents can be more or less relevant to a given query.
+Information retrieval systems assign a \textit{score} to each document for a given query.
+In the scope of this work, we consider relevance as a binary metric:
+A data item is either relevant (satisfies the given query) or it is not.
+However, as described in Section \ref{subsec:query_prcessing_tier}, query results
+can, similarly to information retrieval, include non-relevant results (false positives),
+or not include relevant results (false-negatives).
+Therefore, we argue that the recall and precision are meaningful metrics for evaluating the effectiveness of the query processing tier.
 
 \subsubsection{Freshness}
 
@@ -622,37 +636,37 @@ A number of metrics for measuring data freshness have been proposed in the liter
 \subsubsection{Availability}
 The importance of availability becomes apparent when considering the negative effects of service downtime.
 
-A study on user behavior in the Web \cite{nah:waitingtime} found that users abandon a nonworking hyperlink after
+A study on user behavior in the Web \cite{nah:waitingtime} found that users abandon a non-working hyperlink after
 5-8 seconds.
 
 Operators of global services understand that ``even slightest outage has significant financial
 consequences and impacts customer trust'' \cite{deCandia:dynamo}.
-A service 49 minute service outage in January 2013 cost Amazon an estimated \$4 million or more in lost sales
+A 49-minute service outage in January 2013 cost Amazon an estimated \$4 million or more in lost sales
 \cite{infoworld:cloudoutages}.
 
 \subsubsection{Operational Cost}
 % Operating a query processing system requires computation, memory, network and storage resources.
 Another important parameter that drives system design parameters is the system's operational cost.
 
-Traditionally, the system is deployed on dedicated infrastructure, and the operational cost is the cost of owning and
-operating that infrastructure.
+Traditionally, the system is deployed on dedicated infrastructure,
+and the operational cost is the cost of owning and operating that infrastructure.
 
-More recently, the infrastructure and platform as a service cloud computing models providing flexible, fine-grained
-provisioning of computing, storage and networking resources.
-In addition, these services provide fined-grained, ``pay-as-you-go'' pricing mechanisms.
-As a result, system designers can have more control over the system's operational cost.
+More recently, the infrastructure-as-a-Service cloud computing models providing flexible, fine-grained provisioning of computing resources.
+These services provide fined-grained, ``pay-as-you-go'' pricing schemes, enable more control over the system's operational cost.
 
 A typical cloud pricing model \cite{aws:pricing} has distinct pricing for (1) computation and memory resources
 (vCPUs and memory), (2) persistent storage, and (3) data transfer.
 
-In chapter \todo{ref}
-we describe how system design decisions can affect the system's resource utilization, for example limiting the cross-DC
-communication, and therefore its operational cost.
+% In chapter \todo{ref}
+% we describe how system design decisions can affect the system's resource utilization, for example limiting the cross-DC
+% communication, and therefore its operational cost.
 
 \section{Conclusion}
-This chapter presented ...
+This chapter presented the two-tiered system model that this work is based on, consisting of a data storage tier,
+and a query processing tier.
+It described the system's data model,
+and the query language provided by query processing tier.
+Finally, it presented the requirements and metrics that guide the query processing tier design.
 
-In the following chapter, we present ...
-
-\bibliographystyle{plainnat}
-\bibliography{refs}
+% \bibliographystyle{plainnat}
+% \bibliography{refs}

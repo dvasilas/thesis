@@ -92,38 +92,23 @@ booktitle	= {Proceedings of the Conference on Innovative Data system Research (C
 }
 
 @inproceedings{corbett:spanner,
-  author    = {James C. Corbett and
-               Jeffrey Dean and
-               Michael Epstein and
-               Andrew Fikes and
-               Christopher Frost and
-               J. J. Furman and
-               Sanjay Ghemawat and
-               Andrey Gubarev and
-               Christopher Heiser and
-               Peter Hochschild and
-               Wilson C. Hsieh and
-               Sebastian Kanthak and
-               Eugene Kogan and
-               Hongyi Li and
-               Alexander Lloyd and
-               Sergey Melnik and
-               David Mwaura and
-               David Nagle and
-               Sean Quinlan and
-               Rajesh Rao and
-               Lindsay Rolig and
-               Yasushi Saito and
-               Michal Szymaniak and
-               Christopher Taylor and
-               Ruth Wang and
-               Dale Woodford},
-  title     = {Spanner: Google's Globally-Distributed Database},
-  booktitle = {10th {USENIX} Symposium on Operating Systems Design and Implementation,
-               {OSDI} 2012},
-  year      = {2012},
-  url       = {https://www.usenix.org/conference/osdi12/technical-sessions/presentation/corbett}
+author = {Bacon, David F. and Bales, Nathan and Bruno, Nico and Cooper, Brian F. and Dickinson, Adam and Fikes, Andrew and Fraser, Campbell and Gubarev, Andrey and Joshi, Milind and Kogan, Eugene and Lloyd, Alexander and Melnik, Sergey and Rao, Rajesh and Shue, David and Taylor, Christopher and van der Holst, Marcel and Woodford, Dale},
+title = {Spanner: Becoming a SQL System},
+year = {2017},
+isbn = {9781450341974},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3035918.3056103},
+doi = {10.1145/3035918.3056103},
+abstract = {Spanner is a globally-distributed data management system that backs hundreds of mission-critical services at Google. Spanner is built on ideas from both the systems and database communities. The first Spanner paper published at OSDI'12 focused on the systems aspects such as scalability, automatic sharding, fault tolerance, consistent replication, external consistency, and wide-area distribution. This paper highlights the database DNA of Spanner. We describe distributed query execution in the presence of resharding, query restarts upon transient failures, range extraction that drives query routing and index seeks, and the improved blockwise-columnar storage format. We touch upon migrating Spanner to the common SQL dialect shared with other systems at Google.},
+booktitle = {Proceedings of the 2017 ACM International Conference on Management of Data},
+pages = {331--343},
+numpages = {13},
+keywords = {cloud computing, transactional databases, sql, distributed systems},
+location = {Chicago, Illinois, USA},
+series = {SIGMOD '17}
 }
+
 
 @inproceedings{bacon:spanner,
   author    = {David F. Bacon and
@@ -1228,4 +1213,27 @@ numpages = {1}
   title = {Tom's {O}bvious, {M}inimal {L}anguage.},
   howpublished = {\url{https://toml.io/en/}},
   year = {2020}
+}
+
+@article{agrawal:taxonomy,
+  author    = {Divy Agrawal and
+               Amr El Abbadi and
+               Kenneth Salem},
+  title     = {A Taxonomy of Partitioned Replicated Cloud-based Database Systems},
+  journal   = {{IEEE} Data Eng. Bull.},
+  year      = {2015},
+  url       = {http://sites.computer.org/debull/A15mar/p4.pdf},
+}
+
+@inproceedings {vuppalapati:elasticqueryengine,
+author = {Midhul Vuppalapati and Justin Miron and Rachit Agarwal and Dan Truong and Ashish Motivala and Thierry Cruanes},
+title = {Building An Elastic Query Engine on Disaggregated Storage },
+booktitle = {17th {USENIX} Symposium on Networked Systems Design and Implementation ({NSDI} 20)},
+year = {2020},
+isbn = {978-1-939133-13-7},
+address = {Santa Clara, CA},
+pages = {449--462},
+url = {https://www.usenix.org/conference/nsdi20/presentation/vuppalapati},
+publisher = {{USENIX} Association},
+month = feb,
 }
