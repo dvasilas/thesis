@@ -1,4 +1,7 @@
 
+This chapter provides an overview of concepts related to ...
+%  thework presentedin this thesis. It provides an overview of research on key-value stores, includ-ing many orthogonal or complementary research directions.Then it providesan overview of different related research on transactionalsystems. Finally, itprovides an overview of distributed file systems.
+
 Query processing refers to the range of activities involved in extracting data from a database.
 These activities include the translation of queries from high-level languages into formats that can be processed
 by the database, query-optimizing transformations, and actual evaluation of queries.
@@ -127,7 +130,7 @@ Views are not precomputed and stored; the database stores only the query definin
 Each time the view is used, the database expands it on the fly into the underlying query,
 and then processes the expanded query.
 
-In contrast, a materialized view is a view whose contents are pre-computed and stored (cached?) by the database.
+In contrast, a materialized view is a view whose contents are pre-computed by the database: ... (write-time vs read-time)
 In many cases reading the contents of a materialized view is much more efficient than computing the contents of the view
 by executing the query that the view defines.
 Essentially, a materialized view is a precomputed cache of query results.
@@ -148,7 +151,7 @@ in \textit{synchronous} view maintenance, view maintenance is performed as soon 
 as part of the updating transaction,
 while in \textit{asynchronous} or lazy view maintenance,
 updating the view is deferred to a later time \cite{zhou:lazymvMaintenance}.
-Materialized views with deferred view maintenance may be somewhat out-of-date with the underlying data.
+Materialized views with deferred view maintenance may be somewhat out-of-date with the corpus.
 
 \subsubsection{Query Optimization and Materialized Views}
 
@@ -160,9 +163,9 @@ Materialized views add further consideration to query optimization:
   The query processor may produce a more efficient query plan by rewriting the query to make use of an available
   materialized view.
 
-  \item Replacing the use of a materialized view with its definition.
-  Sometimes, using the query that defines a materialized view instead of directly reading from its pre-computed contents
-  may offer more optimization options.
+  \item Conversely, Replacing the use of a materialized view with its definition.
+  In some cases, using the query that defines a materialized view instead of directly reading from its pre-computed contents
+  may offer more optimization options. \todo{}
   For example, consider a case in which a materialized view does not include indexes that can be used to speed up the query,
   but the underlying relations do.
   Using the views definition instead of its contents enables query execution to take advantage of those indexes.
@@ -182,6 +185,7 @@ The problem of choosing which views to materialize in order to achieve a desirab
 parameters is known as the view selection problem \cite{gupta:viewselection, mami:viewselection}.
 
 \subsection{Caching}
+% Search engines cache the results of frequent and/or recentqueries to reduce the query workload on backend clustersand improve query response time
 Another technique for speeding up queries, besides the use of indexes and materialized views, is caching:
 storing the result of a costly computation so that repeated reads of this result can be performed without re-executing
 the computation, if the underlying data has not change.
@@ -296,6 +300,10 @@ Therefore, systems that use range partitioning need mechanisms for detecting and
 
 Range partitioning is used by Bigtable and its open source equivalent HBase \cite{hbasebigtable:comparison},
 RethinkDB, and MongoDB before version 2.4.
+
+\medskip
+\noindent
+\todo{comment on whats the effect on querying}
 
 \bigskip
 \noindent

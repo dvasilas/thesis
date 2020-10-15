@@ -941,18 +941,22 @@ series = {SIGMOD '17}
   url       = {https://www.usenix.org/conference/atc16/technical-sessions/presentation/tai}
 }
 
-@inproceedings{baezayates:multisitefeasibility,
-  author    = {Ricardo Baeza{-}Yates and
-               Aristides Gionis and
-               Flavio Junqueira and
-               Vassilis Plachouras and
-               Luca Telloli},
-  title     = {On the feasibility of multi-site web search engines},
-  booktitle = {Proceedings of the 18th {ACM} Conference on Information and Knowledge
-               Management, {CIKM}},
-  publisher = {{ACM}},
-  year      = {2009},
-  url       = {https://doi.org/10.1145/1645953.1646009}
+@inproceedings{yates:multisitefeasibility,
+author = {Baeza-Yates, Ricardo and Gionis, Aristides and Junqueira, Flavio and Plachouras, Vassilis and Telloli, Luca},
+title = {On the {F}easibility of {M}ulti-{S}ite {W}eb {S}earch {E}ngines},
+year = {2009},
+isbn = {9781605585123},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/1645953.1646009},
+doi = {10.1145/1645953.1646009},
+abstract = {Web search engines are often implemented as centralized systems. Designing and implementing a Web search engine in a distributed environment is a challenging engineering task that encompasses many interesting research questions. However, distributing a search engine across multiple sites has several advantages, such as utilizing less compute resources and exploiting data locality. In this paper we investigate the cost-effectiveness of building a distributed Web search engine. We propose a model for assessing the total cost of a distributed Web search engine that includes the computational costs and the communication cost among all distributed sites. We then present a query-processing algorithm that maximizes the amount of queries answered locally, without sacrificing the quality of the results compared to a centralized search engine. We simulate the algorithm on real document collections and query workloads to measure the actual parameters needed for our cost model, and we show that a distributed search engine can be competitive compared to a centralized architecture with respect to real cost.},
+booktitle = {Proceedings of the 18th ACM Conference on Information and Knowledge Management},
+pages = {425--434},
+numpages = {10},
+keywords = {distributed systems, web search, query processing, cost model},
+location = {Hong Kong, China},
+series = {CIKM '09}
 }
 
 @inproceedings{cambazoglu:multisitequantifying,

@@ -1,88 +1,71 @@
-% \section{Secondary attribute querying in NoSQL databases}
+\section{Secondary attribute querying in non-relational data stores}
 
-% Many large-scale key-value storage systems sacrifice features like secondary indexing and/or consistency in favor of scalability or performance. This limits the ease and efficiency of application development on such systems.
+%  get intro from SLIK
+Many large-scale key-value storage systems sacrifice features like secondary indexing and/or consistency in favor of scalability or performance. This limits the ease and efficiency of application development on such systems.
 
-% \subsection{Secondary index based approaches}
+\subsection{Secondary index based approaches}
+A number of implemented secondary indexing approaches for distributed databases have been proposed.
 
-% \textit{SLIK: Scalable Low-Latency Indexes  for a Key-Value Store}
+% // SLIK: Scalable Low-Latency Indexes for a Key-Value Store
 
-% SLIK \cite{kejriwal:slik} is a secondary indexing system designed with the design goals of
-% (1) low latency,
-% (2) horizontal throughput scalability,
-% (3) consistency, specifically the requirement of providing the same strong consistency as a centralized system,
-% and (4) availability.
+SLIK \cite{kejriwal:slik} proposes an approach for implementing secondary indexes in a large-scale main key-value store.
+It is designed with the goals of low latency, high scalability, consistency
+(specifically the requirement of providing the same strong consistency as a centralized system) and high availability.
 
-% SLIK partitions secondary indexes using the scheme which we refer to as partitioning by term
-% (in \cite{kejriwal:slik} the term independent partitioning is used.
-% Index partition (referred to as an indexlets) are represented by B+trees.
-% Index entries store hashes of data items' primary keys.
-% Therefore, after an index lookup each data item contains the result need to be retrieved from the storage engine.
+SLIK partitions secondary indexes using the scheme which we refer to as partitioning by term.
 
-% To achieve consistent index lookups, SLIK using two techniques:
-% \begin{itemize}
-%   \item \textit{Ordered writes}.
-%   Index entries are created before updates to the corresponding data items are applied,
-%   and old index entries are removed asynchronously.
-%   This guarantees that if a data item contains a secondary attribute value, then an index lookup for that value will return the data item,
-%   by ensuring that the lifespan of each index entry spans that of the corresponding data item.
-%   \item \textit{Treating data items as ground truth and index entries as hints}.
-%   The system verifies the results of index lookups by checking the corresponding data items.
-%   This guarantees that if a data item is returned by an index lookup then this data item contains the requested secondary key.
-% \end{itemize}
+Index partition (referred to as an indexlets) are implemented using B+trees.
+Index entries store hashes of data items' primary keys.
+Therefore, after an index lookup each data item contains the result need to be retrieved from the storage engine.
 
-% Moreover, SLIK performs long-running bulk operations such as index creation, deletion and migration in the background,
-% in order to avoid blocking blocking normal operations.
+To achieve consistent index lookups SLIK
+Ordered writes.
+Index entries are created before updates to the corresponding data items are applied,
+and old index entries are removed asynchronously.
+This guarantees that if a data item contains a secondary attribute value, then an index lookup for that value will return the data item,
+by ensuring that the lifespan of each index entry spans that of the corresponding data item.
 
-% SLIK is implemented in RAMCloud \cite{ousterhout:ramcloud}, a distributed in-memory key-value storage system.
+Treating data items as ground truth and index entries as hints.
+The system verifies the results of index lookups by checking the corresponding data items.
+This guarantees that if a data item is returned by an index lookup then this data item contains the requested secondary key.
 
-% This work analyses alternative approaches available in a number of aspects in the design of a secondary indexing system, and discusses the tradeoffs these approaches.
-% They make specific design decisions guided by their design goals, for example the requirement for consistency for index lookups.
-% Moreover, this work does not consider a geo-distributed setting.
+Moreover, SLIK performs long-running bulk operations such as index creation, deletion and migration in the background,
+n order to avoid blocking blocking normal operations.
 
-% \textit{Secondary Indexing Techniques for Key-Value Stores: Two Rings To Rule Them All} \cite{dsilva:tworings}
+SLIK is implemented in RAMCloud \cite{ousterhout:ramcloud}, a distributed in-memory key-value storage system.
 
-% % In this paper, we explore the challenges associated with indexing modern distributed table-based data stores and investigate two secondary index approaches  which  we  have  integrated  within  HBase.
-% % Our detailed analysis and experimental results prove the bene-fits of both the approaches.  Further, we demonstrate that such  secondary  index  implementation  decisions  cannot  be made in isolation of the data distribution and that different indexing approaches can cater to different needs.
+This work analyses alternative approaches available in a number of aspects in the design of a secondary indexing system, and discusses the tradeoffs these approaches.
+They make specific design decisions guided by their design goals, for example the requirement for consistency for index lookups.
+Moreover, this work does not consider a geo-distributed setting.
 
-% % We discuss two indexing strategies for distributed key-value  stores:  one  based  on  distributed  tables  that  is able to exploit the table model of the underlying sys-tem for index management, the other using a co-location approach allowing for efficient main-memory access
+% // Secondary Indexing Techniques for Key-Value Stores: Two Rings To Rule Them All
 
-% % Both  strategies  are  implemented  and  integrated  intoHBase in a non-intrusive way.
+\cite{dsilva:tworings}
+We have discussed the results of this analysis in detail in section
 
-% % We provide an enhanced client interface to query HBase tables  using  secondary  indexing  that  supports  both point queries and range queries.
+In this paper, we explore the challenges associated with indexing modern distributed table-based data stores and investigate two secondary index approaches which we have integrated within HBase.
+Our detailed analysis and experimental results prove the benefits of both the approaches.
+Further, we demonstrate that such secondary index implementation decisions cannot be made in isolation of the data distribution and that different indexing approaches can cater to different needs.
+We discuss two indexing strategies for distributed key-value stores:
+one based on distributed tables that is able to exploit the table model of the underlying system for index management,
+the other using a co-location approach allowing for efficient main-memory access
 
-% % We present a detailed performance metrics on various database operations with secondary indices and a comparative analysis of the different approaches
-
-% % We present a thorough analysis on the effects of data distribution on different indexing approaches.
-
-% % we provided a very detailed analysis of how different data distributions warrant different indexing approaches and demonstrated a case for both implementations.
-% % Our results show that there is clearly  a  benefit  to  having  secondary  indices  in  HBase,and  that  they  can  be  often  built  with  reasonable  performance overhead.
-% % Although there has been some prior works to achieve secondary indexing in HBase, our work have been more detailed and insightful about the various alternatives and clearly shows that there is no one-stop solution to secondary indexing needs in HBase.
-
-
-
-% \textit{A Comparative Study of Secondary Indexing Techniques inLSM-based NoSQL Databases} \cite{qader:comparativestudy}
-
-% Qader et al. study the secondary indexing techniques used in state-of-the-art commercial and research NoSQL databases.
-% More specifically, they categorize secondary indexes in (1) stand-alone indexes, where indexing structures are built and maintained
-% and (2) filter indexes, where there is no separate secondary index structured, but secondary attribute index information is stored inside the original data blocks.
-% Stand-alone indexing techniques are further categorized to those that perform in-place update (i.e. for each write the index structures are accessed, updated and stored back to disk),
-% and those that perform append-only updates.
-% The authors implement a number of different secondary indexing techniques on top of LevelDB [12] and study the trade-offs between different indexing techniques on various workloads.
-% This work is mainly focused on a single server instance of LevelDB and does not consider a distributed setting.
+Both strategies are implemented and integrated into HBase in a non-intrusive way.
+We provide an enhanced client interface to query HBase tables using secondary indexing that supports both point queries and range queries.
+We present a detailed performance metrics on various database operations with secondary indices and a comparative analysis of the different approaches
+We present a thorough analysis on the effects of data distribution on different indexing approaches.
+We provided a very detailed analysis of how different data distributions warrant different indexing approaches and demonstrated a case for both implementations.
+Our results show that there is clearly a benefit to  having  secondary  indices  in  HBase,and  that  they  can  be  often  built  with  reasonable  performance overhead.
+Although there has been some prior works to achieve secondary indexing in HBase,
+our work have been more detailed and insightful about the various alternatives and clearly shows that there is no one-stop solution to secondary indexing needs in HBase.
 
 
-% In this paper, we present a taxonomy of NoSQL secondary indexes,broadly split into two classes:Embedded Indexes(i.e. lightweight filters embedded inside the primary table) andStand-Alone Indexes(i.e. separate data structures).
 
-% we built LevelDB++, on top of Google’s popular open-source LevelDB key-value store.
-% There, we implemented two Embedded Indexes and three state-of-the-art Stand-Alone indexes, which cover most of the popular NoSQL databases.
-% Our comprehensive experimental study and theoretical evaluation show that none of these indexing techniques dominate the others:
-% the embedded indexes offer superior write throughput and are more space efficient, whereas the stand-alone secondary indexes achieve faster query response times.
-% Thus, the optimal choice of secondary in-dex depends on the application workload.
-% This paper provides an empirical guideline for choosing secondary indexes.
+% // Diff-Index: Differentiated Index in Distributed Log-Structured Data Stores
+\cite{tan:diffindex}
 
-% \textit{Diff-Index: Differentiated Index in Distributed Log-Structured Data Stores} \cite{tan:diffindex}
-
-% \textit{Schema-Agnostic Indexing with Azure DocumentDB} \cite{shukla:schemaagnostic}
+% // Schema-Agnostic Indexing with Azure DocumentDB
+\cite{shukla:schemaagnostic}
 
 
 % \subsection{Secondary index partitioning schemes}
@@ -98,7 +81,14 @@
 
 % \textbf{HyperDex: A Distributed, Searchable Key-Value Store} \cite{escriva:hyperdex}
 
-% % SLIK : HyperDex [17] is a disk-based large-scale storage sys- tem that supports consistent indexing. It partitions data using a novel hyperspace hashing scheme by mapping objects’ attributes into a multidimentional space. As the number of attributes increase, the number of hyperspaces increases dramatically. HyperDex alleviates this by par- titioning tables with many attributes into multiple lower- dimensional hyperspaces called subspaces. HyperDex also replicates the entire contents of objects in each index. This means that while HyperDex provides an ef- ficient mechanism for search, it uses more storage space for the extra copies of objects. While this is acceptable for disk based systems, it would be very expensive for main-memory based systems.
+% SLIK =>
+% HyperDex is a disk-based large-scale storage system that supports consistent indexing.
+% It partitions data using a novel hyperspace hashing scheme by mapping objects’ attributes into a multi-dimensional space.
+% As the number of attributes increase, the number of hyperspaces increases dramatically.
+% HyperDex alleviates this by partitioning tables with many attributes into multiple lower-dimensional hyperspaces called subspaces.
+% HyperDex also replicates the entire contents of objects in each index.
+% This means that while HyperDex provides an efficient mechanism for search, it uses more storage space for the extra copies of objects.
+% While this is acceptable for disk based systems, it would be very expensive for main-memory based systems.
 
 % \textbf{Replex: A Scalable, Highly Available Multi-Index DataStore} \cite{tai:replex}
 
@@ -113,29 +103,30 @@
 
 % \textbf{Improving the Efficiency of Multi-site Web Search Engines} \cite{frances:multisiteimprovingefficiency}
 
-% \section{Modular - Flexible architectures}
+\section{Modular - Flexible architectures}
 
-% \textbf{The Click Modular Router} \cite{kohler:click}
+% // The Click Modular Router
 
-% Click is a new software architecture for building flexible and configurable routers.
 
-% A Click router is assembled from packet processing modules called elements.
-% Individual elements implement simple router functions like packet classification, queueing, scheduling, and interfacing with network devices.
-% A router configuration is a directed graph with elements at the vertices;
-% packets flow along the edges of the graph.
-% Several features make individual elements more powerful and complex configurations easier to write, including pull connections,
-% which model packet flow driven by transmitting hardware devices, and flow-based router context, which helps an element locate other interesting elements.
+Click \cite{kohler:click} proposes a software architecture for building flexible and configurable routers.
 
-% This paper presents Click, a flexible, modular software architecture for creating routers.
-% Click routers are built from fine-grained components;
-% this supports fine-grained extensions throughout the forwarding path.
-% The components are packet processing modules called elements.
+A Click router is assembled from packet processing modules called elements.
+Individual elements implement simple router functions like packet classification, queueing, scheduling, and interfacing with network devices.
+A router configuration is a directed graph with elements at the vertices;
+packets flow along the edges of the graph.
+Several features make individual elements more powerful and complex configurations easier to write, including pull connections,
+which model packet flow driven by transmitting hardware devices, and flow-based router context, which helps an element locate other interesting elements.
 
-% A Click element represents a unit of router processing.
-% An element represents a conceptually simple computation,such as decrementing an IP packet’s time-to-live field,
-% rather than a large, complex computation, such as IP routing.
-% A Click router configuration is a directed graph with elements at the vertices.
-% An edge, or connection, between two elements represents a possible path for packet transfer.
+This paper presents Click, a flexible, modular software architecture for creating routers.
+Click routers are built from fine-grained components;
+this supports fine-grained extensions throughout the forwarding path.
+The components are packet processing modules called elements.
+
+A Click element represents a unit of router processing.
+An element represents a conceptually simple computation,such as decrementing an IP packet’s time-to-live field,
+rather than a large, complex computation, such as IP routing.
+A Click router configuration is a directed graph with elements at the vertices.
+An edge, or connection, between two elements represents a possible path for packet transfer.
 
 % \bibliographystyle{plainnat}
 % \bibliography{refs}
@@ -148,7 +139,82 @@
 % \subsection{Query processing in distributed databases}
 
 
-% \section{Modular architectures}
-
-
 % \section{Stream processing and Data-flow systems}
+
+\section{Multi-site web search engines}
+``A line of papers'' that consider the problem of designing a web search engine over multiple data centers geographically distant to each other.
+Data centers are associated with geographical regions;
+Each data center stores and crawls and documents that are served by the web sites in its geographical region.
+User queries are routed to data centers according to the regions they originate from.
+
+
+In \cite{yates:multisitefeasibility}, Cambazoglu et al. a taxonomy of search architectures for this problem.
+In a centralized architecture, the entire web index is stored in one, central site,
+and all user queries are submitted to this single site.
+% Large-scale web search engines are composed of multiple data centers that are geographically distant to each other.
+% We consider a search engine architecture composed of multiple data centers.
+
+% In this architecture, each data center crawls and stores documents belonging to a disjoint subset of the Web.
+
+% Each data center then builds a local web index over its crawled documents, independent of the other data centers. We assume that IP addresses (or countries at a higher granular-ity) are statically assigned to data centers according to their geographical proximity. Each data center is responsible for pro-cessing queries that originate from its subset of IPs and is said to be the local data center for those queries.
+
+
+% At one extreme, a global index is built over the entire web collection, and this index is replicated on all data centers. Que-ries are processed on the entire web index, and hence search result qualities are identical to those of a centralized searcharchitecture. However, this approach does not scale well since the global web index needs to be constructed from a distrib-uted document collection and periodically maintained. Moreover, this approach requires major hardware investments andresults in high power consumption, which is an important issue for commercial search engines. Finally, processing queries over an entire web index may be too costly to satisfy the tight response time constraints of large-scale web search engines(Cambazoglu, Zaragoza, et al., 2010).
+% At the other extreme, each data center builds a regional web index on its local crawl and processes its queries over thispartial (local) index. This approach is highly scalable because partial indexes are locally maintained and less resources areneeded for query processing (alternatively, queries can be processed faster). However, as processing of queries is limitedto a partial index, some high-quality or best matching documents that are indexed by non-local data centers may be missingin search results. This may lead to not affordable losses in search result qualities, negatively impacting the user satisfactionand potentially the revenues of the search engine.
+
+% distributed Web search engines comprising geographically dispersed sites
+
+% as an offline process, an inverted in-dex [10, 16] is built over a Web page collectio
+% Typically, this mapping is based ongeographical proximity of users to data center
+
+% We consider the problem of designing a distributed Web search engine over n remote sites.
+% We assume that sites associated with geographical regions (e.g., states, countries, group of countries, continents),but they could also represent other types of entities (e.g., languages,domain names, network clusters, etc.). 
+% We assume a collection of documentsDover a set of termsT.We assume that the documentsDare partitioned into two subsets:local (L) and global (G). Global documents are present in all sites,whereas local documents are further partitioned disjointly among the sites of S.
+% We also assume that the search engine serves a set of usersU, who are also assigned disjointly to the sites of S.
+
+% Replicating globally popular documents on all sites leads to a high reduction in the forwarded query count
+
+% [On the Feasibility of Multi-Site Web Search Engines]
+% contributions
+%  propose such a model to assess the operational costs of multi-site Web search systems.
+% query-processing algorithm that maximizes the amount of queries answered locally, without sacrificing the quality of the results compared to a centralized search engine.
+
+% assess the feasibility of distributed Web search engines comprising geographically dispersed sites
+% propose a detailed cost model that includes operational costs, and enables us to answer questions
+% - Given  an  optimization  that  reduces  the  average  latency  of an operation (crawling, receiving request, query processing)
+%   how does it affect power consumption?
+% - Given  different local  rates  for  power,  how  much  resource savings are necessary to compensate for such differences?
+% Query-processing algorithm
+% #1, offline index construction : each site builds index on the set of docs assigned to it (local+global)
+%   computes upper bound on the scoring function - threshold -  for each term of docs in a site of local docs: upper bound to the contribution of term t to ranking function for query that contains t
+%   subset of "good-quality" docs replicated and indexed in all sites
+% #2, offline propagation: all sites communicate with each other, exchange thresholds computed at phase #1 -  each site acquires complete info about thresholds of all terms in all sites
+% phase #3, online query processing:
+% each site handles queries it receives: compute matching set of docs from local index, rank them → use thresholds of other sites to decide whether computed results would have been identical to centralized system results
+% use thresholds to obtain guarantees on the quality of partial results computed locally
+% if quality guarantees not satisfied → propagate query to other sites to obtain partial results
+
+% [Quantifying Performance and Quality Gains inDistributed Web Search Engines]
+% Taxonomy
+% centralized architecture: the entire Web index is stored in one, central site. The index is replicated locally over multiple search clusters located within the site.All user queries are submitted to this single site, where eachquery is completely processed by an individual cluste
+% index replication: Theentire index is replicated over multiple (e.g., several), geo-graphically distant data centers. The index is also locallyreplicated in each data center as in the case of SE-C. Thereis a static, one-to-one mapping between user queries andsearch sites, i.e., each site is responsible for processing asubset of user queries. Typically, this mapping is based ongeographical proximity of users to data centers
+% In the SE-P architecture, the global document collectionis partitioned into smaller, non-overlapping sub-collectionssuch that each data center has a different sub-collection as-signed to it. Hence, the entire index is partitioned and dis-tributed over multiple, geographically distant search sites.Each site replicates its local sub-index on its clusters. Map-ping of queries to sites and processing is similar to SE-R
+%  There are two ways to alleviate this problem:  taking popular data to queries or taking some queries to sites with relevant data
+% The first is an offlineprocess that requires replicating a portion of the index (e.g.,globally popular documents) on data centers. The secondis an online process based on forwarding some queries (e.g.,queries that are expected to have relevant documents onother sites) to non-local data centers for additional process-ing.
+
+% The replica-tion algorithm used is na ̈ıve because it is simply based onreplicating frequently accessed parts of the index on all datacenters,
+% The query forwardingalgorithm is novel because it has a filtering step which pre-vents forwarding of queries to sites with irrelevant content.
+
+% [Query Forwarding inGeographically Distributed Search Engines]
+% We describe an LP-based thresholding algorithm that significantly outperforms the current state-of-the-art [3]
+% We evaluate a heuristic for partial index replication.
+% We investigate the impact of result caching and cache freshness on query forwarding performance.
+% We present several optimizations that provide furtherperformance improvements under certain conditions
+% Note: uses caching -> ref to Proteus architecture that does that
+% as a significant impact on the number of for-warded queries. With result caching, the fraction of queriesthat can be locally processed increases by 35%–45%, depend-ing on the offline query set used (Fig. 13). We also observethat more informative query sets receive a lower benefit.This is because, under result caching, only the queries thatare seen for the first time (i.e., compulsory cache misses) aresubject to forwarding
+
+% [Energy-Price-Driven Query Processing in Multi-center Web Search Engines]
+% We have provided an optimization framework and a prac-tical algorithm, based on shifting query workloads betweensearch data centers,  in order to 
+
+% [Document replication strategies for geographically distributed web search engines]
+% As a remedy to this scalability problem, we propose a document replication frame-work in which documents are selectively replicated on data centers based on regional userinterests. Within this framework, we propose three different document replication strate-gies, each optimizing a different objective: reducing the potential search quality loss, theaverage query response time, or the total query workload of the search system
