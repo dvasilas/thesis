@@ -1,73 +1,214 @@
-The goal of this chapter is to motivate and define the research problem that
-this thesis addresses, and to introduce its contributions.
 
-Idea 1: Start by discussing the importance of design trade-offs in distributed
-systems in general.
-Almost every aspect of a distributed system faces trade-offs.
-Due to that, the design of each system needs to be informed by application/user
-requirements and workload characteristics.
-A lot of work has been done to address this.
+% \section{Background and motivation}
+
+Today's global-scale services handle large volumes of data and serve large volumes of requests from users distributed worldwide.
+They rely on large-scale data systems,
+which distribute data across multiple geographically distant data centers,
+to reduce response time and tolerate failures.
+Moreover, services increasingly spread their application data between on-premise and remote cloud nodes,
+as well as between multiple cloud providers, in order to increase reliability and reduce costs.
+
+An important feature of the data systems that developers rely on for building applications is a powerful query language.
+Google, describing the evolution of Spanner from a key-value store to a relational database \cite{corbett:spanner},
+has reported that Google developers found it difficult to build applications on a system lacking a strong schema system
+and a robust query language.
+Query processing is an essential component of data systems' technology, as it's role is to bridge declarative query languages,
+in which queries specify the patterns and conditions that results must meet, and efficient execution.
+
+\bigskip
+\noindent
+In this thesis, we study the challenges of supporting efficient query processing in contexts in which users and data are
+distributed across multiple geographic locations.
+In particular, we consider a corpus of data items, each composed of a primary key and a set of secondary attributes;
+The corpus is distributed across multiple data centers worldwide, and is potentially spread across multiple data systems.
+We examine the design decisions and trade-offs involved in the design of a query engine for enabling applications to
+retrieving data item using queries on secondary attributes.
+
+A query engine implements operators for performing transformations over the corpus (selections, aggregations, joins).
+In addition, it employs techniques aimed at reducing query processing time.
+These techniques commonly involve the materialization of \textit{derived state};
+This includes maintaining copies of the data organized in forms that facilitate different access patterns (indexes),
+and pre-computing the results of expensive reoccurring operations (materialized views).
+
+\bigskip
+\noindent
+Users expect query engines to serve requests in a timely fashion and provide accurate results.
+Moreover, query engines must incur low overhead to other aspects of data systems' operation and to their operational cost.
+
+% It is well known that
+In geo-distributed deployments,
+latencies between data centers can be orders of magnitude higher that those within a data center.
+Moreover, network resources between data centers are often limited and costly,
+and this the amount of data transferred across data centers affects network consumption and hence the system’s operational cost.
+Because of these factors,
+in deployments in which corpus and users are spread across multiple geographic locations
+the requirements of low response time, accurate query results and low overhead to the system's performance and operational
+cost are incompatible and cannot be achieved all at once:
+% incompatible and thus query engines must balance trade-offs between desirable properties.
+
 \begin{itemize}
-  \item One size does not fit all. Specialized database designs for specific use
-  cases.
-  \item Online database reconfiguration.
-  \item Using learned models (machine learning for various database components).
+  \item User-perceived query response time is composed of two components:
+  query network time, which accounts for the time spent to send the query from the user to the query engine over the network
+  and the time spent to send search results back to the user, and query processing time.
+  Techniques for reducing query processing time, like the above-mentioned, have been extensively studied in the context of database systems.
+  However, in geo-distributed deployments query network time becomes a significant factor to query response time.
+
+  \item At the same time, the derived state structures that query engines use to speed-up query processing must be kept up-to-date with changes to the corpus.
+  This is achieved by propagating the effects of write operations from the corpus to the query engine's derived state.
+  As a result, each index or view that is materialized by the query engine incurs additional overhead to write operations.
+  An approach employed by query engines to address this issue is to perform this maintenance task asynchronously,
+  outside of the critical path of write operations.
+  This, however, entails that derived state is eventually consistent with the corpus, and can be temporarily stale relative to the corpus.
+  Serving queries from stale indexes or materialized views may result to query results not being consistent with the state of the corpus.
 \end{itemize}
 
-The same is true for query processing.
-There have been approaches for "tuning" query processing for the needs for different applications:
-\begin{itemize}
-  \item Selecting which indexes/materialized view to materialize in databases.
-  \item Optimizing distributed query execution (finding the best place to execute each operator).
-\end{itemize}
+Query network time can be reduced by replicating the query engine's derived state on every data center,
+thus ensuring that all queries can be served from the local data center without requiring communication with other data centers.
+However, maintaining a full replica of every index and materialized view on every data center incurs significant memory and storage overhead.
+Moreover, to remain up-to-date with the corpus, a derived state replica must receive the effects of write operation from every data center.
+Assuming asynchronous maintenance, this means that derived state can become significantly stale, affecting the accuracy of query results.
+In addition, in write-dominated workloads, this results in significant data transfer between data centers for state maintenance.
 
-Limitation of this state of the art:
-\begin{itemize}
-  \item Current approaches do not provide flexible placement of query processing state:
-  \begin{itemize}
-    \item This is definitely the case for sharded NoSQL databases.
-    \item TODO: determine how relational database handle index placement.
-    \item Haven't seen works considering flexible cache or materialized view placement.
-  \end{itemize}
-\end{itemize}
+At the other end of the design space,
+derived state can be partitioned into non-overlapping parts and assign each part to a data center,
+so that each part is responsible for the data items in the local data center.
+This approach improves derived state freshness.
+However, every query needs to be forwarded to every derived state part, resulting in significant overhead in query network time.
+Moreover, in query-dominated workloads this increases data transfer between data centers for query processing.
 
-Idea 2: An argument for our choice of separating the storage and query processing tier is that disaggregation of storage
-and query processing is actually a trend in cloud systems.
-One example to use is AWS Athena that provides queries on top of AWS S3 with a pay-per-query pricing scheme.
+\bigskip
+\noindent
+It becomes apparent that, in this setting, design decisions about the query engine's architecture,
+and more specifically about the distribution and placement of derive state,
+result to trade-offs between query response time, query result consistency, and the system's operational cost.
+Techniques such as caching of query results add additional points in this design space.
 
+At the same time,
+modern applications have diverse query processing requirements.
+User-facing queries have strict response time requirements, as response times directly affect revenues.
+On the other hand, query engines that serve social media applications are required to ingest new content rapidly \cite{busch:earlybird}.
 
-\section{Problem Statement}
+Additionally, different design decisions about derived state distribution and placement are better suited to different workload characteristics.
+A design that requires only local communication between the corpus and derived state is better suited for a
+write-dominated workload in terms of data transfer costs.
+Conversely, a design that does require cross data center communication for query processing is more cost-effective
+for a query-dominated workload.
 
-% It is well understood that efficient query processing requires tuning on a case-by-case and even query-by-query basis.
-% Databases systems allow database administrators to select which indexes to materialize, and choose between different
-% index types.
-% Relational database systems in particular have a long history of aiming to provide access to data via the use of
-% optimizers, components that automatically construct query execution plans, select query operator algorithms etc. based
-% on statistics on the characteristics of data.
-% The common characteristics of these techniques is that query processing systems are designed as general purpose systems
-% and provide mechanisms for optimizing query processing to the characteristics of different use cases \textit{at runtime}.
+\bigskip
+\noindent
+Based the above analysis, it becomes evident that no single query engine architecture design can be suitable for all
+needs.
+However, existing query engines are designed to be general-purpose systems;
+They aim at handling a variety of use cases and workloads.
+In the context of geo-distribution, a general-purpose query engine architecture might be inefficient for certain workloads
+and application requirements.
+Specialized solutions can be much more efficient, but adjusting a query engine's architecture for a specific application
+can be time and resource consuming.
 
-\section{State of the art}
-
-% For motivating the work, we will state the relevance and timeliness of two
-% application needs / market trends / ... : attribute-based data retrieval, and
-% geo-distribution of data.
-
-% Attribute-based data retrieval: \\
-% Retrieving data based on descriptive attributes attached to them (as opposed to
-% retrieval based on primary key or content-based retrieval).
-
-% Data geo-distribution: \\
-% At the same time, data is increasingly geo-distributed (and federated).
-
-% Problem definition: \\
-% This thesis studies how attribute-based retrieval can be performed efficiently
-% on geo-distributed data.
-
+In this work, we make the case for a \textit{flexible} query engine architecture that can be adjusted to the requirements
+and characteristics of different applications in a case-by-case basis, with low engineering effort.
 
 \section{Contributions}
-\subsection{A design pattern for configurable query processing architectures}
-Chapter~\ref{ch:design_pattern}
 
-\subsection{Proteus: Towards application-specific query processing systems}
-Chapter~\ref{ch:proteus}
+Traditional monolithic query engine architectures do not provide the flexibility required to adjust the trade-offs
+between query response time, query result consistency, and operational cost according to the characteristics and
+requirements of different geo-distributed applications.
+
+To address this challenge, we introduce a new \textit{modular} query engine architecture.
+Our key insight is that query processing can be decomposed into a set primitives,
+such as selecting from a set of data items the ones that satisfy a given condition,
+or constructing from a set of data items a secondary index on a given attribute.
+Each primitive can be encapsulated by an independent architecture component that interoperates with other components through a set of interfaces.
+We show that, while different components encapsulate different query processing primitives,
+all components can expose a common set of interfaces with common semantics.
+
+Guided by this insight,
+we introduce an architecture component abstraction, called Query Processing Unit (QPU).
+The QPU abstraction defines the properties, interfaces and semantics of a generic query engine architecture component.
+In order to express different types of query processing primitives,
+the QPU abstraction combines the properties of a streaming operator and a microservice.
+Akin to a microservice, a QPU component maintains internal state, is configured independently, and exposes its functionality to other components through a service interface;
+Akin to a streaming operator, a QPU component operates by receiving one or more input streams from other components,
+performs a computation over these streams, and emits an output stream.
+
+Different instantiations of the QPU abstraction (QPU classes) implement different query processing primitives.
+These include relational operators, such as selections, aggregations, and joins,
+derived state structures, such as indexes, materialized views and caches,
+and ``routing'' functionalities, such as load balancing, and managing index partitions.
+
+Query Processing Units are aimed to be used as building blocks for constructing query engine architecture.
+A query engine is a directed acyclic graph, with QPUs as vertices;
+Graph edges indicate communication paths between QPUs.
+An edge from $QPU_A$ to $QPU_B$ indicates that $QPU_A$ can invoke the interface of $QPU_B$,
+and that, as a results, it can receive an input stream from $QPU_B$.
+By specifying the QPU class and configuration of each graph vertex, as well as the graph topology,
+one can control how query engine's derived state is partitioned,
+and the communication patterns required for query processing and state maintenance.
+Because the operation of a QPU depends only on its interaction with other QPUs and not its placement,
+the query engine's state and computations can be flexibly placed across the system.
+
+QPU-based query engines run a bidirectional data-flow computation.
+The corpus is situated at the leaf nodes of the graph, while queries enter the graph through root nodes.
+Updates to the corpus stream upwards through the query engine graph, and incrementally update the QPUs’ internal data structures;
+Conversely, queries stream downwards, are incrementally transformed in sub-queries which are processed in different parts of the graph.
+Partial results are then incrementally combined (flowing back upward) to produce the query response.
+
+\medskip
+\noindent
+We realize this architecture model in the form of a query processing framework, called Proteus.
+Proteus provides a library of Query Processing Unit implementations,
+a service discovery mechanism that allows QPU graphs to self-organize with only local configuration to each QPU,
+and a configuration language for specifying query engine architectures.
+
+Proteus aims at enabling developers to design and deploy query engines in a case-by-case basis,
+by enabling flexibility over the distribution and placement of the query engine's state and computations.
+
+In summary, this work makes the following contributions:
+
+\begin{itemize}
+  \item A comprehensive analysis of the design choices and corresponding trade-offs of geo-distributed query processing.
+
+  \item A novel modular query engine architecture model, based on the Query Processing Unit abstraction,
+  which enables flexible distribution and placement of query processing state and computations.
+
+  \item Case studies that demonstrate how a flexible query engines architectures can be applied to a number of applications
+  and provide improvements over state-of-the-art approaches.
+
+  \item Proteus, a framework for constructing and deploying query engines using the proposed architecture model.
+
+  \item An experimental evaluation ... \todo{leaving this a TODO until I can put a number here.}
+\end{itemize}
+
+\section{Thesis outline}
+
+This thesis is structured as follows:
+
+\begin{itemize}
+
+  \item Chapter \ref{ch:models} introduces the system and data model that we consider in this work,
+  and discusses the requirements for an efficient and effective query engine design.
+
+  \item Chapter \ref{ch:background} provides an overview of concepts related to the work presented in this thesis.
+  It provides a broad overview of query processing in database systems,
+  focusing on techniques for facilitating query processing by maintaining derived state (indexes, materialized views and caches).
+
+  \item Chapter \ref{ch:design_space} presents an analysis of the design decisions and trade-offs involved in the design
+  of query engines that derived state.
+
+  \item Chapter \ref{ch:design_pattern} presents the specification of the Query Processing Unit abstraction,
+  and the proposed query engine architecture model.
+
+  \item Chapter \ref{ch:case_studies} demonstrates the proposed architecture's expressiveness by applying it to a number
+  of use cases and applications showing how it can provide improvements over the state-of-the-art.
+
+  \item Chapter \ref{ch:proteus} describes the Proteus framework.
+
+  \item Chapter \ref{ch:evaluation} evaluates the proposed approach,
+  and shows how flexible state and computation placement can allow applications to balance the trade-offs between
+  query response time, result accuracy and operational cost.
+
+  \item Chapter \ref{ch:related_work} overviews related work.
+
+  \item Chapter \ref{ch:conclusion} concludes the thesis and discusses directions for future work.
+\end{itemize}
+

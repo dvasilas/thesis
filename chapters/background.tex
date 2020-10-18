@@ -2,6 +2,8 @@
 This chapter provides an overview of concepts related to ...
 %  thework presentedin this thesis. It provides an overview of research on key-value stores, includ-ing many orthogonal or complementary research directions.Then it providesan overview of different related research on transactionalsystems. Finally, itprovides an overview of distributed file systems.
 
+\bigskip
+\noindent
 Query processing refers to the range of activities involved in extracting data from a database.
 These activities include the translation of queries from high-level languages into formats that can be processed
 by the database, query-optimizing transformations, and actual evaluation of queries.
@@ -99,7 +101,7 @@ The query execution engine is the query processor's component that provides impl
 
 The most common approach used to implement query operators is the iterator model \cite{graefe:queryevaluation}.
 Iterators can be described using the object-oriented paradigm.
-Figure~\ref{lst:iterator} shows a simplified definition for a general iterator class.
+Listing~\ref{lst:iterator} shows a simplified definition for a general iterator class.
 
 \begin{lstlisting}[caption={Iterator class pseudocode \cite{hellerstein:databasearchitecture}},label={lst:iterator},captionpos=b,language=Java]
 class iterator {
@@ -118,7 +120,7 @@ The iterator model has certain useful properties for modeling query execution:
   In addition, the common interface means that each iterator's logic is independent of its children and parents in the
   graph.
 
-  \item Τhe iterator paradigm supports pipelining of results from one operator to another.
+  \item The iterator paradigm supports pipelining of results from one operator to another.
 
 \end{itemize}
 
@@ -273,8 +275,8 @@ Partitioning is a technique for dividing a logical database into smaller distinc
 across several nodes.
 Partitioning divides both the database's content (corpus) as well as its computations.
 Each partition effectively acts as a database of its own, although there may be operations that involve multiple partitions.
-Different database systems use different terms to refer to what we here call partition, including \textit{shard}
-\todo{MongoDB, elasticSearch}, \textit{region} \todo{HBase}, \textit{tablet} \todo{BigTable} and \textit{vnode} \todo{Cassandra, Riak}.
+Different database systems use different terms to refer to what we here call partition, including \textit{shard} \cite{mongo:shards, elastic:shards}
+\textit{region} \cite{hbase:regions}, \textit{tablet} \cite{bigtable:tablets} and \textit{vnode} \cite{cassandra:vnodes, riak:vnodes}.
 
 The goal of partitioning is to spread data and load evenly across nodes.
 When implemented efficiently, it enables horizontal scaling:
@@ -435,7 +437,7 @@ Adding a secondary index does not affect the contents of the database;
 it only affects the performance of read and write operations.
 Writes go to the primary data and all of the other data copies are derived from it.
 The other copies only serve read requests.
-(TODO: address write-through?)
+\todo{address write-through?}
 
 The following data structures are commonly used as secondary indexing structures:
 
@@ -502,7 +504,7 @@ API:
 
 We argue that our results hold true for any index implementation with the above specification.
 In our prototype
-(TODO: ref to implementation chapter)
+\todo{TODO: ref to implementation chapter}
 we use of-the-shelf state of the art index data structure implementations.
 
 \subsubsection{Partitioning and Secondary Indexes}
@@ -518,18 +520,6 @@ document-based partitioning and term-based partitioning.
 The terminology used in the rest of this section comes from the literature of full-text indexes
 (a particular kind of secondary index):
 a document is a self-contained piece of information, is composed of terms.
-
-\begin{figure}[t]
-  \centering
-
-  \includegraphics[width=\textwidth]{./figures/background/index_partitioning.png}
-
-  \caption{Index partitioning schemes (temporary; borrowed)
-  TODO: redo}
-
-  \label{fig:index_partitioning}
-
-\end{figure}
 
 \bigskip
 \noindent
@@ -551,6 +541,25 @@ MongoDB \cite{coubase:mongoindexes}, Riak \cite{riakv:secondaryindexes}, Cassand
 Elasticsearch \cite{elastic:docrouting}, Solr \cite{solr:indexsharding}.
 
 An index partitioned using this approach are commonly referred to as a \textit{local index}.
+
+\begin{figure}
+    \centering
+    \begin{minipage}{.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/background/index_partitioning_by_doc.pdf}
+        \caption{Index partitioning by document.}
+        \label{fig:index_partitioning_by_doc}
+    \end{minipage}%
+    \begin{minipage}{.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/background/index_partitioning_by_term.pdf}
+        \caption{Index partitioning by term.}
+        \label{fig:index_partitioning_by_term}
+    \end{minipage}
+    \caption{Two approaches for partitioning a secondary index, given that the corpus table is partitioned by its primary key.
+      In the partitioning by document approach the index is partitioned so that each index entry of a data item is co-located with the data item.
+      In the partitioning by term approach the index partitioned so that each index partition contains index entries in a particular range.}
+\end{figure}
 
 \bigskip
 \noindent
@@ -575,7 +584,6 @@ Secondary indexes are stored in regular HBase tables, using the indexed attribut
 Term-partitioned indexes have also been used in the research systems such as SLIK \cite{kejriwal:slik}
 and Diff-Index \cite{tan:diffindex}.
 
-
 An index partitioned using this approach are commonly referred to as a \textit{global index}.
 
 \medskip
@@ -590,3 +598,8 @@ However, some document-oriented databases like MongoDB \cite{mongodb:joins}, Ret
 and CouchDB \cite{couchdb:joins} support join operations.
 Query planning in NoSQL databases mainly deals with the database's distribution model:
 a query execution plans consist of routing query requests to the appropriate data or index partitions.
+
+
+\section{Conclusion}
+
+This chapter presented

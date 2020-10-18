@@ -1,3 +1,21 @@
+-- Ch: Intro --
+
+@inproceedings{busch:earlybird,
+author = {Busch, Michael and Gade, Krishna and Larson, Brian and Lok, Patrick and Luckenbill, Samuel and Lin, Jimmy},
+title = {Earlybird: Real-Time Search at Twitter},
+year = {2012},
+isbn = {9780769547473},
+publisher = {IEEE Computer Society},
+address = {USA},
+url = {https://doi.org/10.1109/ICDE.2012.149},
+doi = {10.1109/ICDE.2012.149},
+abstract = {The web today is increasingly characterized by social and real-time signals, which we believe represent two frontiers in information retrieval. In this paper, we present Early bird, the core retrieval engine that powers Twitter's real-time search service. Although Early bird builds and maintains inverted indexes like nearly all modern retrieval engines, its index structures differ from those built to support traditional web search. We describe these differences and present the rationale behind our design. A key requirement of real-time search is the ability to ingest content rapidly and make it searchable immediately, while concurrently supporting low-latency, high-throughput query evaluation. These demands are met with a single-writer, multiple-reader concurrency model and the targeted use of memory barriers. Early bird represents a point in the design space of real-time search engines that has worked well for Twitter's needs. By sharing our experiences, we hope to spur additional interest and innovation in this exciting space.},
+booktitle = {Proceedings of the 2012 IEEE 28th International Conference on Data Engineering},
+pages = {1360–-1369},
+numpages = {10},
+series = {ICDE '12}
+}
+
 -- Ch: Background --
 
 % NoSQL Database Systems: A Survey and Decision Guidance
@@ -54,6 +72,48 @@
   year = {2013}
 }
 
+@online{mongo:shards,
+  title = {Mongo{DB} {M}anual: {S}hards},
+  author = {MongDB, Inc.},
+  howpublished = {\url{https://docs.mongodb.com/manual/core/sharded-cluster-shards/}},
+  year = {2020}
+}
+
+@online{elastic:shards,
+  title = {Elasticsearch {R}eference [7.9]: {S}calability and resilience: clusters, nodes, and shards},
+  author = {Elastic},
+  howpublished = {\url{https://www.elastic.co/guide/en/elasticsearch/reference/7.9/scalability.html}},
+  year = {2020}
+}
+
+@online{hbase:regions,
+  title = {Apache {HB}ase {R}eference {G}uide: {R}egions},
+  author = {Apache {HB}ase {T}eam},
+  howpublished = {\url{https://hbase.apache.org/2.2/book.html#regions.arch}},
+  year = {2020}
+}
+
+@online{bigtable:tablets,
+  title = {Overview of {C}loud {B}igtable},
+  author = {Google Cloud},
+  howpublished = {\url{https://cloud.google.com/bigtable/docs/overview}},
+  year = {2020}
+}
+
+@online{cassandra:vnodes,
+  title = {{A}pache {C}assandra {D}ocumentation: {A}rchitecture, {D}ynamo },
+  author = {{T}he {A}pache {S}oftware {F}oundation},
+  howpublished = {\url{https://cassandra.apache.org/doc/latest/architecture/dynamo.html}},
+  year = {2016}
+}
+
+@online{riak:vnodes,
+  title = {Riak {KV} {D}ocumentation: {C}lusters},
+  author = {Riak {L}abs},
+  howpublished = {\url{https://docs.riak.com/riak/kv/2.2.3/learn/concepts/clusters.1.html}},
+  year = {2016}
+}
+
 @online{dynamodb:secondaryindexes,
   title = {Amazon {D}ynamo{DB} {D}ocumentation: {I}mproving {D}ata {A}ccess with {S}econdary {I}ndexes},
   author = {Amazon {W}eb {S}ervices},
@@ -108,7 +168,6 @@ keywords = {cloud computing, transactional databases, sql, distributed systems},
 location = {Chicago, Illinois, USA},
 series = {SIGMOD '17}
 }
-
 
 @inproceedings{bacon:spanner,
   author    = {David F. Bacon and

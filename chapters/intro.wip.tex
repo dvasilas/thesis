@@ -1,0 +1,401 @@
+% Goal: distributed querying to distributed / replicated / federated data/corpora
+% What are the requirements
+% Why is it a problem
+% What's wrong with current approaches
+
+% Issue
+% Index => high bandwidth -> near (central) data store
+% Query => fast response => near user
+
+
+This thesis studies the challenges of supporting efficient query processing over
+
+In particular, it considers ...
+
+\subsection{Background and motivation}
+
+% [ Smooth intro to query{ing | processing} ]
+% [ Data .. data .. data - > systems that manage data ]
+% // The storage systems underlying today’s large-scale cloud services % ... handle a high volume of requests from users around the world. T
+% // The storage systems have the challenging task of providing % some degree of scalability, availability, and durability for the data.
+% // Many applications today are data-intensive, as opposed to compute-intensive.
+% // Bigger problems are usually the amount of data, the complexity of data, and the speed at which it is changing.
+Data is the lifeblood of modern computing and the systems that store and provide access to it have a prominent place in the infrastructure of today's applications.
+% [ applications rely on a way to retrieve data based not only on the primary key => attributed-based retrieval ]
+A traditional feature of database systems that application developers rely on is the ability to search data based on keys other than the primary key.
+// Queries are declarative //
+% in which queries specify the conditions that results must meed,
+% [ boom, arrive at query processing ]
+% // Query optimization
+% // Query optimization is one of the signature components of database technology—the bridge that connects declarative languages to efficient execution.
+% // Declarative languages
+% // it included a new way of querying data: SQL is a declarative query language
+% // in a declarative query language, you just specify the pattern of the data you want what conditions the results must meet,
+% // and how you want the data to be transformed (e.g., sorted, grouped, and aggregated), but not how to achieve that goal.
+% // It is up to the database system’s query optimizer to decide which indexes and which join methods to use, and in which order to execute various parts of the query
+% // A declarative query language is attractive because it is typically more concise and easier to work with than an imperative API.
+% // But more importantly, it also hides implementation details of the database engine,
+% // which makes it possible for the database system to introduce performance improvements without requiring any changes to queries.
+Query processing is the component of database technology that bridges declarative queries to efficient execution.
+
+% Requirements
+% The requirements posed to any query processing system
+
+Low response time:
+Response time is the time passed between the submission of a query and the display of the results.
+Typically, search engines try to keep it below a few hundred milliseconds. In general, the response time is composed of two components:network latency and query processing time.
+Low Latency: The latency for indexed operations should be as low as possible. 
+This requirement  means  that  the  system  should  harness  low  latency  networks  and  store index  data  in  DRAM.  Further,  the  system  should  leave  out  complex  mechanismswherever possible in favor of lightweight methods that minimize overhead.
+
+
+% // caching: Remember the result of an expensive operation, to speed up reads (caches)
+
+% idea for argument structure after having introduced trade-offs, diverse requirements
+% option 1: a system that fits all needs: not possible
+% option 2: building a new system for each specific need. Can be done, but too many diverse needs. Also an application may have more than one type of "query workload"
+% our option: principled approach to option 2, but using a " ~common~ toolbox ". B
+
+% // quotes from Spanner //
+% // driven by the experiences of Google developers trying to build on previous “key-value” storage systems (The prototypical example of such a key-value system is Bigtable)
+% // However, developers of many OLTP applications found it difficult to build these applications without a strong schema system, cross-row transactions, consistent replication and a powerful query language.
+% // The initial response to these difficulties was to build transaction processing systems on top of Bigtable;
+% // While these systems provided some of the benefits of a database system, they lacked many traditional database features that application developers often rely on.
+% A key example is a robust query language, meaning that developers had to write complex code to process and aggregate the data in their applications.
+
+% [construct] Recent advances in ... have resulted in ...
+
+
+SQL well studied...
+transition to NoSQL ... simple language .. secondary indexes
+
+In both contexts, it is well understood that
+
+% requirements ...
+However, its design for a low-latency large-scale main-memory storage system presents several unique design issues
+
+
+
+Consistency: The system should provide clients with strong consistency guarantees,similar to what a centralized system might provide.  For instance, when an indexed object is written, the update to that object and all of its indexes must appear atomic,even in the face of concurrent accesses and server crashes.  However, providing consis-tency when information is distributed, traditionally requires locks or algorithms thatimpact latency or scalability.  Further, as data and indexes become sharded over moreand more nodes, it becomes increasingly complex and expensive to manage metadataand maintain consistency between data and the corresponding indexes
+
+Such a system cannot be realized in practice and, instead, practitioners must balance numerous trade-offs between desirable properties
+
+
+% [ state problem as question ]
+%
+We set out to explore the following question:
+% can we provide the simplicity of a shared log without imposing a total order?
+% [ transition to contribution ]
+
+
+Contributions: We propose the novel abstraction of a FuzzyLog (§2): a durable, iterable DAG of colored nodes representing the partial order of updates in a distributed system. We argue that this abstraction is useful (§2.1), describing and evaluating application designs that obtain the simplicity of the shared log approach while scaling linearly with atomic­ ity, obtaining weaker consistency, and tolerating network partitions. We show that the abstraction is feasible in practice (§5.1), describing and evaluating a performant, scalable, fault-tolerant implementation called Dapple.
+
+% Idea 1: Start by discussing the importance of design trade-offs in distributed
+% systems in general.
+% Almost every aspect of a distributed system faces trade-offs.
+% Due to that, the design of each system needs to be informed by application/user
+% requirements and workload characteristics.
+% A lot of work has been done to address this.
+% \begin{itemize}
+%   \item One size does not fit all. Specialized database designs for specific use
+%   cases.
+%   \item Online database reconfiguration.
+%   \item Using learned models (machine learning for various database components).
+% \end{itemize}
+
+% The same is true for query processing.
+% There have been approaches for "tuning" query processing for the needs for different applications:
+% \begin{itemize}
+%   \item Selecting which indexes/materialized view to materialize in databases.
+%   \item Optimizing distributed query execution (finding the best place to execute each operator).
+% \end{itemize}
+
+% Limitation of this state of the art:
+% \begin{itemize}
+%   \item Current approaches do not provide flexible placement of query processing state:
+%   \begin{itemize}
+%     \item This is definitely the case for sharded NoSQL databases.
+%     \item TODO: determine how relational database handle index placement.
+%     \item Haven't seen works considering flexible cache or materialized view placement.
+%   \end{itemize}
+% \end{itemize}
+
+% Idea 2: An argument for our choice of separating the storage and query processing tier is that disaggregation of storage
+% and query processing is actually a trend in cloud systems.
+% One example to use is AWS Athena that provides queries on top of AWS S3 with a pay-per-query pricing scheme.
+
+
+% \section{Problem Statement}
+
+% It is well understood that efficient query processing requires tuning on a case-by-case and even query-by-query basis.
+% Databases systems allow database administrators to select which indexes to materialize, and choose between different
+% index types.
+% Relational database systems in particular have a long history of aiming to provide access to data via the use of
+% optimizers, components that automatically construct query execution plans, select query operator algorithms etc. based
+% on statistics on the characteristics of data.
+% The common characteristics of these techniques is that query processing systems are designed as general purpose systems
+% and provide mechanisms for optimizing query processing to the characteristics of different use cases \textit{at runtime}.
+
+% \section{State of the art}
+
+% For motivating the work, we will state the relevance and timeliness of two
+% application needs / market trends / ... : attribute-based data retrieval, and
+% geo-distribution of data.
+
+% Attribute-based data retrieval: \\
+% Retrieving data based on descriptive attributes attached to them (as opposed to
+% retrieval based on primary key or content-based retrieval).
+
+% Data geo-distribution: \\
+% At the same time, data is increasingly geo-distributed (and federated).
+
+% Problem definition: \\
+% This thesis studies how attribute-based retrieval can be performed efficiently
+% on geo-distributed data.
+
+
+% \section{Contributions}
+% \subsection{A design pattern for configurable query processing architectures}
+% Chapter~\ref{ch:design_pattern}
+
+% \subsection{Proteus: Towards application-specific query processing systems}
+% Chapter~\ref{ch:proteus}
+
+
+
+% Outline
+% introduces the terminology and approach that we’re going to use throughout this boo% Goal: distributed querying to distributed / replicated / federated data/corpora
+% What are the requirements
+% Why is it a problem
+% What's wrong with current approaches
+
+% Issue
+% Index => high bandwidth -> near (central) data store
+% Query => fast response => near user
+
+
+This thesis studies the challenges of supporting ...
+
+In particular, it considers ...
+
+\subsection{Background and motivation}
+
+% [ Smooth intro to query{ing | processing} ]
+% [ Data .. data .. data - > systems that manage data ]
+% // The storage systems underlying today’s large-scale cloud services % ... handle a high volume of requests from users around the world. T
+% // The storage systems have the challenging task of providing % some degree of scalability, availability, and durability for the data.
+% // Many applications today are data-intensive, as opposed to compute-intensive.
+% // Bigger problems are usually the amount of data, the complexity of data, and the speed at which it is changing.
+Data is the lifeblood of modern computing and the systems that store and provide access to it have a prominent place in the infrastructure of today's applications.
+% [ applications rely on a way to retrieve data based not only on the primary key => attributed-based retrieval ]
+A traditional feature of database systems that application developers rely on is the ability to search data based on keys other than the primary key.
+// Queries are declarative //
+% in which queries specify the conditions that results must meed,
+% [ boom, arrive at query processing ]
+% // Query optimization
+% // Query optimization is one of the signature components of database technology—the bridge that connects declarative languages to efficient execution.
+% // Declarative languages
+% // it included a new way of querying data: SQL is a declarative query language
+% // in a declarative query language, you just specify the pattern of the data you want what conditions the results must meet,
+% // and how you want the data to be transformed (e.g., sorted, grouped, and aggregated), but not how to achieve that goal.
+% // It is up to the database system’s query optimizer to decide which indexes and which join methods to use, and in which order to execute various parts of the query
+% // A declarative query language is attractive because it is typically more concise and easier to work with than an imperative API.
+% // But more importantly, it also hides implementation details of the database engine,
+% // which makes it possible for the database system to introduce performance improvements without requiring any changes to queries.
+Query processing is the component of database technology that bridges declarative queries to efficient execution.
+
+% Requirements
+% The requirements posed to any query processing system
+
+Low response time:
+Response time is the time passed between the submission of a query and the display of the results.
+Typically, searchengines try to keep it below a few hundred milliseconds. Ingeneral, the response time is composed of two components:network latency and query processing time.
+Low Latency: The latency for indexed operations should be as low as possible. 
+This requirement  means  that  the  system  should  harness  low  latency  networks  and  store index  data  in  DRAM.  Further,  the  system  should  leave  out  complex  mechanismswherever possible in favor of lightweight methods that minimize overhead.
+
+
+% // caching: Remember the result of an expensive operation, to speed up reads (caches)
+
+% idea for argument structure after having introduced trade-offs, diverse requirements
+% option 1: a system that fits all needs: not possible
+% option 2: building a new system for each specific need. Can be done, but too many diverse needs. Also an application may have more than one type of "query workload"
+% our option: principled approach to option 2, but using a " ~common~ toolbox ". B
+
+% // quotes from Spanner //
+% // driven by the experiences of Google developers trying to build on previous “key-value” storage systems (The prototypical example of such a key-value system is Bigtable)
+% // However, developers of many OLTP applications found it difficult to build these applications without a strong schema system, cross-row transactions, consistent replication and a powerful query language.
+% // The initial response to these difficulties was to build transaction processing systems on top of Bigtable;
+% // While these systems provided some of the benefits of a database system, they lacked many traditional database features that application developers often rely on.
+% A key example is a robust query language, meaning that developers had to write complex code to process and aggregate the data in their applications.
+
+% [construct] Recent advances in ... have resulted in ...
+
+
+SQL well studied...
+transition to NoSQL ... simple language .. secondary indexes
+
+In both contexts, it is well understood that
+
+% requirements ...
+However, its design for a low-latency large-scale main-memory storage system presents several unique design issues
+
+
+
+Consistency: The system should provide clients with strong consistency guarantees,similar to what a centralized system might provide.  For instance, when an indexedobject is written, the update to that object and all of its indexes must appear atomic,even in the face of concurrent accesses and server crashes.  However, providing consis-tency when information is distributed, traditionally requires locks or algorithms thatimpact latency or scalability.  Further, as data and indexes become sharded over moreand more nodes, it becomes increasingly complex and expensive to manage metadataand maintain consistency between data and the corresponding indexes
+
+Such a system cannot be realized in practice and, instead, practitioners must balance numerous trade-offs between desirable properties
+
+In the era of global-scale services and cloud computing,
+more and more data sets are naturally geo-distributed,
+as the services producing them run on multiple locations.
+This happens for various reasons.
+First, many organizations operate multiple data cen-
+ters (DCs) across the globe, to improve both reliability and user-
+perceived latency; second, as cloud computing becomes more pop-
+ular, organizations will split their data processing between in-house
+and  remote  cloud  nodes;  third,  some  organizations  might  prefer
+to  use  multiple  cloud  providers  to  increase  reliability  and/or  de-
+crease  costs  [20,  5]
+
+% [ state problem as question ]
+%
+We set out to explore the following question:
+% can we provide the simplicity of a shared log without imposing a total order?
+% [ transition to contribution ]
+
+
+Contributions: We propose the novel abstraction of a FuzzyLog (§2): a durable, iterable DAG of colored nodes representing the partial order of updates in a distributed system. We argue that this abstraction is useful (§2.1), describing and evaluating application designs that obtain the simplicity of the shared log approach while scaling linearly with atomic­ ity, obtaining weaker consistency, and tolerating network partitions. We show that the abstraction is feasible in practice (§5.1), describing and evaluating a performant, scalable, fault-tolerant implementation called Dapple.
+
+% Idea 1: Start by discussing the importance of design trade-offs in distributed
+% systems in general.
+% Almost every aspect of a distributed system faces trade-offs.
+% Due to that, the design of each system needs to be informed by application/user
+% requirements and workload characteristics.
+% A lot of work has been done to address this.
+% \begin{itemize}
+%   \item One size does not fit all. Specialized database designs for specific use
+%   cases.
+%   \item Online database reconfiguration.
+%   \item Using learned models (machine learning for various database components).
+% \end{itemize}
+
+% The same is true for query processing.
+% There have been approaches for "tuning" query processing for the needs for different applications:
+% \begin{itemize}
+%   \item Selecting which indexes/materialized view to materialize in databases.
+%   \item Optimizing distributed query execution (finding the best place to execute each operator).
+% \end{itemize}
+
+% Limitation of this state of the art:
+% \begin{itemize}
+%   \item Current approaches do not provide flexible placement of query processing state:
+%   \begin{itemize}
+%     \item This is definitely the case for sharded NoSQL databases.
+%     \item TODO: determine how relational database handle index placement.
+%     \item Haven't seen works considering flexible cache or materialized view placement.
+%   \end{itemize}
+% \end{itemize}
+
+% Idea 2: An argument for our choice of separating the storage and query processing tier is that disaggregation of storage
+% and query processing is actually a trend in cloud systems.
+% One example to use is AWS Athena that provides queries on top of AWS S3 with a pay-per-query pricing scheme.
+
+
+% \section{Problem Statement}
+
+% It is well understood that efficient query processing requires tuning on a case-by-case and even query-by-query basis.
+% Databases systems allow database administrators to select which indexes to materialize, and choose between different
+% index types.
+% Relational database systems in particular have a long history of aiming to provide access to data via the use of
+% optimizers, components that automatically construct query execution plans, select query operator algorithms etc. based
+% on statistics on the characteristics of data.
+% The common characteristics of these techniques is that query processing systems are designed as general purpose systems
+% and provide mechanisms for optimizing query processing to the characteristics of different use cases \textit{at runtime}.
+
+% \section{State of the art}
+
+% For motivating the work, we will state the relevance and timeliness of two
+% application needs / market trends / ... : attribute-based data retrieval, and
+% geo-distribution of data.
+
+% Attribute-based data retrieval: \\
+% Retrieving data based on descriptive attributes attached to them (as opposed to
+% retrieval based on primary key or content-based retrieval).
+
+% Data geo-distribution: \\
+% At the same time, data is increasingly geo-distributed (and federated).
+
+% Problem definition: \\
+% This thesis studies how attribute-based retrieval can be performed efficiently
+% on geo-distributed data.
+
+
+% \section{Contributions}
+% \subsection{A design pattern for configurable query processing architectures}
+% Chapter~\ref{ch:design_pattern}
+
+% \subsection{Proteus: Towards application-specific query processing systems}
+% Chapter~\ref{ch:proteus}
+
+
+
+% Outline
+% introduces the terminology and approach that we’re going to use throughout this boo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Leftovers
+% As a result, they
+% An answer to this challenged would be the development of specialized query engines
+
+% Query engines architectures require flexibility in order to be able to balance the trade-offs that existing between
+% query processing requirements and adjust to the needs of different applications.
+% The architectures of existing query engines are monolithic and tightly coupled to the data system's architecture,
+% and thus cannot provide this flexibility.
+% As a result, application developers are
+% to address these requirements --- notably enabling flexible derived state placement.
+
+% potential solution -> specialized query engines
+
+% In this , we make the case that
+%  that query subsystems should provide the database administrator with the ability to tune the system's topology and placement a
+
+
+%   %  Materializing an index or view can reduce query processing time,
+%   but incurs storage overhead.
+%   Moreover, indexes and materialized view must be updated to reflect the effects of write operations;
+%   This incurs overhead to write operations.
+
+%   Avoiding incurring overhead to write operation can be achieved by performing the corresponding updates to derived
+%   state outside the critical path of write operations.
+
+% Existing query engines provide mechanisms for controlling the trade-off between query processing time
+% and write and storage overhead, and between write overhead and query result consistency.
+
+% However, geo-distribution adds additional considerations to the above trade-offs.
+
+
+% Similarly,
+% When corpus and the query engine's deriver state is distributed across multiple data centers,
+% network latency can be significant
+
+% % Techniques for improving query processing time have been extensively studied in the context of database systems.
+% % They include maintaining copies of the data organized in forms that facilitate different access patterns (indexes),
+% % and pre-computing the results of expensive reoccurring operations (materialized views).
+% In geo-distributed deployments
+% In the context of geo-distribution, network latency accounts for the time spent over the network to receive the query from the userplus the time spent over the network to send the searchresults to the user.
+
+% It is well understood that these requirements cannot be achieved all at once,
+% and thus query engines must balance numerous trade-offs between desirable properties.
+
+
+% Materializing derived state can reduce query processing time, but it also requires additional storage space, and it
+
+% It is well known that achieving good query processing performance requires tunning the query processing system to the needs of different use cases.
+% To achieve that, query systems expose configuration parameters and knobs such as selecting which indexes to materialize and choosing between consistent and lazy index maintenance.
+% In addition, query systems are able to generate query execution plans adapted to each individual query (query optimization).
+
+% However, the users and data of most web services nowadays are geographically distributed across the globe.
+
+% % // Geo - distribution
+
+
+% In the context of geo-distribution, the objectives of fast query response, consistent results, and low operational cost are inherently conflicting and create trade-offs.
