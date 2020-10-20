@@ -1,6 +1,10 @@
-
-This chapter provides an overview of concepts related to ...
-%  thework presentedin this thesis. It provides an overview of research on key-value stores, includ-ing many orthogonal or complementary research directions.Then it providesan overview of different related research on transactionalsystems. Finally, itprovides an overview of distributed file systems.
+In this Chapter we review concepts related to query processing in database systems.
+After presenting an overview of the ``textbook'' query processing techniques in relational databases in Section~\ref{sec:query_pr_relational}
+we describe techniques aimed at reducing query processing time, including the use of materialized views (Section~\ref{sec:materialize_views}),
+and caching (Section~\ref{sec:caching}).
+In Section~\ref{sec:distributed_qp}, we describe state-of-the-art approaches of distributed query processing in commercial database systems.
+Then, in Section~\ref{sec:qp_non_relational} we present an overview of research on query processing in non-relational database systems,
+focusing on concepts related to secondary indexing.
 
 \bigskip
 \noindent
@@ -12,21 +16,29 @@ Query processing has been studied extensively in the context of relational datab
 Relational databases provide sophisticated querying capabilities and require complex query processing techniques
 to connect declarative query languages to efficient query execution.
 
-On the other hand, databases that belong in the class of nonrelational database systems (also referred to as NoSQL)
-in general make design decisions that favor scalability (very large datasets or very high write throughput) over rich
-query models, often supporting only primary key lookups.
-There, query processing is mainly linked to data distribution schemes and involves the use of secondary indexes.
+On the other hand, databases that belong in the class of non-relational database systems (also referred to as NoSQL)
+in general make design decisions aimed at high scalability (very large datasets or very high write throughput) and availability,
+and opt of more flexible and dynamic schemas than the relational schema \cite{couchbase:nosqladoption}.
+A common technique used for supporting lookups on non-primary keys is secondary indexing \cite{riakv:secondaryindexes, cassandra:secondaryindexing}.
 
-The purpose of this chapter is to present an overview of several ``textbook'' query processing techniques.
-Our work is influenced by and builds on top of the techniques presented in this chapter.
+In this chapter, we review the query processing techniques used in both worlds,
+with the intend of identifying the primitives and approaches common in both classes of database systems.
 
 \section{Query Processing in Relational Database Systems}
-
+\label{sec:query_pr_relational}
 The database component responsible for query processing is the \textit{query processor}.
-The role of a relational query processor is, given a declarative high-level statement (often SQL), to validate it,
+The role of a relational query processor is, a declarative query (e.g. written in SQL) to validate it,
 optimize it into a procedural dataflow execution plan, and execute that dataflow program.
 
-Query processing consists of the following phases \cite{hellerstein:databasearchitecture, kossmann:distqeuryprocessing}:
+Query processing processed in three main phases \cite{hellerstein:databasearchitecture, kossmann:distqeuryprocessing}.
+First, the query is parsed;
+The result is parse tree representing the query structure.
+Second, the query processor performs semantics analysis in order to transform the parse tree into a relational algebra expression tree.
+Finally, the query processor produces a query execution plan,
+which indicates the operations to be performed, the order in which they are to be evaluated,
+and the algorithm chosen for each operation, and the way intermediate results are passed from one operation to another.
+
+We describe in more detail the steps involved in query query processing below.
 
 \bigskip
 \noindent
@@ -41,13 +53,11 @@ and verifies that the user is authorized to execute the query.
 \bigskip
 \noindent
 \textbf{Query Rewrite.}
-In the query rewrite phase, the query processor transforms the query in order to carry out optimizations that are
-beneficial regardless of the physical state of the system
-(the size of tables, presence of indices, locations of copies of tables etc.)
+In the query rewrite phase, the query processor transforms the relational operator tree in order to carry out optimizations that are
+beneficial regardless of the physical state of the system (the size of tables, presence of indices, locations of copies of tables etc.).
 
 Typical transformations include:
 \begin{itemize}
-
   \item \textbf{Elimination of redundant predicates and simplification of expressions:}
   This includes the evaluation of constant arithmetic expressions,
   short-circuit evaluation of logical expressions via satisfiability tests,
@@ -64,7 +74,6 @@ Typical transformations include:
   In many cases, integrity constrains defined by the schema can be used to simplify queries.
   An important such optimization is redundant join elimination (for example, a query that joins two tables but does not
   make use of the columns of one of the tables).
-
 \end{itemize}
 
 \bigskip
@@ -73,16 +82,10 @@ Typical transformations include:
 In the query optimization phase, the optimizer (the query processor component responsible for query optimizations)
 transforms the internal query representation into an efficient plan for executing the query.
 
-A query plan can be thought of as a dataflow diagram that specifies how the query is to be executed.
-A common approach to represent a query plan is using a tree:
-the tree's nodes are operators
---- each operator carrying out a particular operation such as join, group by, sort, scan, etc. ---
-and edges represent consumer-producer relationships between operators.
-
 The optimizer is responsible for decisions such as which indices to use to execute a query,
-which methods to use to execute the operators of a query,
+which algorithms to use to execute the join operations,
 and in which order to execute a query's operations.
-In a distributed system, the optimizer also decides at which node each operation is to be executed.
+In a distributed system, the optimizer also decides about the placement of computations across the systems.
 
 The foundational paper by Selinger et al. on System R \cite{selinger:systemr} decomposes the problem of query optimization
 into three distinct sub-problems: cost estimation, relational equivalences that define a search space, and cost-based
@@ -91,67 +94,78 @@ The optimizer assigns a cost estimate to the execution of each component of a qu
 cost.
 To do so, the optimizer relies on pre-computed statistics about the contents of each relation, and heuristics for
 determining the cardinality of the query output.
-It then uses a dynamic programming algorithm to construct a query plan based on these cost estimates.
+It then uses a dynamic programming algorithm to construct a query execution plan based on these cost estimates.
 
 \bigskip
 \noindent
 \textbf{Query Execution}
-Query execution is carried out by the \textit{query execution engine}.
-The query execution engine is the query processor's component that provides implementations for every operator.
+All query processing algorithm implementations iterate over the members of their input sets.
+In \cite{graefe:queryevaluation}, Graefe models these algorithms as algebra operators consuming zero or more inputs and
+producing one or more outputs.
 
-The most common approach used to implement query operators is the iterator model \cite{graefe:queryevaluation}.
-Iterators can be described using the object-oriented paradigm.
-Listing~\ref{lst:iterator} shows a simplified definition for a general iterator class.
+A query execution engine --- the query processor's component responsible for executing the query execution plan ---
+consists of a collection of operators, and mechanisms to execute complex expressions using multiple operators.
+Query engines execute query plans by pipelined query operators;
+The output of one operator is streamed into the next operator without materializing the intermediate query results.
+An advantage of this model is that all iterators have the same interface;
+As a result, a consumer-producer relationship can exist between any two iterators;
+Operators can, because of that, be combined into arbitrarily complex query evaluation plans.
 
-\begin{lstlisting}[caption={Iterator class pseudocode \cite{hellerstein:databasearchitecture}},label={lst:iterator},captionpos=b,language=Java]
-class iterator {
-  iterator &inputs[];
-  void init();
-  tuple get_next();
-  void close();
-}
-\end{lstlisting}
+There are two approaches for implementing pipelining.
+traditionally, query execution engines have implemented \textit{demand-driven pipelining}:
+Each time an operator needs an record it pulls the next record from its input operator,
+and wait input that operator produces the a record.
+That input operator might in turn require itself a record from its input operator, and so on.
+This approach has been popularized by its used in the Volcano system \cite{graefe:volcano}.
 
-The iterator model has certain useful properties for modeling query execution:
-\begin{itemize}
+Conversely, in \text{data-driven pipelining}, records are pushed from source operators towards destination operators.
+This is commonly used in streaming systems.
 
-  \item All iterators have the same interface.
-  As a result, a consumer-producer relationship can exist between any two iterators, and thus, any plan can be executed.
-  In addition, the common interface means that each iterator's logic is independent of its children and parents in the
-  graph.
+Since query execution plans are algebra expressions, they can be expressed as trees;
+Tree's nodes are operators and edges represent consumer-producer relationships between operators.
+More generally, for queries with common sub-expressions,
+the query execution plan is a directed acyclic graph \cite{graefe:queryevaluation}.
 
-  \item The iterator paradigm supports pipelining of results from one operator to another.
 
-\end{itemize}
+\bigskip
+\noindent
+The concept of implementing a query execution engine as a directed acyclic graph of relational algebra operators,
+each executing a basic operation, forms the basis of our query engine architectural model.
+In Chapter~\ref{ch:design_pattern}, we describe how this concept can be generalized to include
+stateful operators that implement derived state structures, including indexes, materialized views and caches,
+as well as  ``meta-operators''.
+We characterize as meta-operators (or routing) those operators that perform query processing control tasks,
+such as managing index partitions and load balancing, rather data manipulation tasks.
 
 \subsection{Materialized Views}
-
+\label{sec:materialize_views}
 An important element of the relational model is the \textit{view}.
 A view is a ``virtual relation'' defined by a query that conceptually contains the result of that query.
 Views are not precomputed and stored; the database stores only the query defining the view.
-Each time the view is used, the database expands it on the fly into the underlying query,
+Views are computed \textit{on-demand};
+When a view is referred to by a query, the query engine expands it on-the-fly using its definition,
 and then processes the expanded query.
 
-In contrast, a materialized view is a view whose contents are pre-computed by the database: ... (write-time vs read-time)
+A materialized view is a view whose contents are \textit{pre-computed} and stored by the database.
 In many cases reading the contents of a materialized view is much more efficient than computing the contents of the view
-by executing the query that the view defines.
-Essentially, a materialized view is a precomputed cache of query results.
-The use of materialized views is a common technique for reducing query response time.
+by executing the query that defines the view.
+% Essentially, a materialized view is a precomputed cache of query results.
+The use of materialized views is a common technique for improving query processing time.
 
 \subsubsection{View maintenance}
 
-An important aspect of materialized views is that when the data referred in the view definition changes,
+An important aspect of materialized views is that when the underlying data referred in the view definition changes,
 the view must be kept up-to-date.
-A simplistic way of achieving this to recompute the materialized view on every update.
-A better option is to, on each update, modify only the affected parts of the view.
+A simplistic way of achieving this to re-compute the materialized view in response to every change to the corpus.
+A better option is to, given a change to the corpus, modify only the affected parts of the view.
 This approach is known as incremental view maintenance.
-There is considerable research on incremental view maintenance for in relational databases
+Much research work has focused on incremental view maintenance in relational databases
 \cite{larson:outerjoinviewmaintenance, lee:multiplejoinviewmaintenance, zhuge:viewmaintenance}.
 
-Another design decision when incremental view maintenance is used, is when to perform the maintenance:
-in \textit{synchronous} view maintenance, view maintenance is performed as soon as an update occurs,
-as part of the updating transaction,
-while in \textit{asynchronous} or lazy view maintenance,
+A design decision related to incremental view maintenance is \textit{when} to perform the maintenance task:
+In \textit{synchronous} view maintenance, view maintenance is performed as soon as an update occurs,
+as part of the updating transaction;
+In \textit{asynchronous} or lazy view maintenance,
 updating the view is deferred to a later time \cite{zhou:lazymvMaintenance}.
 Materialized views with deferred view maintenance may be somewhat out-of-date with the corpus.
 
@@ -165,10 +179,10 @@ Materialized views add further consideration to query optimization:
   The query processor may produce a more efficient query plan by rewriting the query to make use of an available
   materialized view.
 
-  \item Conversely, Replacing the use of a materialized view with its definition.
-  In some cases, using the query that defines a materialized view instead of directly reading from its pre-computed contents
-  may offer more optimization options. \todo{}
-  For example, consider a case in which a materialized view does not include indexes that can be used to speed up the query,
+  \item Replacing the use of a materialized view with its definition.
+  In some cases, replacing the materialized view with its definition in a given query, rather than directly reading from the view's contents,
+  may offer more optimization options.
+  For example, consider a case in which a materialized view does not include indexes that can be used to speed up a certain query,
   but the underlying relations do.
   Using the views definition instead of its contents enables query execution to take advantage of those indexes.
 
@@ -186,20 +200,8 @@ view maintenance cost and storage space.
 The problem of choosing which views to materialize in order to achieve a desirable balance among these three
 parameters is known as the view selection problem \cite{gupta:viewselection, mami:viewselection}.
 
-\subsection{Caching}
-% Search engines cache the results of frequent and/or recentqueries to reduce the query workload on backend clustersand improve query response time
-Another technique for speeding up queries, besides the use of indexes and materialized views, is caching:
-storing the result of a costly computation so that repeated reads of this result can be performed without re-executing
-the computation, if the underlying data has not change.
-
-A common approach is to deploy a \textit{caching tier} between the database system and the clients.
-In-memory key-value stores such as Redis \cite{redis:cache} and memcached \cite{memcached:wiki} are often used for this
-purpose.
-
-% However, this approach requires application logic to invalidate or replace cache entries, which may be complex and error prone.
-
 \subsection{Distributed Query Processing}
-
+\label{sec:distributed_qp}
 So far we covered query processing from the perspective of a single-node database, without considering data distribution.
 However, data is inherently distributed \cite{bacon:spanner, cockroachdb:docs} and therefore query processing needs to
 efficiently operate on distributed data.
@@ -223,7 +225,7 @@ the tree in order to push the maximum amount of computation to the servers.
 In the query execution phase, distributed union routes a sub-query request addressed to a shard, to one of the nearest
 replicas of that shard in order to minimize latency.
 
-CockroachDB employs a mechanism for distributed query processing \textbf{computation} \cite{cockroachdb:distsql}
+CockroachDB employs a mechanism for distributed query processing computation \cite{cockroachdb:distsql}
 (for example join, aggregation, or sorting) on multiple nodes in order to improve performance.
 In CockroachDB, a query plan is a tree of operators, termed \textit{aggregators}:
 each aggregator consumes an input stream of records and produces an output stream or records.
@@ -232,8 +234,21 @@ the computation for each group is independent of the computation for other group
 concatenation of computation result for all groups.
 Since results for each group are independent, different groups can be processed on different nodes.
 
+\subsection{Caching}
+\label{sec:caching}
+A widely used technique for reducing query load to the query engine and improve query response time is to cache
+the results of common-case queries,
+in order to avoid re-evaluating the query when the corpus is unchanged.
+
+A common approach is to deploy a \textit{caching layer} between the database system and the application.
+In-memory key-value stores such as Redis \cite{redis:cache} and memcached \cite{memcached:wiki} are often used for this
+purpose.
+However, in this case the application logic is responsible for the caching logic,
+including writing query results to the caching store, and invalidating or replacing cache entries as the underlying data change.
+This makes this approach complex and error prone \cite{kate:pequod}.
 
 \section{Query Processing in Non-Relational Database Systems}
+\label{sec:qp_non_relational}
 
 The querying capabilities of a non-relational database mainly follow from their distribution model and data model.
 Thus different non-relational databases have varying querying capabilities.
@@ -283,6 +298,18 @@ When implemented efficiently, it enables horizontal scaling:
 doubling the number of nodes in the system should make the system able to handle double the volume of data, and
 should double the system's read and write throughput.
 
+\medskip
+\noindent
+Partitioning has implications for query processing.
+Database records are assigned to partitions based on a \textit{partitioning key},
+and are typically sorted based on that key.
+Because of that, performing a selection operation on a key other than the partitioning key,
+requires every partition to perform a full scan of its records, and retrieve the ones that satisfy the selection predicate.
+A technique employed to more efficiently identify the requested records is secondary indexing.
+We describe secondary indexing in detail in Section~\ref{sec:secondary_indexes}.
+
+\medskip
+\noindent
 The partitioning techniques commonly used in non-relational databases are range and hash partitioning.
 
 \bigskip
@@ -302,10 +329,6 @@ Therefore, systems that use range partitioning need mechanisms for detecting and
 
 Range partitioning is used by Bigtable and its open source equivalent HBase \cite{hbasebigtable:comparison},
 RethinkDB, and MongoDB before version 2.4.
-
-\medskip
-\noindent
-\todo{comment on whats the effect on querying}
 
 \bigskip
 \noindent
@@ -412,23 +435,33 @@ It can be efficiently supported as it is compatible with both hash and range par
 
 \bigskip
 \noindent
-\textbf{Filter (predicate) queries.}
-A filter query returns all data items from a database table that meet a predicate specified over their properties.
-In their simplest form, filter queries can be performed as filtered full-table scans.
+\textbf{Predicate queries.}
+A predicate query returns all data items from a database table that meet a condition specified over their attributes.
+In its simplest form, a predicate query can be performed as a filtered full-table scan.
 
 \subsubsection{Secondary indexes}
+\label{sec:secondary_indexes}
 For databases that use hash partitioning a full-table scan implies a scatter-gather operation where each shard
 performs a filtered scan, and results from all shard are merged.
 
-A common technique used to support efficient filter queries is the use of secondary indexes (secondary indexing).
+A common technique used to support efficient predicate queries is the use of secondary indexes.
 
 A secondary index is a structure that is derived from the primary data, and organizes data in a form that
 provides a way to efficiently access database records by means other than the primary key.
 
-Essentially, a secondary index is a key-value structure where the key is a \textit{term} (an attribute or key of a
-database record other than the primary key),
-and the value is a list of primary keys of all the records that contain that term (a \textit{posting list}).
+Typically, a secondary index consists of an entry for each existing value of the indexed attribute.
+Entries can be viewed as a key-value pairs,
+where the key is a value of the indexed attribute,
+and the value is a list of pointers to database records that contain this value (a \textit{posting list}).
+In lower level index implementations, employed in centralized database systems
+or in the scope of a single partition, a pointer indicates the position of a record in the physical representation
+of the database.
+In higher level index implementations, typically used in distributed databases, the primary key of the record is used as pointer;
+This assumes the presence of a mechanism that can efficiently retrieve records via their primary keys.
+In this work, we consider this second pointer implementation.
 
+\medskip
+\noindent
 Secondary indexing is an instance of a general system design pattern:
 having the same data represented in different formats to address different access patterns.
 Database tables are the primary copy of data.
@@ -437,8 +470,13 @@ Adding a secondary index does not affect the contents of the database;
 it only affects the performance of read and write operations.
 Writes go to the primary data and all of the other data copies are derived from it.
 The other copies only serve read requests.
-\todo{address write-through?}
+% \todo{address write-through?}
 
+\medskip
+\noindent
+\textbf{Index data structures.}
+
+\noindent
 The following data structures are commonly used as secondary indexing structures:
 
 \medskip
@@ -490,26 +528,22 @@ The B-tree and LSM-tree can be both used as primary or secondary index structure
 
 In this work, we focus on the aspects of employing secondary indexes on distributed data.
 We consider these aspects orthogonal to the index implementation;
-we abstract index implementation details by modeling a secondary index as a system component that provides the following
-API:
+We abstract index implementation details by modeling a secondary index as a system component that provides the following
+APIs:
 \begin{itemize}
-
   \item An efficient range query operation $query(key_1, key_2) \rightarrow [value]$,
   where $key_1$ and $key_2$ are the boundaries of a range of keys.
-  Using this API, a key lookup is a special case in which $key_1 == key_2$.
+  A point lookup is a special case in which $key_1 == key_2$.
 
   \item Operations for inserting, updating, and deleting keys.
-
 \end{itemize}
 
-We argue that our results hold true for any index implementation with the above specification.
-In our prototype
-\todo{TODO: ref to implementation chapter}
-we use of-the-shelf state of the art index data structure implementations.
+We argue that this model can be used to represent any secondary index data structure.
+Our prototype implementation (Chapter~\ref{ch:proteus}) uses of-the-shelf state-of-the-art index data structure implementations.
 
 \subsubsection{Partitioning and Secondary Indexes}
 \label{sec:index_partitioning_background}
-The partitioning schemes discussed in \ref{sec:partitioning} rely on a key-value data model.
+The partitioning schemes discussed in Section~\ref{sec:partitioning} rely on a key-value data model.
 Secondary indexes do not neatly map to these partitioning techniques:
 a secondary index usually does not uniquely identify a data item, but rather provides a way of searching for occurrences
 of a particular value.
@@ -601,5 +635,9 @@ a query execution plans consist of routing query requests to the appropriate dat
 
 
 \section{Conclusion}
-
-This chapter presented
+This chapter presented an overview of concepts related to query processing.
+In particular, it presented query execution in relation database systems,
+focusing on the implementation of query execution engines.
+Furthermore, it described techniques used for improving query processing time,
+including materialized views, caching, and secondary indexing.
+The concepts presented in this chapter form the basis upon which the contributions of this thesis are built.

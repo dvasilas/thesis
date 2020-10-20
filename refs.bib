@@ -532,6 +532,19 @@ series = {SIGMOD '17}
   year = {2020}
 }
 
+@inproceedings{kate:pequod,
+author = {Bryan Kate and Eddie Kohler and Michael S. Kester and Neha Narula and Yandong Mao and Robert Morris},
+title = {Easy Freshness with Pequod Cache Joins},
+booktitle = {11th {USENIX} Symposium on Networked Systems Design and Implementation ({NSDI} 14)},
+year = {2014},
+isbn = {978-1-931971-09-6},
+address = {Seattle, WA},
+pages = {415--428},
+url = {https://www.usenix.org/conference/nsdi14/technical-sessions/presentation/kate},
+publisher = {{USENIX} Association},
+month = apr,
+}
+
 -- Ch: Models --
 
 @online{aws:athena,
@@ -1299,4 +1312,30 @@ pages = {449--462},
 url = {https://www.usenix.org/conference/nsdi20/presentation/vuppalapati},
 publisher = {{USENIX} Association},
 month = feb,
+}
+@online{couchbase:nosqladoption,
+  author = {James Phillips},
+  title = {Surprises in our {N}o{SQL} adoption survey},
+  howpublished = {\url{https://blog.couchbase.com/nosql-adoption-survey-surprises/}},
+  year = {December 2014}
+}
+
+@article{graefe:volcano,
+author = {Graefe, G.},
+title = {Volcano— An Extensible and Parallel Query Evaluation System},
+year = {1994},
+issue_date = {February 1994},
+publisher = {IEEE Educational Activities Department},
+address = {USA},
+volume = {6},
+number = {1},
+issn = {1041--4347},
+url = {https://doi.org/10.1109/69.273032},
+doi = {10.1109/69.273032},
+abstract = {To investigate the interactions of extensibility and parallelism in database query processing, we have developed a new dataflow query execution system called Volcano. The Volcano effort provides a rich environment for research and education in database systems design, heuristics for query optimization, parallel query execution, and resource allocation. Volcano uses a standard interface between algebra operators, allowing easy addition of new operators and operator implementations. Operations on individual items, e.g., predicates, are imported into the query processing operators using support functions. The semantics of support functions is not prescribed; any data type including complex objects and any operation can be realized. Thus, Volcano is extensible with new operators, algorithms, data types, and type-specific methods. Volcano includes two novel meta-operators. The choose-plan meta-operator supports dynamic query evaluation plans that allow delaying selected optimization decisions until run-time, e.g., for embedded queries with free variables. The exchange meta-operator supports intra-operator parallelism on partitioned datasets and both vertical and horizontal inter-operator parallelism, translating between demand-driven dataflow within processes and data-driven dataflow between processes. All operators, with the exception of the exchange operator, have been designed and implemented in a single-process environment, and parallelized using the exchange operator. Even operators not yet designed can be parallelized using this new operator if they use and provide the interator interface. Thus, the issues of data manipulation and parallelism have become orthogonal, making Volcano the first implemented query execution engine that effectively combines extensibility and parallelism.},
+journal = {IEEE Trans. on Knowl. and Data Eng.},
+month = feb,
+pages = {120-–135},
+numpages = {16},
+keywords = {intra-operator parallelism, choose-plan meta-operator, semantics, data structures, algebra operators, resource allocation, parallel query evaluation system, parallel programming, data type, dynamic query evaluation plans, data-driven dataflow, demand-driven dataflow, support functions, query optimization, predicates, partitioned datasets, database query processing, horizontal inter-operator parallelism, dataflow query execution system, extensibility, query processing operators, query processing, Volcano, type-specific methods., novel meta-operators}
 }
