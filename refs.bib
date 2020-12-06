@@ -1015,7 +1015,7 @@ month = apr,
 
 @inproceedings{yates:multisitefeasibility,
 author = {Baeza-Yates, Ricardo and Gionis, Aristides and Junqueira, Flavio and Plachouras, Vassilis and Telloli, Luca},
-title = {On the {F}easibility of {M}ulti-{S}ite {W}eb {S}earch {E}ngines},
+title = {On the Feasibility of Multi-Site Web Search Engines},
 year = {2009},
 isbn = {9781605585123},
 publisher = {Association for Computing Machinery},
@@ -1024,38 +1024,98 @@ url = {https://doi.org/10.1145/1645953.1646009},
 doi = {10.1145/1645953.1646009},
 abstract = {Web search engines are often implemented as centralized systems. Designing and implementing a Web search engine in a distributed environment is a challenging engineering task that encompasses many interesting research questions. However, distributing a search engine across multiple sites has several advantages, such as utilizing less compute resources and exploiting data locality. In this paper we investigate the cost-effectiveness of building a distributed Web search engine. We propose a model for assessing the total cost of a distributed Web search engine that includes the computational costs and the communication cost among all distributed sites. We then present a query-processing algorithm that maximizes the amount of queries answered locally, without sacrificing the quality of the results compared to a centralized search engine. We simulate the algorithm on real document collections and query workloads to measure the actual parameters needed for our cost model, and we show that a distributed search engine can be competitive compared to a centralized architecture with respect to real cost.},
 booktitle = {Proceedings of the 18th ACM Conference on Information and Knowledge Management},
-pages = {425--434},
+pages = {425–434},
 numpages = {10},
-keywords = {distributed systems, web search, query processing, cost model},
+keywords = {query processing, cost model, distributed systems, web search},
 location = {Hong Kong, China},
 series = {CIKM '09}
 }
 
 @inproceedings{cambazoglu:multisitequantifying,
-  author    = {Berkant Barla Cambazoglu and
-               Vassilis Plachouras and
-               Ricardo Baeza{-}Yates},
-  title     = {Quantifying performance and quality gains in distributed web search
-               engines},
-  booktitle = {Proceedings of the 32nd Annual International {ACM} {SIGIR} Conference
-               on Research and Development in Information Retrieval, {SIGIR}},
-  publisher = {{ACM}},
-  year      = {2009},
-  url       = {https://doi.org/10.1145/1571941.1572013}
+author = {Cambazoglu, B Barla and Plachouras, Vassilis and Baeza-Yates, Ricardo},
+title = {Quantifying Performance and Quality Gains in Distributed Web Search Engines},
+year = {2009},
+isbn = {9781605584836},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/1571941.1572013},
+doi = {10.1145/1571941.1572013},
+abstract = {Distributed search engines based on geographical partitioning of a central Web index emerge as a feasible solution to the immense growth of the Web, user bases, and query traffic. However, there is still lack of research in quantifying the performance and quality gains that can be achieved by such architectures. In this paper, we develop various cost models to evaluate the performance benefits of a geographically distributed search engine architecture based on partial index replication and query forwarding. Specifically, we focus on possible performance gains due to the distributed nature of query processing and Web crawling processes. We show that any response time gain achieved by distributed query processing can be utilized to improve search relevance as the use of complex but more accurate algorithms can now be enabled for document ranking. We also show that distributed Web crawling leads to better Web coverage and try to see if this improves the search quality. We verify the validity of our claims over large, real-life datasets via simulations.},
+booktitle = {Proceedings of the 32nd International ACM SIGIR Conference on Research and Development in Information Retrieval},
+pages = {411–418},
+numpages = {8},
+keywords = {index partitioning, web crawling, data centers, distributed query processing},
+location = {Boston, MA, USA},
+series = {SIGIR '09}
 }
 
 @inproceedings{cambazoglu:multisiteforwarding,
-  author    = {Berkant Barla Cambazoglu and
-               Emre Varol and
-               Enver Kayaaslan and
-               Cevdet Aykanat and
-               Ricardo Baeza{-}Yates},
-  title     = {Query forwarding in geographically distributed search engines},
-  booktitle = {Proceeding of the 33rd International {ACM} {SIGIR} Conference on Research
-               and Development in Information Retrieval, {SIGIR}},
-  publisher = {{ACM}},
-  year      = {2010},
-  url       = {https://doi.org/10.1145/1835449.1835467}
+author = {Cambazoglu, B. Barla and Varol, Emre and Kayaaslan, Enver and Aykanat, Cevdet and Baeza-Yates, Ricardo},
+title = {Query Forwarding in Geographically Distributed Search Engines},
+year = {2010},
+isbn = {9781450301534},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/1835449.1835467},
+doi = {10.1145/1835449.1835467},
+abstract = {Query forwarding is an important technique for preserving the result quality in distributed search engines where the index is geographically partitioned over multiple search sites. The key component in query forwarding is the thresholding algorithm by which the forwarding decisions are given. In this paper, we propose a linear-programming-based thresholding algorithm that significantly outperforms the current state-of-the-art in terms of achieved search efficiency values. Moreover, we evaluate a greedy heuristic for partial index replication and investigate the impact of result cache freshness on query forwarding performance. Finally, we present some optimizations that improve the performance further, under certain conditions. We evaluate the proposed techniques by simulations over a real-life setting, using a large query log and a document collection obtained from Yahoo!.},
+booktitle = {Proceedings of the 33rd International ACM SIGIR Conference on Research and Development in Information Retrieval},
+pages = {90–97},
+numpages = {8},
+keywords = {linear programming, optimization, search engines, distributed ir, query forwarding, index replication, result caching},
+location = {Geneva, Switzerland},
+series = {SIGIR '10}
+}
+
+@inproceedings{frances:multisiteefficiency,
+author = {Franc\`{e}s, Guillem and Bai, Xiao and Cambazoglu, B. Barla and Baeza-Yates, Ricardo},
+title = {Improving the Efficiency of Multi-Site Web Search Engines},
+year = {2014},
+isbn = {9781450323512},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2556195.2556249},
+doi = {10.1145/2556195.2556249},
+abstract = {A multi-site web search engine is composed of a number of search sites geographically distributed around the world. Each search site is typically responsible for crawling and indexing the web pages that are in its geographical neighborhood. A query is selectively processed on a subset of search sites that are predicted to return the best-matching results. The scalability and efficiency of multi-site web search engines have attracted a lot of research attention in recent years. In particular, research has focused on replicating important web pages across sites, forwarding queries to relevant sites, and caching results of previous queries. Yet, these problems have only been studied in isolation, but no prior work has properly investigated the interplay between them.In this paper, we take this challenge up and conduct what we believe is the first comprehensive analysis of a full stack of techniques for efficient multi-site web search. Specifically, we propose a document replication technique that improves the query locality of the state-of-the-art approaches with various replication budget distribution strategies. We devise a machine learning approach to decide the query forwarding patterns, achieving a significantly lower false positive ratio than a state-of-the-art thresholding approach with little negative impact on search result quality. We propose three result caching strategies that reduce the number of forwarded queries and analyze the trade-off they introduce in terms of storage and network overheads. Finally, we show that the combination of the best-of-the-class techniques yields very promising search efficiency, rendering multi-site, geographically distributed web search engines an attractive alternative to centralized web search engines.},
+booktitle = {Proceedings of the 7th ACM International Conference on Web Search and Data Mining},
+pages = {3–12},
+numpages = {10},
+keywords = {document replication, result caching, query processing, query forwarding, efficiency, distributed web search},
+location = {New York, New York, USA},
+series = {WSDM '14}
+}
+
+@article{kayaaslan:multisitereplication,
+title = {Document replication strategies for geographically distributed web search engines},
+journal = {Information Processing & Management},
+volume = {49},
+number = {1},
+pages = {51--66},
+year = {2013},
+issn = {0306--4573},
+doi = {https://doi.org/10.1016/j.ipm.2012.01.002},
+url = {http://www.sciencedirect.com/science/article/pii/S0306457312000039},
+author = {Enver Kayaaslan and B. Barla Cambazoglu and Cevdet Aykanat},
+keywords = {Web search, Distributed information retrieval, Document replication, Query processing, Query forwarding, Result caching},
+abstract = {Large-scale web search engines are composed of multiple data centers that are geographically distant to each other. Typically, a user query is processed in a data center that is geographically close to the origin of the query, over a replica of the entire web index. Compared to a centralized, single-center search engine, this architecture offers lower query response times as the network latencies between the users and data centers are reduced. However, it does not scale well with increasing index sizes and query traffic volumes because queries are evaluated on the entire web index, which has to be replicated and maintained in all data centers. As a remedy to this scalability problem, we propose a document replication framework in which documents are selectively replicated on data centers based on regional user interests. Within this framework, we propose three different document replication strategies, each optimizing a different objective: reducing the potential search quality loss, the average query response time, or the total query workload of the search system. For all three strategies, we consider two alternative types of capacity constraints on index sizes of data centers. Moreover, we investigate the performance impact of query forwarding and result caching. We evaluate our strategies via detailed simulations, using a large query log and a document collection obtained from the Yahoo! web search engine.}
+}
+
+@inproceedings{cambazoglu:yahoorefreshing,
+author = {Cambazoglu, Berkant Barla and Junqueira, Flavio P. and Plachouras, Vassilis and Banachowski, Scott and Cui, Baoqiu and Lim, Swee and Bridge, Bill},
+title = {A Refreshing Perspective of Search Engine Caching},
+year = {2010},
+isbn = {9781605587998},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/1772690.1772710},
+doi = {10.1145/1772690.1772710},
+abstract = {Commercial Web search engines have to process user queries over huge Web indexes under tight latency constraints. In practice, to achieve low latency, large result caches are employed and a portion of the query traffic is served using previously computed results. Moreover, search engines need to update their indexes frequently to incorporate changes to the Web. After every index update, however, the content of cache entries may become stale, thus decreasing the freshness of served results. In this work, we first argue that the real problem in today's caching for large-scale search engines is not eviction policies, but the ability to cope with changes to the index, i.e., cache freshness. We then introduce a novel algorithm that uses a time-to-live value to set cache entries to expire and selectively refreshes cached results by issuing refresh queries to back-end search clusters. The algorithm prioritizes the entries to refresh according to a heuristic that combines the frequency of access with the age of an entry in the cache. In addition, for setting the rate at which refresh queries are issued, we present a mechanism that takes into account idle cycles of back-end servers. Evaluation using a real workload shows that our algorithm can achieve hit rate improvements as well as reduction in average hit ages. An implementation of this algorithm is currently in production use at Yahoo!.},
+booktitle = {Proceedings of the 19th International Conference on World Wide Web},
+pages = {181–190},
+numpages = {10},
+keywords = {web search engines, caching, index updates, refresh},
+location = {Raleigh, North Carolina, USA},
+series = {WWW '10}
 }
 
 @article{ousterhout:ramcloud,

@@ -142,79 +142,172 @@ An edge, or connection, between two elements represents a possible path for pack
 % \section{Stream processing and Data-flow systems}
 
 \section{Multi-site web search engines}
-A line of work has studied the problem of designing a web search engine over multiple data centers geographically distant to each other.
-Data centers are associated with geographical regions;
+A series of papers \cite{cambazoglu:multisitequantifying, yates:multisitefeasibility, cambazoglu:multisiteforwarding, frances:multisiteefficiency, kayaaslan:multisitereplication}
+has studied the problem of designing a large-scale web search engine architecture over multiple, geographically distributed data centers.
+
+This works consider the following system model:
+The search engine architecture is composed of multiple data centers; Data centers are associated with geographical regions.
 Each data center stores and crawls and documents that are served by the web sites in its geographical region.
-User queries are routed to data centers according to the regions they originate from.
+As a result, each data center is responsible for a disjoint subset of the Web.
+The search engine builds an inverted index over the crawled documents, which is used to serve queries.
+
+\medskip
+\noindent
+In \cite{cambazoglu:multisitequantifying}, Cambazoglu et al. a taxonomy of search engine architectures for this problem.
+In a \textit{centralized} architecture, the entire index is stored in one, central site,
+and all user queries are submitted to this site.
+
+In this architecture, the index might be replicated or partitioned with the site.
+This architecture was used by early web search engines as well as small-scale engines.
+In \textit{replicated} architecture, the entire index is replicated over multiple data centers.
+Queries are routed to data centers based on geographical proximity of users to data centers.
+Documents are ranked based on ranking function; the result of query consists of the k highly ranked documents for that
+query.
+
+Finally, in a \textit{partitioned} architecture the document collection is partitioned into smaller, non-overlapping
+sub-collections such that each data center is responsible for a different sub-collection.
+Queries originating in a particular region, are evaluated over the partial index in the corresponding search site.
+The underlying assumption in this approach is that users are interested more in documents located in their own region,
+and local documents are more relevant for queries originating from the same region.
+This leads to gains in query processing time and throughput, as queries are now evaluated over small subsets of
+the index.
+The downside of this approach is that documents that are relevant to a query but are not local to the search site are
+not retrieved, leading to inferior search quality.
+The problem of accessing non-local documents has two immediate solutions:
+taking the data to where it is sought and/or taking the queries to what they seek.
+The first is an offline solution that requires partial replication of the popular documents in a region on some non-local search sites.
+The second is an online solution that requires selective forwarding of queries between search sites to extend cover- age of search results.
+forwarding of queries between search sites to extend cover- age of search results.
+
+This problem bares similarities to the problem studies in this thesis ...
+There are however two significant differences
+
+\medskip
+\noindent
+The works in \cite{yates:multisitefeasibility} and \cite{cambazoglu:multisiteforwarding}
+have proposed techniques for selective query forwarding.
+Selective forwarding works as follows:
+When a search site receives a query, it estimates the quality of the locally computed results relative to globally computed results
+(results that which would have been obtained through evaluation over the full index).
+If it is determined that the local index misses some documents that would have appeared in the global ranking,
+the local site estimates which remote sites might have those documents, and forwards the query to those sites.
+Finally, non-local and local results are merged and returned to the user.
+
+In addition, \cite{cambazoglu:multisiteforwarding} evaluates the impact of result caching
+on the rate of locally processed queries.
+Results show that with result caching, the fraction of queries that can be locally processed inc increases by 35\% to 45\%.
+
+\medskip
+\noindent
+In \cite{frances:multisiteefficiency} Kayaaslan et al.
+propose strategies for selectively replicating documents across search engine sites.
+The key idea is to identify documents that are of interest to the users of certain geographical regions,
+based on the occurrence frequencies of documents in past search results,
+and then replicate identified documents on remote sites so that future queries can be processed without the need for
+forwarding.
+Documents replication leads to improvements in the query processing efficiency, as when performed effectively,
+fewer queries need to be forwarded, this reducing average query response times and the overall query workload of the search engine.
+At the same time, increasing the volume of replicated documents has a negative impact on query processing times of local data centers,
+due to the increase in their index sizes.
+There is thus a trade-off between replication and search performance.
+The work in \cite{kayaaslan:multisitereplication}
+proposes three different document replication strategies, each optimizing a different objective:
+reducing the potential search quality loss, the average query response time, or the total query workload of the search system.
 
 
-In \cite{yates:multisitefeasibility}, Cambazoglu et al. a taxonomy of search architectures for this problem.
-In a centralized architecture, the entire web index is stored in one, central site,
-and all user queries are submitted to this single site.
-% Large-scale web search engines are composed of multiple data centers that are geographically distant to each other.
-% We consider a search engine architecture composed of multiple data centers.
 
-% In this architecture, each data center crawls and stores documents belonging to a disjoint subset of the Web.
+\section{Result caching}
 
-% Each data center then builds a local web index over its crawled documents, independent of the other data centers. We assume that IP addresses (or countries at a higher granular-ity) are statically assigned to data centers according to their geographical proximity. Each data center is responsible for pro-cessing queries that originate from its subset of IPs and is said to be the local data center for those queries.
+In \cite{cambazoglu:yahoorefreshing} Cambazoglu et al. present the design of the result cache used
+in the Yahoo! search engine.
+The authors argue that eviction policies are not critical in the setting of search engines, as those engines ca use
+in production large caches by using disk space to store query results.
+Instead, this work focuses on the problem of keeping cached results consistent with the search engine’s index
+as new batches of crawled documents are indexed.
+It proposes a TTL-based strategy for expiring cache entries
+and refreshing them by issuing refresh queries,
+and presents and algorithm for prioritizing cache entries to be refreshed based on the access frequency of entries and
+the age of the cached entry.
+
+In general, we can categorize cache invalidation and approaches in two types.
+Coupled or ``push-based'' approaches provide the cache with information about changes to the underlying data
+(the web search index in this case).
+Decoupled approaches invalidate cached entries without any concrete knowledge of changes to the underlying data.
+This work presents a decoupled, ``pull-based'' approach in which the caching system refreshes cache entries by querying
+the underlying index.
+Our design enables both push- and pull-based cache invalidation and refreshing,
+and enables system operators to select approach that is better suited for each particular use case.
 
 
-% At one extreme, a global index is built over the entire web collection, and this index is replicated on all data centers. Que-ries are processed on the entire web index, and hence search result qualities are identical to those of a centralized searcharchitecture. However, this approach does not scale well since the global web index needs to be constructed from a distrib-uted document collection and periodically maintained. Moreover, this approach requires major hardware investments andresults in high power consumption, which is an important issue for commercial search engines. Finally, processing queries over an entire web index may be too costly to satisfy the tight response time constraints of large-scale web search engines(Cambazoglu, Zaragoza, et al., 2010).
-% At the other extreme, each data center builds a regional web index on its local crawl and processes its queries over thispartial (local) index. This approach is highly scalable because partial indexes are locally maintained and less resources areneeded for query processing (alternatively, queries can be processed faster). However, as processing of queries is limitedto a partial index, some high-quality or best matching documents that are indexed by non-local data centers may be missingin search results. This may lead to not affordable losses in search result qualities, negatively impacting the user satisfactionand potentially the revenues of the search engine.
+% % We show that flushing the cache is not efficient and propose a TTL-based strategy to expire cache entries.
 
-% distributed Web search engines comprising geographically dispersed sites
+% % we focus on result caches, which store previously computed query results
+% % Given the high volume of user queries,
+% % result caches emerge as crucial performance components to reduce the query traffic to back-end servers and also to reduce
+% % the average query processing latency.
 
-% as an offline process, an inverted in-dex [10, 16] is built over a Web page collectio
-% Typically, this mapping is based ongeographical proximity of users to data center
+% % One major drawback of large result caches is freshness. Search engine indexes change frequently due to
 
-% We consider the problem of designing a distributed Web search engine over n remote sites.
-% We assume that sites associated with geographical regions (e.g., states, countries, group of countries, continents),but they could also represent other types of entities (e.g., languages,domain names, network clusters, etc.). 
-% We assume a collection of documentsDover a set of termsT.We assume that the documentsDare partitioned into two subsets:local (L) and global (G). Global documents are present in all sites,whereas local documents are further partitioned disjointly among the sites of S.
-% We also assume that the search engine serves a set of usersU, who are also assigned disjointly to the sites of S.
+% This cache introduces the concept of refreshing cache entries and presents a practical algorithm for prioritizing entries to refresh.
 
-% Replicating globally popular documents on all sites leads to a high reduction in the forwarded query count
 
-% [On the Feasibility of Multi-Site Web Search Engines]
-% contributions
-%  propose such a model to assess the operational costs of multi-site Web search systems.
-% query-processing algorithm that maximizes the amount of queries answered locally, without sacrificing the quality of the results compared to a centralized search engine.
+% There are two possible approaches for cache invalidation in this context: coupled and decoupled.
+% The coupled approach is the one of providing the cache with information about changes to the index.
+% This approach is difficult to realize in practice due to the complexity and computational cost of accurately determining changes to the index and propagating them to the result cache.
+% Such coupled solutions are out of the scope of this work.
 
-% assess the feasibility of distributed Web search engines comprising geographically dispersed sites
-% propose a detailed cost model that includes operational costs, and enables us to answer questions
-% - Given  an  optimization  that  reduces  the  average  latency  of an operation (crawling, receiving request, query processing)
-%   how does it affect power consumption?
-% - Given  different local  rates  for  power,  how  much  resource savings are necessary to compensate for such differences?
-% Query-processing algorithm
-% #1, offline index construction : each site builds index on the set of docs assigned to it (local+global)
-%   computes upper bound on the scoring function - threshold -  for each term of docs in a site of local docs: upper bound to the contribution of term t to ranking function for query that contains t
-%   subset of "good-quality" docs replicated and indexed in all sites
-% #2, offline propagation: all sites communicate with each other, exchange thresholds computed at phase #1 -  each site acquires complete info about thresholds of all terms in all sites
-% phase #3, online query processing:
-% each site handles queries it receives: compute matching set of docs from local index, rank them → use thresholds of other sites to decide whether computed results would have been identical to centralized system results
-% use thresholds to obtain guarantees on the quality of partial results computed locally
-% if quality guarantees not satisfied → propagate query to other sites to obtain partial results
+% which we adopt in this work, is the one of invalidating cached entries without any concrete knowledge of changes to the index.
+% A simple way to achieve this goal is to use a time-to-live (TTL) value and mark entries as expired once they have been in the cache for longer than TTL.
 
-% [Quantifying Performance and Quality Gains inDistributed Web Search Engines]
-% Taxonomy
-% centralized architecture: the entire Web index is stored in one, central site. The index is replicated locally over multiple search clusters located within the site.All user queries are submitted to this single site, where eachquery is completely processed by an individual cluste
-% index replication: Theentire index is replicated over multiple (e.g., several), geo-graphically distant data centers. The index is also locallyreplicated in each data center as in the case of SE-C. Thereis a static, one-to-one mapping between user queries andsearch sites, i.e., each site is responsible for processing asubset of user queries. Typically, this mapping is based ongeographical proximity of users to data centers
-% In the SE-P architecture, the global document collectionis partitioned into smaller, non-overlapping sub-collectionssuch that each data center has a different sub-collection as-signed to it. Hence, the entire index is partitioned and dis-tributed over multiple, geographically distant search sites.Each site replicates its local sub-index on its clusters. Map-ping of queries to sites and processing is similar to SE-R
-%  There are two ways to alleviate this problem:  taking popular data to queries or taking some queries to sites with relevant data
-% The first is an offlineprocess that requires replicating a portion of the index (e.g.,globally popular documents) on data centers. The secondis an online process based on forwarding some queries (e.g.,queries that are expected to have relevant documents onother sites) to non-local data centers for additional process-ing.
+% mechanism for expiring cache entries based on a time-to-live value and a mechanism for maintaining the cache content fresh
+% by issuing refresh queries to back-end search clusters,
+% propose a novel algorithm for prioritizing cache entries to be refreshed based on the access frequency of entries and the age of the cached entry.
 
-% The replica-tion algorithm used is na ̈ıve because it is simply based onreplicating frequently accessed parts of the index on all datacenters,
-% The query forwardingalgorithm is novel because it has a filtering step which pre-vents forwarding of queries to sites with irrelevant content.
+% examine result caching, and
 
-% [Query Forwarding inGeographically Distributed Search Engines]
-% We describe an LP-based thresholding algorithm that significantly outperforms the current state-of-the-art [3]
-% We evaluate a heuristic for partial index replication.
-% We investigate the impact of result caching and cache freshness on query forwarding performance.
-% We present several optimizations that provide furtherperformance improvements under certain conditions
-% Note: uses caching -> ref to Proteus architecture that does that
-% as a significant impact on the number of for-warded queries. With result caching, the fraction of queriesthat can be locally processed increases by 35%–45%, depend-ing on the offline query set used (Fig. 13). We also observethat more informative query sets receive a lower benefit.This is because, under result caching, only the queries thatare seen for the first time (i.e., compulsory cache misses) aresubject to forwarding
+% % [On the Feasibility of Multi-Site Web Search Engines]
+% % contributions
+% %  propose such a model to assess the operational costs of multi-site Web search systems.
+% % query-processing algorithm that maximizes the amount of queries answered locally, without sacrificing the quality of the results compared to a centralized search engine.
 
-% [Energy-Price-Driven Query Processing in Multi-center Web Search Engines]
-% We have provided an optimization framework and a prac-tical algorithm, based on shifting query workloads betweensearch data centers,  in order to 
+% % assess the feasibility of distributed Web search engines comprising geographically dispersed sites
+% % propose a detailed cost model that includes operational costs, and enables us to answer questions
+% % - Given  an  optimization  that  reduces  the  average  latency  of an operation (crawling, receiving request, query processing)
+% %   how does it affect power consumption?
+% % - Given  different local  rates  for  power,  how  much  resource savings are necessary to compensate for such differences?
+% % Query-processing algorithm
+% % #1, offline index construction : each site builds index on the set of docs assigned to it (local+global)
+% %   computes upper bound on the scoring function - threshold -  for each term of docs in a site of local docs: upper bound to the contribution of term t to ranking function for query that contains t
+% %   subset of "good-quality" docs replicated and indexed in all sites
+% % #2, offline propagation: all sites communicate with each other, exchange thresholds computed at phase #1 -  each site acquires complete info about thresholds of all terms in all sites
+% % phase #3, online query processing:
+% % each site handles queries it receives: compute matching set of docs from local index, rank them → use thresholds of other sites to decide whether computed results would have been identical to centralized system results
+% % use thresholds to obtain guarantees on the quality of partial results computed locally
+% % if quality guarantees not satisfied → propagate query to other sites to obtain partial results
 
-% [Document replication strategies for geographically distributed web search engines]
-% As a remedy to this scalability problem, we propose a document replication frame-work in which documents are selectively replicated on data centers based on regional userinterests. Within this framework, we propose three different document replication strate-gies, each optimizing a different objective: reducing the potential search quality loss, theaverage query response time, or the total query workload of the search system
+% % [Quantifying Performance and Quality Gains in Distributed Web Search Engines]
+% % Taxonomy
+% % centralized architecture: the entire Web index is stored in one, central site. The index is replicated locally over multiple search clusters located within the site.All user queries are submitted to this single site, where eachquery is completely processed by an individual cluste
+% % index replication: The entire index is replicated over multiple (e.g., several), geo-graphically distant data centers. The index is also locallyreplicated in each data center as in the case of SE-C. Thereis a static, one-to-one mapping between user queries andsearch sites, i.e., each site is responsible for processing asubset of user queries. Typically, this mapping is based ongeographical proximity of users to data centers
+% % In the SE-P architecture, the global document collectionis partitioned into smaller, non-overlapping sub-collectionssuch that each data center has a different sub-collection as-signed to it. Hence, the entire index is partitioned and dis-tributed over multiple, geographically distant search sites.Each site replicates its local sub-index on its clusters. Map-ping of queries to sites and processing is similar to SE-R
+% %  There are two ways to alleviate this problem:  taking popular data to queries or taking some queries to sites with relevant data
+% % The first is an offline process that requires replicating a portion of the index (e.g.,globally popular documents) on data centers. The secondis an online process based on forwarding some queries (e.g.,queries that are expected to have relevant documents onother sites) to non-local data centers for additional process-ing.
+
+% % The replication algorithm used is naive because it is simply based on replicating frequently accessed parts of the index on all data centers,
+% % The query forwarding algorithm is novel because it has a filtering step which prevents forwarding of queries to sites with irrelevant content.
+
+% % [Query Forwarding in Geographically Distributed Search Engines]
+% % We describe an LP-based threshold-ing algorithm that significantly outperforms the current state-of-the-art [3]
+% % We evaluate a heuristic for partial index replication.
+% % We investigate the impact of result caching and cache freshness on query forwarding performance.
+% % We present several optimizations that provide further performance improvements under certain conditions
+% % Note: uses caching -> ref to Proteus architecture that does that
+% % as a significant impact on the number of for-warded queries. With result caching, the fraction of queries that can be locally processed increases by 35%–45%, depend-ing on the offline query set used (Fig. 13).
+% % We also observethat more informative query sets receive a lower benefit.This is because, under result caching, only the queries thatare seen for the first time (i.e., compulsory cache misses) aresubject to forwarding
+
+% % [Energy-Price-Driven Query Processing in Multi-center Web Search Engines]
+% % We have provided an optimization framework and a practical algorithm, based on shifting query workloads between search data centers,  in order to
+
+% % [Document replication strategies for geographically distributed web search engines]
+% % As a remedy to this scalability problem, we propose a document replication frame-work in which documents are selectively replicated on data centers based on regional userinterests.
+% % Within this framework, we propose three different document replication strate-gies, each optimizing a different objective: reducing the potential search quality loss, theaverage query response time, or the total query workload of the search system
