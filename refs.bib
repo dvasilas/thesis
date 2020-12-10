@@ -1484,3 +1484,32 @@ numpages = {1},
 location = {San Jose, California},
 series = {NSDI'10}
 }
+
+@inproceedings{dean:mapreduce,
+title	= {MapReduce: Simplified Data Processing on Large Clusters},
+author	= {Jeffrey Dean and Sanjay Ghemawat},
+year	= {2004},
+booktitle	= {OSDI'04: Sixth Symposium on Operating System Design and Implementation},
+pages	= {137--150},
+address	= {San Francisco, CA}
+}
+
+@article{mccreadie:mapreduceindexing,
+author = {Mccreadie, Richard and Macdonald, Craig and Ounis, Iadh},
+title = {MapReduce Indexing Strategies: Studying Scalability and Efficiency},
+year = {2012},
+issue_date = {September, 2012},
+publisher = {Pergamon Press, Inc.},
+address = {USA},
+volume = {48},
+number = {5},
+issn = {0306-4573},
+url = {https://doi.org/10.1016/j.ipm.2010.12.003},
+doi = {10.1016/j.ipm.2010.12.003},
+abstract = {In Information Retrieval (IR), the efficient indexing of terabyte-scale and larger corpora is still a difficult problem. MapReduce has been proposed as a framework for distributing data-intensive operations across multiple processing machines. In this work, we provide a detailed analysis of four MapReduce indexing strategies of varying complexity. Moreover, we evaluate these indexing strategies by implementing them in an existing IR framework, and performing experiments using the Hadoop MapReduce implementation, in combination with several large standard TREC test corpora. In particular, we examine the efficiency of the indexing strategies, and for the most efficient strategy, we examine how it scales with respect to corpus size, and processing power. Our results attest to both the importance of minimising data transfer between machines for IO intensive tasks like indexing, and the suitability of the per-posting list MapReduce indexing strategy, in particular for indexing at a terabyte-scale. Hence, we conclude that MapReduce is a suitable framework for the deployment of large-scale indexing.},
+journal = {Inf. Process. Manage.},
+month = sep,
+pages = {873-–888},
+numpages = {16},
+keywords = {Efficiency, Hadoop, Indexing, MapReduce, Scalability}
+}
