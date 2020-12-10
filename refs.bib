@@ -143,6 +143,22 @@ url = {https://www.usenix.org/conference/atc16/technical-sessions/presentation/k
   url       = {https://doi.org/10.5441/002/edbt.2014.76}
 }
 
+@inproceedings{tang:deferredindexing,
+author = {Tang, Yuzhe and Iyengar, Arun and Tan, Wei and Fong, Liana and Liu, Ling and Palanisamy, Balaji},
+title = {Deferred Lightweight Indexing for Log-Structured Key-Value Stores},
+year = {2015},
+isbn = {9781479980062},
+publisher = {IEEE Press},
+url = {https://doi.org/10.1109/CCGrid.2015.150},
+doi = {10.1109/CCGrid.2015.150},
+abstract = {The recent shift towards write-intensive workload on big data (e.g., financial trading, social user-generated data streams) has pushed the proliferation of log-structured key-value stores, represented by Google's BigTable [1], Apache HBase [2] and Cassandra [3]. While providing key-based data access with a Put/Get interface, these key-value stores do not support value-based access methods, which significantly limits their applicability in modern web and database applications. In this paper, we present DELI, a DEferred Lightweight Indexing scheme on the log-structured key-value stores. To index intensively updated big data in real time, DELI aims at making the index maintenance as lightweight as possible. The key idea is to apply an append-only design for online index maintenance and to collect index garbage at carefully chosen time. DELI optimizes the performance of index garbage collection through tightly coupling its execution with a native routine process called compaction. The DELI's system design is fault-tolerant and generic (to most key-value stores); we implemented a prototype of DELI based on HBase without internal code modification. Our experiments show that the DELI offers significant performance advantage for the write-intensive index maintenance.},
+booktitle = {Proceedings of the 15th IEEE/ACM International Symposium on Cluster, Cloud, and Grid Computing},
+pages = {11–20},
+numpages = {10},
+location = {Shenzhen, China},
+series = {CCGRID '15}
+}
+
 @inproceedings{baker:megastore,
 title	= {Megastore: Providing Scalable, Highly Available Storage for Interactive Services},
 author	= {Jason Baker and Chris Bond and James C. Corbett and JJ Furman and Andrey Khorlin and James Larson and Jean-Michel Leon and Yawei Li and Alexander Lloyd and Vadim Yushprakh},
@@ -1087,7 +1103,7 @@ series = {WSDM '14}
 
 @article{kayaaslan:multisitereplication,
 title = {Document replication strategies for geographically distributed web search engines},
-journal = {Information Processing & Management},
+journal = {Information Processing \& Management},
 volume = {49},
 number = {1},
 pages = {51--66},
@@ -1398,4 +1414,73 @@ month = feb,
 pages = {120-–135},
 numpages = {16},
 keywords = {intra-operator parallelism, choose-plan meta-operator, semantics, data structures, algebra operators, resource allocation, parallel query evaluation system, parallel programming, data type, dynamic query evaluation plans, data-driven dataflow, demand-driven dataflow, support functions, query optimization, predicates, partitioned datasets, database query processing, horizontal inter-operator parallelism, dataflow query execution system, extensibility, query processing operators, query processing, Volcano, type-specific methods., novel meta-operators}
+}
+
+@article{lakshmanan:placementstrategies,
+author = {Lakshmanan, Geetika T. and Li, Ying and Strom, Rob},
+title = {Placement Strategies for Internet-Scale Data Stream Systems},
+year = {2008},
+issue_date = {November 2008},
+publisher = {IEEE Educational Activities Department},
+address = {USA},
+volume = {12},
+number = {6},
+issn = {1089-7801},
+url = {https://doi.org/10.1109/MIC.2008.129},
+doi = {10.1109/MIC.2008.129},
+abstract = {Optimally assigning streaming tasks to network machines is a key factor that influences a large data-stream-processing system's performance. Although researchers have prototyped and investigated various algorithms for task placement in data stream management systems, taxonomies and surveys of such algorithms are currently unavailable. To tackle this knowledge gap, the authors identify a set of core placement design characteristics and use them compare eight placement algorithms. They also present a heuristic decision tree that can help designers judge how suitable a given placement solutions might be to specific problems.},
+journal = {IEEE Internet Computing},
+month = nov,
+pages = {50–60},
+numpages = {11},
+keywords = {data-management systems, data stream management, task-placement algorithms, system performance, stream processing}
+}
+
+@inproceedings{pietzuch:networkawareopplacement,
+author = {P. Pietzuch and J. Shneidman and M. Roussopoulos and J. Ledlie and M. Seltzer and M. Welsh},
+booktitle = {22nd International Conference on Data Engineering},
+title = {Network-Aware Operator Placement for Stream-Processing Systems},
+year = {2006},
+volume = {},
+issn = {},
+pages = {49},
+keywords = {null},
+doi = {10.1109/ICDE.2006.105},
+url = {https://doi.ieeecomputersociety.org/10.1109/ICDE.2006.105},
+publisher = {IEEE Computer Society},
+address = {Los Alamitos, CA, USA},
+month = {apr}
+}
+
+@article{stonebraker:streamprocessingrequirements,
+author = {Stonebraker, Michael and \c{C}etintemel, Uundefinedur and Zdonik, Stan},
+title = {The 8 Requirements of Real-Time Stream Processing},
+year = {2005},
+issue_date = {December 2005},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {34},
+number = {4},
+issn = {0163-5808},
+url = {https://doi.org/10.1145/1107499.1107504},
+doi = {10.1145/1107499.1107504},
+abstract = {Applications that require real-time processing of high-volume data steams are pushing the limits of traditional data processing infrastructures. These stream-based applications include market feed processing and electronic trading on Wall Street, network and infrastructure monitoring, fraud detection, and command and control in military environments. Furthermore, as the "sea change" caused by cheap micro-sensor technology takes hold, we expect to see everything of material significance on the planet get "sensor-tagged" and report its state or location in real time. This sensorization of the real world will lead to a "green field" of novel monitoring and control applications with high-volume and low-latency processing requirements.Recently, several technologies have emerged---including off-the-shelf stream processing engines---specifically to address the challenges of processing high-volume, real-time data without requiring the use of custom code. At the same time, some existing software technologies, such as main memory DBMSs and rule engines, are also being "repurposed" by marketing departments to address these applications.In this paper, we outline eight requirements that a system software should meet to excel at a variety of real-time stream processing applications. Our goal is to provide high-level guidance to information technologists so that they will know what to look for when evaluation alternative stream processing solutions. As such, this paper serves a purpose comparable to the requirements papers in relational DBMSs and on-line analytical processing. We also briefly review alternative system software technologies in the context of our requirements.The paper attempts to be vendor neutral, so no specific commercial products are mentioned.},
+journal = {SIGMOD Rec.},
+month = dec,
+pages = {42–47},
+numpages = {6}
+}
+
+@inproceedings{agarwal:volley,
+author = {Agarwal, Sharad and Dunagan, John and Jain, Navendu and Saroiu, Stefan and Wolman, Alec and Bhogan, Harbinder},
+title = {Volley: Automated Data Placement for Geo-Distributed Cloud Services},
+year = {2010},
+publisher = {USENIX Association},
+address = {USA},
+abstract = {As cloud services grow to span more and more globally distributed datacenters, there is an increasingly urgent need for automated mechanisms to place application data across these datacenters. This placement must deal with business constraints such as WAN bandwidth costs and datacenter capacity limits, while also minimizing user-perceived latency. The task of placement is further complicated by the issues of shared data, data inter-dependencies, application changes and user mobility. We document these challenges by analyzing month-long traces from Microsoft's Live Messenger and Live Mesh, two large-scale commercial cloud services.We present Volley, a system that addresses these challenges. Cloud services make use of Volley by submitting logs of datacenter requests. Volley analyzes the logs using an iterative optimization algorithm based on data access patterns and client locations, and outputs migration recommendations back to the cloud service.To scale to the data volumes of cloud service logs, Volley is designed to work in SCOPE [5], a scalable MapReduce-style platform; this allows Volley to perform over 400 machine-hours worth of computation in less than a day. We evaluate Volley on the month-long Live Mesh trace, and we find that, compared to a state-of-the-art heuristic that places data closest to the primary IP address that accesses it, Volley simultaneously reduces datacenter capacity skew by over 2\texttimes{}, reduces inter-datacenter traffic by over 1.8\texttimes{} and reduces 75th percentile user-latency by over 30%.},
+booktitle = {Proceedings of the 7th USENIX Conference on Networked Systems Design and Implementation},
+pages = {2},
+numpages = {1},
+location = {San Jose, California},
+series = {NSDI'10}
 }

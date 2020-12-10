@@ -1,313 +1,96 @@
-\section{Secondary attribute querying in non-relational data stores}
+\section{State and computation placement}
+\label{sec:placement}
+\subsection{Computation placement}
 
-%  get intro from SLIK
-Many large-scale key-value storage systems sacrifice features like secondary indexing and/or consistency in favor of scalability or performance. This limits the ease and efficiency of application development on such systems.
+The problem of the placement of computations on processing nodes has been studied primarily in the context of distributed
+stream processing systems \cite{lakshmanan:placementstrategies}.
 
-\subsection{Secondary index based approaches}
-A number of implemented secondary indexing approaches for distributed databases have been proposed.
+A stream processing system can be viewed as a flow graph composed of a set of message sources (producers),
+and a collection of stream processing operators that periodically consume messages, perform processing tasks,
+and deliver results either to message sinks (consumers) or to other operators.
+In addition, there exists a collection of processing nodes available for deploying operators.
+The operator placement problem consists of computing an assignment of operators to nodes that optimally satisfies a
+certain metric, such as load, latency, or network resource usage.
 
-% // SLIK: Scalable Low-Latency Indexes for a Key-Value Store
+From an architecture point of view, placement decisions are performed either by a central placement module, independent
+from the stream processing engine, or are decentralized, each operator taking local placement decisions.
+Our work currently consider the placement decisions as independent to the query processing tasks;
+the placement of the QPU graph on system nodes is decided on by an central entity (a system operator in our current design)
+before the system is deployed.
+A direction for future work could be a hybrid placement logic, in which after an initial global placement decision,
+individual QPUs make local decisions in runtime in response to changing workload, network and resource conditions.
 
-SLIK \cite{kejriwal:slik} proposes an approach for implementing secondary indexes in a large-scale main key-value store.
-It is designed with the goals of low latency, high scalability, consistency
-(specifically the requirement of providing the same strong consistency as a centralized system) and high availability.
+Placement algorithms can be categorized to centralized and decentralized.
+Centralized placement algorithms require global view of the system, including workload information and resource availability.
+These algorithms can compute globally optimal placement assignments, but often have limited scalability.
+On the other had, decentralized algorithms achieve improved scalability by making placement decisions based on local
+workload and resource information.
+Our design implicitly assumes that an system operator deciding on the placement of a QPU graph has a global view of the
+system.
 
-SLIK partitions secondary indexes using the scheme which we refer to as partitioning by term.
+An important difference with these works is that in our current design placement decisions are performed offline,
+before a QPU graph is deployed, and placement is static throughput the system's operation.
 
-Index partition (referred to as an indexlets) are implemented using B+trees.
-Index entries store hashes of data items' primary keys.
-Therefore, after an index lookup each data item contains the result need to be retrieved from the storage engine.
+Another distinction is that, most often, this approaches consider stateless operators.
+In this work we propose an approach for enabling flexible placement of not only stateless operators, such as
+filters, but stateful components such and indexes and materialized views.
+In addition, we take into account techniques such as partitioning and replication of query processing state.
+We consider this one of our mains contributions.
 
-To achieve consistent index lookups SLIK
-Ordered writes.
-Index entries are created before updates to the corresponding data items are applied,
-and old index entries are removed asynchronously.
-This guarantees that if a data item contains a secondary attribute value, then an index lookup for that value will return the data item,
-by ensuring that the lifespan of each index entry spans that of the corresponding data item.
-
-Treating data items as ground truth and index entries as hints.
-The system verifies the results of index lookups by checking the corresponding data items.
-This guarantees that if a data item is returned by an index lookup then this data item contains the requested secondary key.
-
-Moreover, SLIK performs long-running bulk operations such as index creation, deletion and migration in the background,
-n order to avoid blocking blocking normal operations.
-
-SLIK is implemented in RAMCloud \cite{ousterhout:ramcloud}, a distributed in-memory key-value storage system.
-
-This work analyses alternative approaches available in a number of aspects in the design of a secondary indexing system, and discusses the tradeoffs these approaches.
-They make specific design decisions guided by their design goals, for example the requirement for consistency for index lookups.
-Moreover, this work does not consider a geo-distributed setting.
-
-% // Secondary Indexing Techniques for Key-Value Stores: Two Rings To Rule Them All
-
-\cite{dsilva:tworings}
-We have discussed the results of this analysis in detail in section
-
-In this paper, we explore the challenges associated with indexing modern distributed table-based data stores and investigate two secondary index approaches which we have integrated within HBase.
-Our detailed analysis and experimental results prove the benefits of both the approaches.
-Further, we demonstrate that such secondary index implementation decisions cannot be made in isolation of the data distribution and that different indexing approaches can cater to different needs.
-We discuss two indexing strategies for distributed key-value stores:
-one based on distributed tables that is able to exploit the table model of the underlying system for index management,
-the other using a co-location approach allowing for efficient main-memory access
-
-Both strategies are implemented and integrated into HBase in a non-intrusive way.
-We provide an enhanced client interface to query HBase tables using secondary indexing that supports both point queries and range queries.
-We present a detailed performance metrics on various database operations with secondary indices and a comparative analysis of the different approaches
-We present a thorough analysis on the effects of data distribution on different indexing approaches.
-We provided a very detailed analysis of how different data distributions warrant different indexing approaches and demonstrated a case for both implementations.
-Our results show that there is clearly a benefit to  having  secondary  indices  in  HBase,and  that  they  can  be  often  built  with  reasonable  performance overhead.
-Although there has been some prior works to achieve secondary indexing in HBase,
-our work have been more detailed and insightful about the various alternatives and clearly shows that there is no one-stop solution to secondary indexing needs in HBase.
-
-
-
-% // Diff-Index: Differentiated Index in Distributed Log-Structured Data Stores
-\cite{tan:diffindex}
-
-% // Schema-Agnostic Indexing with Azure DocumentDB
-\cite{shukla:schemaagnostic}
-
-
-% \subsection{Secondary index partitioning schemes}
-% \cite{dsilva:tworings}
-
-% \cite{kejriwal:slik}
-% SLIK achieves high scalability by distributing index entries independently from their objects rather than co-locating them
-
-% % SLIK: Cassandra [20], DynamoDB [3] and Phoenix [7] on HBase [4] provide local secondary indexes which are partitioned using the co-location approach
-% % Some of the systems above like DynamoDB [3] and Phoenix [7] on HBase [4] also provide global secondary indexes, but they are only eventually consistent.
-
-% \subsection{Approaches not based on secondary indexing}
-
-% \textbf{HyperDex: A Distributed, Searchable Key-Value Store} \cite{escriva:hyperdex}
-
-% SLIK =>
-% HyperDex is a disk-based large-scale storage system that supports consistent indexing.
-% It partitions data using a novel hyperspace hashing scheme by mapping objects’ attributes into a multi-dimensional space.
-% As the number of attributes increase, the number of hyperspaces increases dramatically.
-% HyperDex alleviates this by partitioning tables with many attributes into multiple lower-dimensional hyperspaces called subspaces.
-% HyperDex also replicates the entire contents of objects in each index.
-% This means that while HyperDex provides an efficient mechanism for search, it uses more storage space for the extra copies of objects.
-% While this is acceptable for disk based systems, it would be very expensive for main-memory based systems.
-
-% \textbf{Replex: A Scalable, Highly Available Multi-Index DataStore} \cite{tai:replex}
-
-
-% \section{Multi-site Web search}
-
-% \textbf{On the Feasibility of Multi-Site Web Search Engines} \cite{baezayates:multisitefeasibility}
-
-% \textbf{Quantifying Performance and Quality Gains in Distributed Web Search Engines} \cite{cambazoglu:multisitequantifying}
-
-% \textbf{Query Forwarding inGeographically Distributed Search Engines} \cite{cambazoglu:multisiteforwarding}
-
-% \textbf{Improving the Efficiency of Multi-site Web Search Engines} \cite{frances:multisiteimprovingefficiency}
-
-\section{Modular - Flexible architectures}
-
-% // The Click Modular Router
-
-
-Click \cite{kohler:click} proposes a software architecture for building flexible and configurable routers.
-
-A Click router is assembled from packet processing modules called elements.
-Individual elements implement simple router functions like packet classification, queueing, scheduling, and interfacing with network devices.
-A router configuration is a directed graph with elements at the vertices;
-packets flow along the edges of the graph.
-Several features make individual elements more powerful and complex configurations easier to write, including pull connections,
-which model packet flow driven by transmitting hardware devices, and flow-based router context, which helps an element locate other interesting elements.
-
-This paper presents Click, a flexible, modular software architecture for creating routers.
-Click routers are built from fine-grained components;
-this supports fine-grained extensions throughout the forwarding path.
-The components are packet processing modules called elements.
-
-A Click element represents a unit of router processing.
-An element represents a conceptually simple computation,such as decrementing an IP packet’s time-to-live field,
-rather than a large, complex computation, such as IP routing.
-A Click router configuration is a directed graph with elements at the vertices.
-An edge, or connection, between two elements represents a possible path for packet transfer.
-
-% \bibliographystyle{plainnat}
-% \bibliography{refs}
-
-% \section{Distributed query processing}
-
-% \subsection{Query processing in Peer-to-Peer systems}
-% DHT stuff.
-
-% \subsection{Query processing in distributed databases}
-
-
-% \section{Stream processing and Data-flow systems}
-
-\section{Multi-site web search engines}
-A series of papers \cite{cambazoglu:multisitequantifying, yates:multisitefeasibility, cambazoglu:multisiteforwarding, frances:multisiteefficiency, kayaaslan:multisitereplication}
-has studied the problem of designing a large-scale web search engine architecture over multiple, geographically distributed data centers.
-
-This works consider the following system model:
-The search engine architecture is composed of multiple data centers; Data centers are associated with geographical regions.
-Each data center stores and crawls and documents that are served by the web sites in its geographical region.
-As a result, each data center is responsible for a disjoint subset of the Web.
-The search engine builds an inverted index over the crawled documents, which is used to serve queries.
+More generally, in this work, we focus on the \textit{mechanisms} (as opposed to placement algorithms)
+required for enabling flexible placement.
+While we evaluate different placement configurations in order to demonstrate the benefits of flexile placement,
+we consider placement algorithms an orthogonal problem that is out of the scope of this work.
 
 \medskip
 \noindent
-In \cite{cambazoglu:multisitequantifying}, Cambazoglu et al. a taxonomy of search engine architectures for this problem.
-In a \textit{centralized} architecture, the entire index is stored in one, central site,
-and all user queries are submitted to this site.
+Two optimization techniques often employed by operator placement algorithms are operator reuse and replication.
+Operator reuse is based on the observation that consumers commonly execute identical of partially identical queries.
+Instead of instantiating new operators for each query,
+some placement algorithms \cite{pietzuch:networkawareopplacement} try to detect opportunities for sharding intermediate results across queries.
+This avoids transmitting multiple redundant copies of the same data.
+The design and implementation of query processing units includes two mechanisms that enable operator reuse.
+First, each QPU can perform multiple independent processing tasks in parallel.
+As a result, queries that require the functionality of a certain QPU can share the same QPU instance,
+provided there are enough resources.
+Second, when a QPU receives a query request, it first examines if that particular query is already being executed,
+and if so it appends the component that submitted the query to the receivers of the query's output stream.
 
-In this architecture, the index might be replicated or partitioned with the site.
-This architecture was used by early web search engines as well as small-scale engines.
-In \textit{replicated} architecture, the entire index is replicated over multiple data centers.
-Queries are routed to data centers based on geographical proximity of users to data centers.
-Documents are ranked based on ranking function; the result of query consists of the k highly ranked documents for that
-query.
+Operator replication consists of deploying multiple instances of an operator,
+and partitioning the input stream among operator replicas.
+This enhances the scalability of stream processing as it parallelizes the processing task among operator replicas
+\cite{stonebraker:streamprocessingrequirements}.
+This technique has been also applied to distributed query processing.
+Query processing in CockroachDB \cite{cockroachdb:distsql} uses the concept of grouping to partition a logical stream
+(that is part of a query processing task) into multiple physical streams which can be processed in parallel.
+A stream is divided into groups so that computation within a group is independent from other groups.
+Parallelizing query processing across operator replicas is also possible in QPU-based architectures.
+The QPU graph and configuration for achieving that is akin to the index partitioning scheme presented in Section~\ref{sec:cs_index_partitioning}.
 
-Finally, in a \textit{partitioned} architecture the document collection is partitioned into smaller, non-overlapping
-sub-collections such that each data center is responsible for a different sub-collection.
-Queries originating in a particular region, are evaluated over the partial index in the corresponding search site.
-The underlying assumption in this approach is that users are interested more in documents located in their own region,
-and local documents are more relevant for queries originating from the same region.
-This leads to gains in query processing time and throughput, as queries are now evaluated over small subsets of
-the index.
-The downside of this approach is that documents that are relevant to a query but are not local to the search site are
-not retrieved, leading to inferior search quality.
-The problem of accessing non-local documents has two immediate solutions:
-taking the data to where it is sought and/or taking the queries to what they seek.
-The first is an offline solution that requires partial replication of the popular documents in a region on some non-local search sites.
-The second is an online solution that requires selective forwarding of queries between search sites to extend cover- age of search results.
-forwarding of queries between search sites to extend cover- age of search results.
+We note that in the the scope of this work neither operator reuse nor replication are automatically handled by the system,
+as in some stream processing systems.
+The system however provides the functionalities required for putting in place these techniques.
+Employing operator replication and reuse in a QPU graph can be performed by configuring the graph accordingly.
 
-This problem bares similarities to the problem studies in this thesis ...
-There are however two significant differences
+\subsection{State placement}
+Large scale web services are concurrently used by a large number of geographically distributed clients.
+A significant challenge that these services face is the large request latencies resulting from the geographical distance
+between clients and application state.
+A common solution to this latency problem is to place data closer to clients in order to avoid costly round-trips
+to the data center.
+For example, Google has comparatively few data center locations relative to edge nodes \cite{google:infra}.
 
-\medskip
-\noindent
-The works in \cite{yates:multisitefeasibility} and \cite{cambazoglu:multisiteforwarding}
-have proposed techniques for selective query forwarding.
-Selective forwarding works as follows:
-When a search site receives a query, it estimates the quality of the locally computed results relative to globally computed results
-(results that which would have been obtained through evaluation over the full index).
-If it is determined that the local index misses some documents that would have appeared in the global ranking,
-the local site estimates which remote sites might have those documents, and forwards the query to those sites.
-Finally, non-local and local results are merged and returned to the user.
+Content delivery networks (CDNs), such as Akamai \footnote{https://www.akamai.com} aim at deploying data on edge nodes,
+close to clients.
+However, CDNs focus on static data as such images and video content and are not well suited for mutable state.
 
-In addition, \cite{cambazoglu:multisiteforwarding} evaluates the impact of result caching
-on the rate of locally processed queries.
-Results show that with result caching, the fraction of queries that can be locally processed inc increases by 35\% to 45\%.
-
-\medskip
-\noindent
-In \cite{frances:multisiteefficiency} Kayaaslan et al.
-propose strategies for selectively replicating documents across search engine sites.
-The key idea is to identify documents that are of interest to the users of certain geographical regions,
-based on the occurrence frequencies of documents in past search results,
-and then replicate identified documents on remote sites so that future queries can be processed without the need for
-forwarding.
-Documents replication leads to improvements in the query processing efficiency, as when performed effectively,
-fewer queries need to be forwarded, this reducing average query response times and the overall query workload of the search engine.
-At the same time, increasing the volume of replicated documents has a negative impact on query processing times of local data centers,
-due to the increase in their index sizes.
-There is thus a trade-off between replication and search performance.
-The work in \cite{kayaaslan:multisitereplication}
-proposes three different document replication strategies, each optimizing a different objective:
-reducing the potential search quality loss, the average query response time, or the total query workload of the search system.
-
-
-
-\section{Result caching}
-
-In \cite{cambazoglu:yahoorefreshing} Cambazoglu et al. present the design of the result cache used
-in the Yahoo! search engine.
-The authors argue that eviction policies are not critical in the setting of search engines, as those engines ca use
-in production large caches by using disk space to store query results.
-Instead, this work focuses on the problem of keeping cached results consistent with the search engine’s index
-as new batches of crawled documents are indexed.
-It proposes a TTL-based strategy for expiring cache entries
-and refreshing them by issuing refresh queries,
-and presents and algorithm for prioritizing cache entries to be refreshed based on the access frequency of entries and
-the age of the cached entry.
-
-In general, we can categorize cache invalidation and approaches in two types.
-Coupled or ``push-based'' approaches provide the cache with information about changes to the underlying data
-(the web search index in this case).
-Decoupled approaches invalidate cached entries without any concrete knowledge of changes to the underlying data.
-This work presents a decoupled, ``pull-based'' approach in which the caching system refreshes cache entries by querying
-the underlying index.
-Our design enables both push- and pull-based cache invalidation and refreshing,
-and enables system operators to select approach that is better suited for each particular use case.
-
-
-% % We show that flushing the cache is not efficient and propose a TTL-based strategy to expire cache entries.
-
-% % we focus on result caches, which store previously computed query results
-% % Given the high volume of user queries,
-% % result caches emerge as crucial performance components to reduce the query traffic to back-end servers and also to reduce
-% % the average query processing latency.
-
-% % One major drawback of large result caches is freshness. Search engine indexes change frequently due to
-
-% This cache introduces the concept of refreshing cache entries and presents a practical algorithm for prioritizing entries to refresh.
-
-
-% There are two possible approaches for cache invalidation in this context: coupled and decoupled.
-% The coupled approach is the one of providing the cache with information about changes to the index.
-% This approach is difficult to realize in practice due to the complexity and computational cost of accurately determining changes to the index and propagating them to the result cache.
-% Such coupled solutions are out of the scope of this work.
-
-% which we adopt in this work, is the one of invalidating cached entries without any concrete knowledge of changes to the index.
-% A simple way to achieve this goal is to use a time-to-live (TTL) value and mark entries as expired once they have been in the cache for longer than TTL.
-
-% mechanism for expiring cache entries based on a time-to-live value and a mechanism for maintaining the cache content fresh
-% by issuing refresh queries to back-end search clusters,
-% propose a novel algorithm for prioritizing cache entries to be refreshed based on the access frequency of entries and the age of the cached entry.
-
-% examine result caching, and
-
-% % [On the Feasibility of Multi-Site Web Search Engines]
-% % contributions
-% %  propose such a model to assess the operational costs of multi-site Web search systems.
-% % query-processing algorithm that maximizes the amount of queries answered locally, without sacrificing the quality of the results compared to a centralized search engine.
-
-% % assess the feasibility of distributed Web search engines comprising geographically dispersed sites
-% % propose a detailed cost model that includes operational costs, and enables us to answer questions
-% % - Given  an  optimization  that  reduces  the  average  latency  of an operation (crawling, receiving request, query processing)
-% %   how does it affect power consumption?
-% % - Given  different local  rates  for  power,  how  much  resource savings are necessary to compensate for such differences?
-% % Query-processing algorithm
-% % #1, offline index construction : each site builds index on the set of docs assigned to it (local+global)
-% %   computes upper bound on the scoring function - threshold -  for each term of docs in a site of local docs: upper bound to the contribution of term t to ranking function for query that contains t
-% %   subset of "good-quality" docs replicated and indexed in all sites
-% % #2, offline propagation: all sites communicate with each other, exchange thresholds computed at phase #1 -  each site acquires complete info about thresholds of all terms in all sites
-% % phase #3, online query processing:
-% % each site handles queries it receives: compute matching set of docs from local index, rank them → use thresholds of other sites to decide whether computed results would have been identical to centralized system results
-% % use thresholds to obtain guarantees on the quality of partial results computed locally
-% % if quality guarantees not satisfied → propagate query to other sites to obtain partial results
-
-% % [Quantifying Performance and Quality Gains in Distributed Web Search Engines]
-% % Taxonomy
-% % centralized architecture: the entire Web index is stored in one, central site. The index is replicated locally over multiple search clusters located within the site.All user queries are submitted to this single site, where eachquery is completely processed by an individual cluste
-% % index replication: The entire index is replicated over multiple (e.g., several), geo-graphically distant data centers. The index is also locallyreplicated in each data center as in the case of SE-C. Thereis a static, one-to-one mapping between user queries andsearch sites, i.e., each site is responsible for processing asubset of user queries. Typically, this mapping is based ongeographical proximity of users to data centers
-% % In the SE-P architecture, the global document collectionis partitioned into smaller, non-overlapping sub-collectionssuch that each data center has a different sub-collection as-signed to it. Hence, the entire index is partitioned and dis-tributed over multiple, geographically distant search sites.Each site replicates its local sub-index on its clusters. Map-ping of queries to sites and processing is similar to SE-R
-% %  There are two ways to alleviate this problem:  taking popular data to queries or taking some queries to sites with relevant data
-% % The first is an offline process that requires replicating a portion of the index (e.g.,globally popular documents) on data centers. The secondis an online process based on forwarding some queries (e.g.,queries that are expected to have relevant documents onother sites) to non-local data centers for additional process-ing.
-
-% % The replication algorithm used is naive because it is simply based on replicating frequently accessed parts of the index on all data centers,
-% % The query forwarding algorithm is novel because it has a filtering step which prevents forwarding of queries to sites with irrelevant content.
-
-% % [Query Forwarding in Geographically Distributed Search Engines]
-% % We describe an LP-based threshold-ing algorithm that significantly outperforms the current state-of-the-art [3]
-% % We evaluate a heuristic for partial index replication.
-% % We investigate the impact of result caching and cache freshness on query forwarding performance.
-% % We present several optimizations that provide further performance improvements under certain conditions
-% % Note: uses caching -> ref to Proteus architecture that does that
-% % as a significant impact on the number of for-warded queries. With result caching, the fraction of queries that can be locally processed increases by 35%–45%, depend-ing on the offline query set used (Fig. 13).
-% % We also observethat more informative query sets receive a lower benefit.This is because, under result caching, only the queries thatare seen for the first time (i.e., compulsory cache misses) aresubject to forwarding
-
-% % [Energy-Price-Driven Query Processing in Multi-center Web Search Engines]
-% % We have provided an optimization framework and a practical algorithm, based on shifting query workloads between search data centers,  in order to
-
-% % [Document replication strategies for geographically distributed web search engines]
-% % As a remedy to this scalability problem, we propose a document replication frame-work in which documents are selectively replicated on data centers based on regional userinterests.
-% % Within this framework, we propose three different document replication strate-gies, each optimizing a different objective: reducing the potential search quality loss, theaverage query response time, or the total query workload of the search system
+Other works have studied the problem placing application state across data centers.
+Volley \cite{agarwal:volley} is a system for automatic data placement across geo-distributed data centers.
+Volley makes placement decisions based on request logs submitted by applications.
+The difference between the placement of application state and derived state used for query processing (indexes, materialized)
+views, is that efficient placement decisions about application state result in reduced latency for both reads and writes
+to the state.
+However, in the system model considered in this work, base data has a static placement,
+while derive state can be flexibly placed across the system.
+This often results to trade-offs between read and write operations,
+as derived state receives read requests from the clients, and update notifications from the base data.
