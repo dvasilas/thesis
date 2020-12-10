@@ -1,3 +1,32 @@
+\section{Result caching}
+\label{sec:caching}
+In \cite{cambazoglu:yahoorefreshing} Cambazoglu et al. present the design of the result cache used
+in the Yahoo! search engine.
+The authors argue that eviction policies are not critical in the setting of search engines, as those engines have access
+to large caches by using disk space to store query results.
+Instead, this work focuses on the problem of keeping cached results consistent with the search engine’s index
+as new batches of crawled documents are indexed.
+It proposes a TTL-based strategy for expiring cache entries and refreshing them by issuing refresh queries,
+and presents an algorithm for prioritizing cache entries to be refreshed based on the access frequency of entries and
+the age of the cached entry.
+
+In general, we can categorize cache invalidation and approaches in two types.
+Coupled or ``push-based'' approaches provide the cache with information about changes to the underlying data
+(the web search index in this case).
+Decoupled approaches invalidate cached entries without any concrete knowledge of changes to the underlying data.
+The work in \cite{cambazoglu:yahoorefreshing} presents a decoupled,
+``pull-based'' approach in which the caching system refreshes cache entries by querying the underlying index.
+Our design supports both push- and pull-based cache invalidation and refreshing:
+Pull-based refreshing is implemented by having a cache QPU send query requests to QPUs that implement the underlying
+query engine.
+Push-based refreshing is implemented by having a cache QPU subscribe to notifications for a cache entry on a cache
+miss.
+The invalidation and refresh policy of a cache QPU is controlled by a configuration parameter,
+and can be adjusted by operators according to the characteristics of each use case.
+In addition, the two approaches can be also combined in a hybrid approach in which a cache QPU receives simple notifications
+for updates to a cache entry, without receiving information about the content of those updates,
+and refreshes the cache entry using a query request when a threshold expressed in number of updates is crossed.
+
 \section{State and computation placement}
 \label{sec:placement}
 \subsection{Computation placement}
@@ -96,6 +125,7 @@ This often results to trade-offs between read and write operations,
 as derived state receives read requests from the clients, and update notifications from the base data.
 
 \section{MapReduce}
+\label{sec:mapreduce}
 MapReduce \cite{dean:mapreduce} is a programming paradigm for distributing computational tasks over multiple processing nodes.
 The core idea is that many types of tasks can be expressed as a map operation that operates on the dataset which is organized
 as a collection of records (key-value pairs);
