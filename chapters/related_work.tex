@@ -91,7 +91,7 @@ indexing delays of minutes, hours of even days might be acceptable.
 In the case of secondary indexing in non-relational distributed data stores,
 there exists a spectrum of design choices for index maintenance.
 
-\bibskip
+\bigskip
 \noindent
 
 Azure DocumentDB is Microsoft’s multi-tenant distributed database service for managing JSON documents at large scale.
@@ -106,7 +106,7 @@ As a result, queries are eventually consistent.
 This mode is better suited for ``ingest now, query later'' workloads requiring efficient document ingestion.
 The indexing policy is set at the level of a document collection.
 
-\bibskip
+\bigskip
 \noindent
 
 Diff-Index \cite{tan:diffindex} and Hindex \cite{tang:deferredindexing} address the challenges of supporting secondary
@@ -132,7 +132,7 @@ This work proposes two scheduling strategies for the repair operations:
 an offline repair that is coupled with the key-value store’s compaction mechanism,
 and an online repair where index-repair operations are piggybacked in the execution path of query operations.
 
-\bibskip
+\bigskip
 \noindent
 
 Enabling configurable index (and, more generally, state) maintenance schemes is one of the design goals of this work.
