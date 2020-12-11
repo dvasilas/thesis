@@ -1,4 +1,5 @@
 \section{Secondary indexing in distributed data stores}
+\label{sec:secondaryindexing}
 A number of works \cite{kejriwal:slik, dsilva:tworings, tan:diffindex, tang:deferredindexing}
 have examined the challenges of implementing secondary indexing in distributed databases have been proposed.
 
@@ -139,6 +140,49 @@ This is achieved by: 1) supporting both synchronous (using acknowledgements) and
 and 2) allowing different QPU types do treat updates using different schemes.
 
 
+\section{Materialized views}
+\label{sec:mv}
+Materialized views were devised for storing results of expensive query computations in relational databases.
+Support for materialized view is limited \cite{mysql:mvs} and views must usually be rebuilt on change \cite{postgresql:mvs}.
+
+The concept of materialized views has been employed by a number of application-level caching systems
+\cite{kate:pequod, amiri:dbproxy, gjengset:noria}.
+
+Noria \cite{gjengset:noria} is a web application backend,
+designed with the aim of delivering the same fast reads as an in-memory cache in front of a database,
+without the application having to manage the cache.
+Noria's system design bares several similarities to our design.
+Applications register long-term queries with Noria for repeated use.
+Noria constructs a data-flow graph that connects database tables at its inputs to materialized views at its leaves,
+and incrementally evaluates these queries when the underlying data changes.
+Similarly to a QPU-based architecture, Noria’s data-flow is a directed acyclic graph of relational operators.
+This is because both systems' designs are based on database query planning.
+Noria generates the data-flow graph for an SQL query using a process similar to database query planning.
+
+Pequod \cite{kate:pequod} and DBProxy \cite{amiri:dbproxy} are application-level caches that support incrementally
+maintained, partially-materialized views \cite{zhou:dynamicmv}.
+Both systems maintain materialized views by subscribing to a stream of updates propagated the underlying database,
+using notifications mechanisms provided by the database.
+Our design uses the same technique in order to propagate update information from the data store to the QPU graph.
+
+Pequod, similarly to our design, acts as a write-around cache;
+Application writes go directly to the database, and applications access Pequod only for reads.
+Conversely, in Noria and DBProxy writes are submitted to the cache and transparently forwarded to the database.
+
+In Noria and Pequod, view materialization is controlled by users.
+Noria receives a program specifying a relational schema and a set of parametrized queries, written in SQL,
+and installs a corresponding data-flow graph.
+In addition, Noria is able to adapt its data-flow graph to new queries without downtime.
+Similarly, in Pequod users can textually define views using a simple grammar.
+On the other hand, DBProxy decides dynamically which views to caching and which can be evicted to save space.
+It achieves that by transparently intercepting application SQL calls.
+In this work, we focus on the system design aspect of maintaining materialized view over geo-distributed data.
+We consider the aspects view selection and view definition to be out of the scope of this work.
+In our current design, a QPU-graph (akin to Noria's data-flow graph) is defined by the system's operator by passing
+the corresponding configuration to the graph's query processing units.
+However, the task of configuration and deployment of a QPU graph based on a given query could be automatically performed
+by an external component.
+
 \section{Federated query processing}
 \label{sec:federation}
 \subsection{Multi-site web search}
@@ -231,7 +275,7 @@ and potentially high rates of updates.
 % reducing the potential search quality loss, the average query response time, or the total query workload of the search system.
 
 \section{Result caching}
-\label{sec:caching}
+\label{sec:related_caching}
 In \cite{cambazoglu:yahoorefreshing} Cambazoglu et al. present the design of the result cache used
 in the Yahoo! search engine.
 The authors argue that eviction policies are not critical in the setting of search engines, as those engines have access
