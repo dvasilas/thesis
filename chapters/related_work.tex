@@ -1,3 +1,144 @@
+\section{Secondary indexing in distributed data stores}
+A number of works \cite{kejriwal:slik, dsilva:tworings, tan:diffindex, tang:deferredindexing}
+have examined the challenges of implementing secondary indexing in distributed databases have been proposed.
+
+SLIK \cite{kejriwal:slik} discusses the design space related to several of aspects of designing a secondary indexing system
+for a distributed key-value store, including index partitioning, index -- base data consistency,
+and performing long-running operations such as index creation and migration.
+
+SLIK partitions secondary indexes using the partitioning scheme that we refer to as partitioning by term.
+Index partition are implemented using B+trees.
+Index entries store hashes of data items' primary keys and therefore,
+following an index lookup, each data item in the lookup result needs to be retrieved from the storage engine.
+
+To achieve consistent index lookups SLIK uses two techniques.
+First, index entries are created before updates are applied to the corresponding base data items,
+and old index entries are removed asynchronously.
+This ensures that the lifespan of an index entry spans that of the corresponding base data item,
+and thus guarantees that if a data item contains a secondary attribute value, then an index lookup for that value will
+return the data item.
+Second, the query engine removes false positives by verifying index lookup results with the corresponding base data items.
+In other words, base data is treated as the ground truth and index entries as hints.
+
+Moreover, SLIK performs long-running bulk operations such as index creation, deletion and migration in the background,
+in order to avoid blocking blocking normal operations.
+
+While this work discusses alternative approaches to several aspects of secondary indexing,
+SLIK's design make is based on certain requirements and as a result makes specific design decisions and trade-offs.
+For instance, SLIK aims at providing the same strong consistency for index lookups as a centralized system.
+Conversely, this works aims at providing flexibility, by proposing a system architecture that can express multiple
+different point in the design space of secondary indexing.
+
+\bigskip
+\noindent
+D'Silva et al. \cite{dsilva:tworings} examine two approaches for implementing partitioned secondary indexes over a
+distributed data store:
+One is makes use of the underlying data store, by implementing secondary indexes as ``system '' tables in the underlying
+data store.
+In the second approach, each table partition is responsible for maintaining its portion of the secondary index,
+and therefore index entries are co-located with the corresponding base table records.
+Both approaches have been implemented in HBase\footnote{https://hbase.apache.org/}.
+
+Experimental comparison of the two approaches shows that there is no one-size-fits-all solution secondary indexing in
+this setting.
+Rather, each approach is better suited for different needs,
+based on factors such as the distribution of values of the indexed attribute,
+the size of the system (number of partitions), the amount of concurrency in index lookups,
+and the selectivity of queries.
+We have described the experimental results of \cite{dsilva:tworings} in more detail in Section~\ref{sec:index_partitioning_design_space}.
+Both strategies are implemented and integrated into HBase in a non-intrusive way.
+
+\todo{comment}
+% other works have analyzed the trade-offs in secondary indexing
+% this paper only / first to demonstrate evaluate
+% served as the initial motivation towards an approach that can express different approaches to secondary indexing.
+
+%  // Replex
+% no need to compromise scalability for functionality.
+% We present Replex, a data store that enables efficient querying on multiple keys by rethinking data placement during replication
+% multi-key datastore.
+% Traditionally, a data store is first globally partitioned, then each partition is replicated identically to multiple nodes
+% Replex relies on a novel replication unit, termed replex, which partitions a full copy of the data based on its unique key.
+% Several NoSQL datastores have emerged that can support queries on multiple keys through the use of secondary indexes.
+% In Replex, each full copy of the data may be partitioned by a different key,
+% thereby retaining the ability to support queries against multiple keys without incurring a performance penalty
+% or storage overhead beyond what is required to protect the database against failure.
+% which makes use of a novel replication unit we call a replex. The key insight of a replex is to combine the need to replicate for fault- tolerance and the need to replicate for index availability.
+% A replex stores a table and shards the rows across multiple partitions. All replexes store the same data (ev- ery row in the table), the only difference across replexes is the way data is partitioned and sorted, which is by the sorting key of the index associated with the replex.
+% uses chain replication to replicate a row to a number of replex partitions, each of which sorts the row by the replex’s corresponding index
+% Programmers need to be able to query data by more than just a single key. For many NoSQL systems, supporting multiple indexes is more of an afterthought: a reaction to programmer frustration with the weakness of the NoSQL model.
+% Replex reconsiders multi-index data stores from the bottom-up, showing that implementing secondary in- dexes can be inexpensive if treated as a first-order concern.
+% novel replication scheme which considers fault- tolerance, availability, and indexing simultaneously.
+
+% In this paper, we explore the challenges associated with indexing modern distributed table-based data stores and investigate two secondary index approaches which we have integrated within HBase.
+% Our detailed analysis and experimental results prove the benefits of both the approaches.
+% Further, we demonstrate that such secondary index implementation decisions cannot be made in isolation of the data distribution and that different indexing approaches can cater to different needs.
+% We discuss two indexing strategies for distributed key-value stores:
+% one based on distributed tables that is able to exploit the table model of the underlying system for index management,
+% the other using a co-location approach allowing for efficient main-memory access
+
+\subsection{Consistency between index and base data}
+
+In traditional database management systems, search is a primary mechanism for data retrieval.
+In addition, indexes are used internally for other operations such as view maintenance.
+Due to these reasons, traditional database management systems keep indexes always up-to-date with base tables by performing
+index maintenance synchronously, in the critical path of write operations.
+On the other hand, in the context of web search, content is not expected to be available for search immediately.
+Web crawlers periodically crawl web content and build indexes, using batch operations to achieve high throughput.
+There, indexes are eventually consistent with the source data, and, depending on the type of the content,
+indexing delays of minutes, hours of even days might be acceptable.
+In the case of secondary indexing in non-relational distributed data stores,
+there exists a spectrum of design choices for index maintenance.
+
+\bibskip
+\noindent
+
+Azure DocumentDB is Microsoft’s multi-tenant distributed database service for managing JSON documents at large scale.
+The work in \cite{shukla:schemaagnostic} describes DocumentDB's indexing subsystem.
+DocumentDB supports two index update policies.
+In ``consistent'' mode, the index is updated synchronously as part of the document update, and therefore
+queries have the same consistency level as the level specified for the point-reads
+(the available consistency levels are strong, bounded-staleness, session and eventual).
+In ``lazy'' mode, the index is updated asynchronously when enough resources are available so that the indexing can proceed
+without affecting the performance guarantees offered for user requests.
+As a result, queries are eventually consistent.
+This mode is better suited for ``ingest now, query later'' workloads requiring efficient document ingestion.
+The indexing policy is set at the level of a document collection.
+
+\bibskip
+\noindent
+
+Diff-Index \cite{tan:diffindex} and Hindex \cite{tang:deferredindexing} address the challenges of supporting secondary
+indexes in data stores that use the log-structured merge tree as their primary storage data structure.
+The characteristics of log-structured data stores (no in-place update, asymmetric read/write latency)
+make the task of maintaining a fully consistent index with reasonable update performance particularly challenging.
+
+Diff-Index \cite{tan:diffindex} proposes algorithms for multiple different levels of consistency between indexes and base data:
+strong, eventual and sessions consistency.
+The consistency levels make different trade-offs between index update latency and index consistency.
+The consistency level can be chosen per index depending on the workload and consistency requirements.
+We note that the authors use the term causal consistency for the consistency level in which once a write operation is
+acknowledged to the client both data and associated index entries are persisted in the data store as;
+in this work, we use the term strong consistency for this guarantee.
+To implement eventual consistency, Diff-index maintains writes that require index processing in an in-memory queue.
+Writes are immediately acknowledged to the client, and the index is updated by a background process.
+Session consistency is implemented by tracking additional state in the client library.
+
+Hindex \cite{tang:deferredindexing} decomposes the task of index maintenance into two sub-tasks:
+inserting new index entries and removing old index entries (termed index-repair).
+It executes the inexpensive insert task synchronously while deferring the expensive repair task.
+This work proposes two scheduling strategies for the repair operations:
+an offline repair that is coupled with the key-value store’s compaction mechanism,
+and an online repair where index-repair operations are piggybacked in the execution path of query operations.
+
+\bibskip
+\noindent
+
+Enabling configurable index (and, more generally, state) maintenance schemes is one of the design goals of this work.
+This is achieved by: 1) supporting both synchronous (using acknowledgements) and asynchronous streams between QPUs,
+and 2) allowing different QPU types do treat updates using different schemes.
+
+
 \section{Federated query processing}
 \label{sec:federation}
 \subsection{Multi-site web search}
