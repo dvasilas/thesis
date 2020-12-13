@@ -4,11 +4,11 @@ we discuss approaches for maintaining materialized view as a tier on top of base
 and caching in Section~\ref{sec:related_caching}.
 This work builds on top of these techniques by studying the design decisions and trade-offs that result from applying
 them in a geo-distributed context.
-In Section~\ref{sec:federation} we summarize approaches to federated query processing.
+In Section~\ref{sec:federation} we summarize works addressing the problem of query processing over geo-distributed corpora.
 Then, in Sections~\ref{sec:modular_arch} and~\ref{sec:placement}
 we present related work in the areas of state and computation placement, and modular architectures respectively.
-Finally, in Section~\ref{sec:mapreduce} we discuss the relation between the query processing unit computation model and
-the MapReduce paradigm.
+Finally, in Section~\ref{sec:dataflowmapreduce} we discuss the relation between the query processing unit computation model
+and MapReduce and dataflow execution models.
 
 
 \section{Secondary indexing in distributed data stores}
@@ -227,9 +227,9 @@ In addition, the two approaches can be also combined in a hybrid approach in whi
 for updates to a cache entry, without receiving information about the content of those updates,
 and refreshes the cache entry using a query request when a threshold expressed in number of updates is crossed.
 
-\section{Federated query processing}
+\section{Geo-distributed query processing}
 \label{sec:federation}
-\subsection{Multi-site web search}
+
 A series of papers \cite{cambazoglu:multisitequantifying, yates:multisitefeasibility, cambazoglu:multisiteforwarding, frances:multisiteefficiency, kayaaslan:multisitereplication}
 have studied the problem of designing a large-scale web search engine over multiple geographically distributed data centers.
 
@@ -415,7 +415,23 @@ Employing operator replication and reuse in a QPU graph can be performed by conf
 
 \bigskip
 \noindent
-// Helios \cite{potharaju:helios} \todo{discuss Microsoft's Helios. Pushes indexing computations at the edge.}
+Helios \cite{potharaju:helios} is a system used at Microsoft for ingestion, indexing, and aggregation of large streams
+of real-time data.
+Helios is used to collect very large amounts (in the order of several PB per day) across 15 data centers.
+It was developed in response to limitation of existing systems
+(``None of our existing systems could handle these requirements adequately; either the solution did not scale or it was too expensive to capture all the desired telemetry.'')
+Amongst Helios' principal design decisions is to support computation offloading at the edge.
+In Helios' architecture, data collection is performed by an independently-running executable that can run in any pod/rack/data center.
+Using this components the tasks of data summarization, index generation, and aggregation can be distributed to edge devices.
+
+Helios' support for computation offloading at the edge is similar to the core design goal of the architecture proposed in the work:
+enabling flexible placement of both (query processing) state and computation across the system.
+While we have focused on scenarios in which data sources reside in the data center,
+QPU-based architectures are not restricted to such configurations and can be also used to ingest and index data from geo-distributed
+sources.
+Helios is, of course, a system deployed in production in Microsoft and provides support for aspects that are out of the
+scope of this work, such as the ability to impose restrictions on the resource consumption of the data collection component
+so that in can run on resource constrained devices.
 
 \subsection{State placement}
 Large scale web services are concurrently used by a large number of geographically distributed clients.
@@ -440,22 +456,6 @@ while derive state can be flexibly placed across the system.
 This often results to trade-offs between read and write operations,
 as derived state receives read requests from the clients, and update notifications from the base data.
 
-\section{Data-flow}
-// This section is not ready.
-% Data-flow processing was initially invented in the 1970s for circuit design but has recently been adopted for large-scale parallel data-processing in systems
-
-A data-flow system represents computations as a graph;
-vertices are operators, and edges carry updates between operators.
-When an operator receives an update, it processes it and emits zero or more updates of its own.
-This graph representation is appealing, as it makes the computation’s dependencies explicit:
-
-// Naiad \cite{murray:naiad} Dryad \cite{isard:dryad} \todo{discuss Dryad and Naiad}
-
-Noria is the first system, to our knowledge, to propose the use of data-flow for maintaining materialized views.
-
-The QPU model also makes use of data-flow for updating derived state.
-(Can we argue that queries are a second data-flow in the opposite direction, or are they more ``control messages''?)
-
 % update propagation across different edges and processing at different vertices can happen in parallel.
 % Therefore, data-flow processing is well-suited to scaling across multiple CPU cores and servers.
 
@@ -473,8 +473,11 @@ The QPU model also makes use of data-flow for updating derived state.
 % make use of the design principle that eliminates the distinction between failures and other anticipated service disruptions (e.g., code deployments, configuration changes, etc.)
 % explication of many production and operational issues associated with partitioned, replicated search services.
 
-\section{MapReduce}
-\label{sec:mapreduce}
+\section{Distributed computation models}
+\label{sec:dataflowmapreduce}
+
+\subsection{MapReduce}
+
 MapReduce \cite{dean:mapreduce} is a programming paradigm for distributing computational tasks over multiple processing nodes.
 The core idea is that many types of tasks can be expressed as a map operation that operates on the dataset which is organized
 as a collection of records (key-value pairs);
@@ -506,6 +509,32 @@ For each document, an indexing QPU computed and emits a (term, docID) records.
 ``Reduce'' QPUs be connected a parents of multiple indexing QPUs,
 so that each reduce QPU receives the output of multiple indexing QPUs.
 Reduce QPU then merge (term, docID) records into posting lists for each docID.
+
+\subsection{Dataflow engines}
+An evolution of the MapReduce model is the model used in dataflow execution engines.
+Dataflow engines explicitly model the flow of data through processing stages (henge the term dataflow).
+A dataflow system represents computations as a graph, in which vertices are user-defined operators.
+An operator receives input records, process each record and emits zero or more output records.
+Edge carry records between operators; the output of one operator becomes the input of another.
+Some of the most well known systems that perform dataflow computations at their core is
+Apache Spark \cite{zaharia:spark} and Flink \cite{carbone:flink}.
+
+These systems are based on research systems such as Dryad.
+Dryad \cite{isard:dryad} is a general-purpose distributed execution engine that employs the dataflow model.
+A Dryad job is a directed acyclic graph; each vertex is a program and edges represent data channels.
+Dryad's runtime is responsible for mapping a logical computation graph to physical resources,
+and abstracts several distributed computing problems from the developer,
+such as resource allocation, scheduling, and the transient or permanent failures.
+
+Noria \cite{gjengset:noria} proposes partially-stateful dataflow,
+a dataflow model that supports eviction and reconstruction of data-flow state on demand.
+Noria employs partially-stateful dataflow to support partially materialized view maintained
+using updates from a database system.
+
+The QPU computation model also makes use of dataflow computations for maintaining derived state
+over base data.
+An important difference from general dataflow engines is that the QPU model is designed for executing
+query processing computations rather than arbitrary distributed computations.
 
 \section{Conclusion}
 This chapter presented an overview of related works and discussed their connection to this work.
