@@ -1,5 +1,19 @@
+In this chapter, we discuss literature related to varying aspects of this work.
+After presenting secondary indexing approaches in distributed data stores in Section~\ref{sec:secondaryindexing},
+we discuss approaches for maintaining materialized view as a tier on top of base data in Section~\ref{sec:mv},
+and caching in Section~\ref{sec:related_caching}.
+This work builds on top of these techniques by studying the design decisions and trade-offs that result from applying
+them in a geo-distributed context.
+In Section~\ref{sec:federation} we summarize approaches to federated query processing.
+Then, in Sections~\ref{sec:modular_arch} and~\ref{sec:placement}
+we present related work in the areas of state and computation placement, and modular architectures respectively.
+Finally, in Section~\ref{sec:mapreduce} we discuss the relation between the query processing unit computation model and
+the MapReduce paradigm.
+
+
 \section{Secondary indexing in distributed data stores}
 \label{sec:secondaryindexing}
+
 A number of works \cite{kejriwal:slik, dsilva:tworings, tan:diffindex, tang:deferredindexing}
 have examined the challenges of implementing secondary indexing in distributed databases have been proposed.
 
@@ -49,10 +63,11 @@ and the selectivity of queries.
 We have described the experimental results of \cite{dsilva:tworings} in more detail in Section~\ref{sec:index_partitioning_design_space}.
 Both strategies are implemented and integrated into HBase in a non-intrusive way.
 
-\todo{comment}
-% other works have analyzed the trade-offs in secondary indexing
-% this paper only / first to demonstrate evaluate
-% served as the initial motivation towards an approach that can express different approaches to secondary indexing.
+While other works \cite{kejriwal:slik, tan:diffindex} have discussed the design choices and trade-offs related to secondary
+indexing in distributed data stores, the work of D'Silva et al. is, in our knowledge, the first to experimentally
+demonstrate that no single approach to secondary indexing can be best for all cases.
+This result has been amongst our initial motivations towards studying a flexible approach,
+able to express different points in the design space of distributed query processing.
 
 %  // Replex
 % no need to compromise scalability for functionality.
@@ -183,6 +198,35 @@ the corresponding configuration to the graph's query processing units.
 However, the task of configuration and deployment of a QPU graph based on a given query could be automatically performed
 by an external component.
 
+\section{Result caching}
+\label{sec:related_caching}
+In \cite{cambazoglu:yahoorefreshing} Cambazoglu et al. present the design of the result cache used
+in the Yahoo! search engine.
+The authors argue that eviction policies are not critical in the setting of search engines, as those engines have access
+to large caches by using disk space to store query results.
+Instead, this work focuses on the problem of keeping cached results consistent with the search engine’s index
+as new batches of crawled documents are indexed.
+It proposes a TTL-based strategy for expiring cache entries and refreshing them by issuing refresh queries,
+and presents an algorithm for prioritizing cache entries to be refreshed based on the access frequency of entries and
+the age of the cached entry.
+
+In general, we can categorize cache invalidation and approaches in two types.
+Coupled or ``push-based'' approaches provide the cache with information about changes to the underlying data
+(the web search index in this case).
+Decoupled approaches invalidate cached entries without any concrete knowledge of changes to the underlying data.
+The work in \cite{cambazoglu:yahoorefreshing} presents a decoupled,
+``pull-based'' approach in which the caching system refreshes cache entries by querying the underlying index.
+Our design supports both push- and pull-based cache invalidation and refreshing:
+Pull-based refreshing is implemented by having a cache QPU send query requests to QPUs that implement the underlying
+query engine.
+Push-based refreshing is implemented by having a cache QPU subscribe to notifications for a cache entry on a cache
+miss.
+The invalidation and refresh policy of a cache QPU is controlled by a configuration parameter,
+and can be adjusted by operators according to the characteristics of each use case.
+In addition, the two approaches can be also combined in a hybrid approach in which a cache QPU receives simple notifications
+for updates to a cache entry, without receiving information about the content of those updates,
+and refreshes the cache entry using a query request when a threshold expressed in number of updates is crossed.
+
 \section{Federated query processing}
 \label{sec:federation}
 \subsection{Multi-site web search}
@@ -274,34 +318,26 @@ and potentially high rates of updates.
 % proposes three different document replication strategies, each optimizing a different objective:
 % reducing the potential search quality loss, the average query response time, or the total query workload of the search system.
 
-\section{Result caching}
-\label{sec:related_caching}
-In \cite{cambazoglu:yahoorefreshing} Cambazoglu et al. present the design of the result cache used
-in the Yahoo! search engine.
-The authors argue that eviction policies are not critical in the setting of search engines, as those engines have access
-to large caches by using disk space to store query results.
-Instead, this work focuses on the problem of keeping cached results consistent with the search engine’s index
-as new batches of crawled documents are indexed.
-It proposes a TTL-based strategy for expiring cache entries and refreshing them by issuing refresh queries,
-and presents an algorithm for prioritizing cache entries to be refreshed based on the access frequency of entries and
-the age of the cached entry.
 
-In general, we can categorize cache invalidation and approaches in two types.
-Coupled or ``push-based'' approaches provide the cache with information about changes to the underlying data
-(the web search index in this case).
-Decoupled approaches invalidate cached entries without any concrete knowledge of changes to the underlying data.
-The work in \cite{cambazoglu:yahoorefreshing} presents a decoupled,
-``pull-based'' approach in which the caching system refreshes cache entries by querying the underlying index.
-Our design supports both push- and pull-based cache invalidation and refreshing:
-Pull-based refreshing is implemented by having a cache QPU send query requests to QPUs that implement the underlying
-query engine.
-Push-based refreshing is implemented by having a cache QPU subscribe to notifications for a cache entry on a cache
-miss.
-The invalidation and refresh policy of a cache QPU is controlled by a configuration parameter,
-and can be adjusted by operators according to the characteristics of each use case.
-In addition, the two approaches can be also combined in a hybrid approach in which a cache QPU receives simple notifications
-for updates to a cache entry, without receiving information about the content of those updates,
-and refreshes the cache entry using a query request when a threshold expressed in number of updates is crossed.
+
+\section{Modular \& Composable architectures}
+\label{sec:modular_arch}
+Click \cite{kohler:click} proposes a software architecture for building flexible and configurable routers.
+A Click router is assembled from packet processing modules, called elements.
+A Click element represents a unit of router processing.
+Individual elements implement simple router functions like packet classification, queueing, scheduling, and interfacing with network devices.
+A router configuration is a directed graph with elements at its vertices.
+An edge between two elements represents a possible path for packet; packets flow along the edges of the graph.
+
+While aimed at a different field, Click's core philosophy is close the QPU model.
+A Click element, akin to a query processing unit, is responsible for a simple packet processing function,
+and different types of elements are responsible for different packet processing tasks.
+
+Pleiades \cite{bouget:pleiades} is a framework for constructing and enforcing large-scale distributed structural invariants.
+It addressed the need of system architectures to organize nodes in complex topologies.
+Pleiades is based on assembly-based modularity for enabling configurations to express complex topologies:
+A structural invariant is expressed as a combination of basic shapes, such as rings, grids, and stars.
+A configurations specifies a set of basic shapes, and how these shapes should be connected.
 
 \section{State and computation placement}
 \label{sec:placement}
@@ -377,6 +413,10 @@ as in some stream processing systems.
 The system however provides the functionalities required for putting in place these techniques.
 Employing operator replication and reuse in a QPU graph can be performed by configuring the graph accordingly.
 
+\bigskip
+\noindent
+// Helios \cite{potharaju:helios} \todo{discuss Microsoft's Helios. Pushes indexing computations at the edge.}
+
 \subsection{State placement}
 Large scale web services are concurrently used by a large number of geographically distributed clients.
 A significant challenge that these services face is the large request latencies resulting from the geographical distance
@@ -399,6 +439,39 @@ However, in the system model considered in this work, base data has a static pla
 while derive state can be flexibly placed across the system.
 This often results to trade-offs between read and write operations,
 as derived state receives read requests from the clients, and update notifications from the base data.
+
+\section{Data-flow}
+// This section is not ready.
+% Data-flow processing was initially invented in the 1970s for circuit design but has recently been adopted for large-scale parallel data-processing in systems
+
+A data-flow system represents computations as a graph;
+vertices are operators, and edges carry updates between operators.
+When an operator receives an update, it processes it and emits zero or more updates of its own.
+This graph representation is appealing, as it makes the computation’s dependencies explicit:
+
+// Naiad \cite{murray:naiad} Dryad \cite{isard:dryad} \todo{discuss Dryad and Naiad}
+
+Noria is the first system, to our knowledge, to propose the use of data-flow for maintaining materialized views.
+
+The QPU model also makes use of data-flow for updating derived state.
+(Can we argue that queries are a second data-flow in the opposite direction, or are they more ``control messages''?)
+
+% update propagation across different edges and processing at different vertices can happen in parallel.
+% Therefore, data-flow processing is well-suited to scaling across multiple CPU cores and servers.
+
+
+% \section{Scaling search services through partitioning and replication}
+% It is widely known that caching, partitioning, and replication are three primary strategies for scaling up large,
+% distributed web services (e.g., search) with high-throughput and low-latency requirements.
+% sharing the distributed search architecture that underlies Twitter user search, a service for discovering relevant accounts on the popular micro-blogging service.
+% issues that are critical to their operation in real-world production environments.
+% Focusing in particular on partitioning and replication, some of these important questions include:
+% manage partition and replica configurations in coordinate automatic, seamless failover of partition and replica
+% dynamically adjust configurations in response to increasing (or decreasing) load in an elastic manner
+% Our goal is to share experiences in answering the above questions, in the context of user search
+% The solution that we describe makes extensive use of ZooKeeper
+% make use of the design principle that eliminates the distinction between failures and other anticipated service disruptions (e.g., code deployments, configuration changes, etc.)
+% explication of many production and operational issues associated with partitioned, replicated search services.
 
 \section{MapReduce}
 \label{sec:mapreduce}
@@ -433,3 +506,6 @@ For each document, an indexing QPU computed and emits a (term, docID) records.
 ``Reduce'' QPUs be connected a parents of multiple indexing QPUs,
 so that each reduce QPU receives the output of multiple indexing QPUs.
 Reduce QPU then merge (term, docID) records into posting lists for each docID.
+
+\section{Conclusion}
+This chapter presented an overview of related works and discussed their connection to this work.

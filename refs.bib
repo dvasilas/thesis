@@ -1596,3 +1596,87 @@ doi={10.1109/ICDE.2003.1260881}
   pages={526--535},
   doi={10.1109/ICDE.2007.367898},
 }
+
+@inproceedings{bouget:pleiades,
+  author={S. {Bouget} and Y. {Bromberg} and A. {Luxey} and F. {Taiani}},
+  booktitle={2018 48th Annual IEEE/IFIP International Conference on Dependable Systems and Networks (DSN)},
+  title={Pleiades: Distributed Structural Invariants at Scale},
+  year={2018},
+  volume={},
+  number={},
+  pages={542--553},
+  doi={10.1109/DSN.2018.00062}}
+
+@article{potharaju:helios,
+author = {Potharaju, Rahul and Kim, Terry and Wu, Wentao and Acharya, Vidip and Suh, Steve and Fogarty, Andrew and Dave, Apoorve and Ramanujam, Sinduja and Talius, Tomas and Novik, Lev and Ramakrishnan, Raghu},
+title = {Helios: Hyperscale Indexing for the Cloud &amp; Edge},
+year = {2020},
+issue_date = {August 2020},
+publisher = {VLDB Endowment},
+volume = {13},
+number = {12},
+issn = {2150-8097},
+url = {https://doi.org/10.14778/3415478.3415547},
+doi = {10.14778/3415478.3415547},
+abstract = {Helios is a distributed, highly-scalable system used at Microsoft for flexible ingestion, indexing, and aggregation of large streams of real-time data that is designed to plug into relational engines. The system collects close to a quadrillion events indexing approximately 16 trillion search keys per day from hundreds of thousands of machines across tens of data centers around the world. Helios use cases within Microsoft include debugging/diagnostics in both public and government clouds, workload characterization, cluster health monitoring, deriving business insights and performing impact analysis of incidents in other large-scale systems such as Azure Data Lake and Cosmos. Helios also serves as a reference blueprint for other large-scale systems within Microsoft. We present the simple data model behind Helios, which offers great flexibility and control over costs, and enables the system to asynchronously index massive streams of data. We also present our experiences in building and operating Helios over the last five years at Microsoft.},
+journal = {Proc. VLDB Endow.},
+month = aug,
+pages = {3231–3244},
+numpages = {14}
+}
+
+@inproceedings{murray:naiad,
+author = {Murray, Derek G. and McSherry, Frank and Isaacs, Rebecca and Isard, Michael and Barham, Paul and Abadi, Mart\'{\i}n},
+title = {Naiad: A Timely Dataflow System},
+year = {2013},
+isbn = {9781450323888},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2517349.2522738},
+doi = {10.1145/2517349.2522738},
+abstract = {Naiad is a distributed system for executing data parallel, cyclic dataflow programs. It offers the high throughput of batch processors, the low latency of stream processors, and the ability to perform iterative and incremental computations. Although existing systems offer some of these features, applications that require all three have relied on multiple platforms, at the expense of efficiency, maintainability, and simplicity. Naiad resolves the complexities of combining these features in one framework.A new computational model, timely dataflow, underlies Naiad and captures opportunities for parallelism across a wide class of algorithms. This model enriches dataflow computation with timestamps that represent logical points in the computation and provide the basis for an efficient, lightweight coordination mechanism.We show that many powerful high-level programming models can be built on Naiad's low-level primitives, enabling such diverse tasks as streaming data analysis, iterative machine learning, and interactive graph mining. Naiad outperforms specialized systems in their target application domains, and its unique features enable the development of new high-performance applications.},
+booktitle = {Proceedings of the Twenty-Fourth ACM Symposium on Operating Systems Principles},
+pages = {439–455},
+numpages = {17},
+location = {Farminton, Pennsylvania},
+series = {SOSP '13}
+}
+
+@article{10.1145/1272998.1273005,
+author = {Isard, Michael and Budiu, Mihai and Yu, Yuan and Birrell, Andrew and Fetterly, Dennis},
+title = {Dryad: Distributed Data-Parallel Programs from Sequential Building Blocks},
+year = {2007},
+issue_date = {June 2007},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {41},
+number = {3},
+issn = {0163-5980},
+url = {https://doi.org/10.1145/1272998.1273005},
+doi = {10.1145/1272998.1273005},
+abstract = {Dryad is a general-purpose distributed execution engine for coarse-grain data-parallel applications. A Dryad application combines computational "vertices" with communication "channels" to form a dataflow graph. Dryad runs the application by executing the vertices of this graph on a set of available computers, communicating as appropriate through flies, TCP pipes, and shared-memory FIFOs.The vertices provided by the application developer are quite simple and are usually written as sequential programs with no thread creation or locking. Concurrency arises from Dryad scheduling vertices to run simultaneously on multiple computers, or on multiple CPU cores within a computer. The application can discover the size and placement of data at run time, and modify the graph as the computation progresses to make efficient use of the available resources.Dryad is designed to scale from powerful multi-core single computers, through small clusters of computers, to data centers with thousands of computers. The Dryad execution engine handles all the difficult problems of creating a large distributed, concurrent application: scheduling the use of computers and their CPUs, recovering from communication or computer failures, and transporting data between vertices.},
+journal = {SIGOPS Oper. Syst. Rev.},
+month = mar,
+pages = {59–72},
+numpages = {14},
+keywords = {concurrency, dataflow, cluster computing, distributed programming}
+}
+
+@inproceedings{isard:dryad,
+author = {Isard, Michael and Budiu, Mihai and Yu, Yuan and Birrell, Andrew and Fetterly, Dennis},
+title = {Dryad: Distributed Data-Parallel Programs from Sequential Building Blocks},
+year = {2007},
+isbn = {9781595936363},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/1272996.1273005},
+doi = {10.1145/1272996.1273005},
+abstract = {Dryad is a general-purpose distributed execution engine for coarse-grain data-parallel applications. A Dryad application combines computational "vertices" with communication "channels" to form a dataflow graph. Dryad runs the application by executing the vertices of this graph on a set of available computers, communicating as appropriate through flies, TCP pipes, and shared-memory FIFOs.The vertices provided by the application developer are quite simple and are usually written as sequential programs with no thread creation or locking. Concurrency arises from Dryad scheduling vertices to run simultaneously on multiple computers, or on multiple CPU cores within a computer. The application can discover the size and placement of data at run time, and modify the graph as the computation progresses to make efficient use of the available resources.Dryad is designed to scale from powerful multi-core single computers, through small clusters of computers, to data centers with thousands of computers. The Dryad execution engine handles all the difficult problems of creating a large distributed, concurrent application: scheduling the use of computers and their CPUs, recovering from communication or computer failures, and transporting data between vertices.},
+booktitle = {Proceedings of the 2nd ACM SIGOPS/EuroSys European Conference on Computer Systems 2007},
+pages = {59–72},
+numpages = {14},
+keywords = {cluster computing, concurrency, dataflow, distributed programming},
+location = {Lisbon, Portugal},
+series = {EuroSys '07}
+}
+
