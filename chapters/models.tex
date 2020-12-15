@@ -206,6 +206,7 @@ representing the data item's attributes, and $Timestamp$ is the timestamp associ
 \end{sloppypar}
 
 \subsubsection{Data storage tier API}
+\label{sec:storage_tier_api}
 One of our design decisions (section~\ref{sec:design_rationale}) is to design the query processing tier as a middleware
 system, decoupled from the data storage tier.
 Moreover, we require the query processing tier to be able to interoperate with multiple different data storage tier implementations.
@@ -249,9 +250,9 @@ To be compatible with our design, a data storage tier needs to expose some the f
 % \end{itemize}
 For the rest of this document,
 we make the assumption that the data storage tier provides the List and Subscribe APIs as describe below.
-In section \todo{ref chapter 5}, we discuss the implications providing a subset of the APIs described in this section,
-such as providing only List or Subscribe, or not exposing data object versions.
-In section \ref{sec:implementation} we comment on the implementation the storage tier APIs using the functionalities of existing data storage systems.
+\todo{In section chapter 5, we discuss the implications providing a subset of the APIs described in this section,
+such as providing only List or Subscribe, or not exposing data object versions.}
+\todo{In section \ref{sec:implementation} we comment on the implementation the storage tier APIs using the functionalities of existing data storage systems.}
 
 \bigskip
 \noindent
@@ -288,7 +289,6 @@ Finally, we do not assume any ordering in $ListResponse$.
 % we describe how our design can use the $List$ API without support for Timestamp ranges.
 
 \bigskip
-
 \noindent
 \textbf{API 2: Subscribe}
 

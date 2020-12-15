@@ -20,7 +20,7 @@ read access patterns to the data.
 
 At an abstract level, derived state can be described by a \textit{write path} and a \textit{read path}
 \cite{kleppmann:designing}.
-\todo{illustrate with figure}
+\todo{NICE TO HAVE: illustrate with figure}
 The write path is the process of creating the derived state, and keeping it up-to-date with the base data.
 The read path is the process of reading from the derived state in order to perform a query processing task.
 In other words, the write path is the pre-computation that takes place when a change to the base data occurs,
@@ -79,7 +79,7 @@ Database systems provide mechanisms for managing this trade-off at runtime, by a
 to select indexes and materialized views to be created, and by providing mechanisms to automate this choice.
 
 However, the use of derived state for optimizing query processing involves a number of additional design choices:
-\todo{add CAP issues}
+\todo{REVIEW: add CAP issues}
 \begin{itemize}
 
   \item Given a change in the base data, when is the derive state updated to reflect this change?
@@ -88,7 +88,7 @@ However, the use of derived state for optimizing query processing involves a num
 
   \item When base data is distributed across multiple data centers, how is the derived state placed across data centers?
 
-\todo{also mention availability of the derived state}
+\todo{REVIEW: also mention availability of the derived state}
 \end{itemize}
 
 These design choices affect multiple aspects of the query processing system's behavior,
@@ -97,7 +97,7 @@ including query performance, overhead to write operation, relevance of query res
 We can reason about how these design choices interact and how they affect the query processing system's behavior
 using the read and write path framework.
 To do so, we first describe the tasks involved in the read and write path.
-\todo{here we need a visualization}
+\todo{NICE TO HAVE: here we need a visualization}
 
 \medskip
 
@@ -121,7 +121,7 @@ higher that intra- data center communication.
 \subsection{Derived state maintenance schemes}
 \label{sec:sync_async_maintenance}
 
-\todo{Figure~\ref{fig:maintenance_schemes} (temporary; borrowed) redo}
+\todo{MUST HAVE: Figure~\ref{fig:maintenance_schemes} (temporary; borrowed) redo}
 
 Given the following update to a data item $d$:
 \[
@@ -236,7 +236,7 @@ More specifically, considering an update that changes $d.attributeA$ from $x$ to
 \subsection{Derived state partitioning}
 \label{sec:index_partitioning_design_space}
 
-\todo{Figures~\ref{fig:prob1_6_2} and~\ref{fig:prob1_6_1} (temporary; borrowed) redo}
+\todo{MUST HAVE: Figures~\ref{fig:prob1_6_2} and~\ref{fig:prob1_6_1} (temporary; borrowed) redo}
 
 Scaling derived state both in terms size and and read access requires partitioning it across multiple system nodes.
 In chapter chapter~\ref{ch:background}, we presented the two main index partitioning schemes.
@@ -373,7 +373,7 @@ schemes.
 
 \subsection{Derived state topology patterns}
 \label{sec:topology_patterns}
-\todo{not a good title: should include the term ``placement''}
+\todo{MUST HAVE: not a good title: should include the term ``placement''}
 
 % \todo{discuss existing approaches for placement of query processing operators across servers for minimizing cross-server communication}
 
@@ -438,7 +438,7 @@ views.
 
 \medskip
 
-TODO: here we need a paragraph about AP.
+\todo{GOOD TO HAVE: here we need a paragraph about AP.}
 Mainly, discuss conflicts and derived data.
 
 \subsubsection{Geo-partitioning}
@@ -487,7 +487,7 @@ query processing based on derived state
 
 \section{Conclusion (placeholder title)}
 
-\todo{we need a vizualization \\ multi-dimensional table? decision tree? something else?}
+\todo{GOOD TO HAVE: we need a vizualization \\ multi-dimensional table? decision tree? something else?}
 
 \begin{itemize}
   \item The use of derived state to speed-up query processing moves query processing work from the read path to the write

@@ -482,14 +482,118 @@ Moreover, it adds to the configuration parameters the QPU instance's downstream 
 % Report on the implementation of different components of Proteus, including:
 % \begin{itemize}
 %   \item The framework used for communication between QPUs.
-%   \item How streams are implemented.  
+%   \item How streams are implemented.
 %   \item ...
 % \end{itemize}
 
 \section{Implementation}
 \label{sec:implementation}
 
-% \begin{itemize}
-%   \item client drivers
-%   \item (connection pool, thread pool, ..)
-% \end{itemize}
+The prototype implementation of Proteus consists of 13k lines of Go.
+The source code is available at \url{https://github.com/dvasilas/proteus}.
+
+% It can operate on a single server or across a cluster of servers.
+
+\bigskip
+\noindent
+\textbf{Interface.}
+Applications interface with Proteus through a protocol buffer \cite{protobuf:docs} interface over gRPC \cite{grpc:docs}
+gRPC is an remote procedural call (RPC) framework.
+Using gPRC, a client process can directly call a method on a server process, on a different machine, as if it were a local object.
+The workflow for using gPRC consists of defining a service, specifying its interface; methods that can be called remotely
+and their parameters and return types.
+gRPC uses protocol buffers as its interface description language.
+We selected gRPC due to its support for streaming and bidirectional streaming RPCs,
+and because it provides compiler plugins that can generate client- and server-side code based on a service definition.
+
+Each query processing unit includes a gRPC server, as well as a gRPC client for communicating with other QPUs.
+Client applications also need to implement gRPC clients.
+
+\medskip
+\noindent
+We have additionally implemented two clients libraries, in Go and Java.
+In the Go driver library, the operation of opening a connection to QPU actually opens and maintains a pool of connections
+to that QPU.
+Performing a query operations consists of requesting an idle connection, potentially opening a new connection if no idle
+connections are available, or, if the maximum number of connections has been reached,  waiting until a connection becomes
+available, performing the operation, and returning the connection to the pool.
+
+\bigskip
+\noindent
+\textbf{Storage.}
+Overall, query processing units maintain state either in memory, or persistently in AntidoteDB \cite{antidotedb:docs} or
+MariaDB \cite{mariadb:docs}.
+However, currently not all QPU implementations support all three state backends.
+For example, our Index QPU implementation supports both in memory and AntidoteDB,
+while the Aggregator and Join QPU implementations support only MariaDB.
+For QPU implementations that support more that one backends,
+the backend by a QPU instance is specified by a configuration parameter.
+
+\bigskip
+\noindent
+\textbf{Subscribe API (see models chapter for terminology).}
+As described in Section~\ref{sec:storage_tier_api}, the data storage tier exposes a logical Subscribe API that can be
+used for subscribing to notifications for data items updates.
+We have implemented the Subscribe API in three data stores: MySQL/MariaDB, CloudServer, and AntidoteDB \cite{scality:cloudserver},
+a REST server that compatible with the AWS S3 API, implemented by Scality.
+As a results, Proteus currently can be used with a data storage tier provided by one of these data stores.
+
+We note that MySQL/MariaDB and AntidoteDB can be used both as a QPU state backend and as a storage tier.
+These two roles are independent:
+A QPU graph may be used to provide materialized view on top of AntidoteDB,
+and independent instances of AntidoteDB also be used for maintaining the state of QPUs in the graph;
+
+\textbf{MySQL/MariaDB:}
+We implement the Subscribe API using a user-defined function \cite{mariadb:udfs}, executed in response to a trigger \cite{mariadb:triggers}.
+One the same machine as the MySQL instance, we run an executable, termed notification server,
+that 1) implements a gRPC server, and 2) listens for socket connections.
+For each MySQL table associated with Proteus, we install triggers that call a user-defined function for each modification to
+the table.
+For each record that is inserted or updated, the user-defined function encodes and sends a message to the notification
+server through a socket connection.
+Corpus Driver QPUs can subscribe to this update stream using the notification server's gRPC service.
+The notification server is schema-agnostic; however, making a table available to Proteus requires installing the corresponding
+triggers for that invoke the user-defined function.
+
+\textbf{CloudServer}
+CloudServer does not provide trigger or user-defined function mechanisms analogous to MySQL.
+We have thus modified CloudServer adding a notification service provided by a gRPC server.
+Our implementation consists of 300 lines of Node.js.
+The source code is available at \url{https://github.com/dvasilas/cloudserver/tree/proto/proteus}.
+
+\textbf{AntidoteDB}
+Similarly to CloudServer, we have modified AntidoteDB adding a simple notification service that can be used by Corpus Driver QPUs.
+The source code is available at \url{https://github.com/dvasilas/antidote/tree/proteus/log_propagation}.
+
+\bigskip
+\noindent
+\textbf{Operator implementation.}
+The implementation of the core QPU functionalities,
+including relational operators (e.g. join, aggregation) and query processing data structures (e.g. secondary indexes,
+materialized views) are fairly straightforward.
+This is because update operations work in an incremental fashion,
+processing records as they arrive.
+
+
+In addition, we note that, despite the fact that the $Query()$ API allows for queries with fine-grained timestamps.
+most QPU implementations currently support three more coarse query modes:
+snapshot queries, persistent (or subscribe queries), and a combination of the two.
+Snapshot queries are executed on the most recent snapshot, in a best-effort fashion,
+and submitting a query request for an earlier snapshot returns an error.
+
+A notable exception is the index QPU, in which we have implemented a versioned secondary index.
+In the versioned secondary index,
+each update creates a new version of the corresponding posting list.
+The index maintains a configurable number of versions for each data item;
+old versions are deleted to reduce memory/storage resource consumption.
+The index QPU maintains its state either in memory or in AntidoteDB.
+
+\bigskip
+\noindent
+\textbf{Multi-threading.}
+Each QPU maintains two thread pools: one for executing query requests and one for processing input stream records.
+Query requests and processing of input records are submitted as tasks to be executed by available threads.
+Our benchmarking showed that using worker pools results in improved performance and stability,
+especially in the implementations with MySQL backend,
+We attribute this to having a bounded number of threads performing database transactions,
+since our previous implementation was creating a new thread for each incoming request.
