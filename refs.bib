@@ -1205,6 +1205,12 @@ series = {WWW '10}
   note = {(visited on 01/01/01)},
 }
 
+@misc{lobsters:source,
+  author = {Lobsters {D}evelopers},
+  title = {Lobsters {R}ails {P}roject},
+  howpublished = {\url{https://github.com/lobsters/lobsters}},
+}
+
 @online{aws:s3,
   author = {Amazon {W}eb {S}ervices},
   title = {Amazon {S3} {API} {R}eference},
@@ -1337,7 +1343,6 @@ number = {MSR-TR-2005-77},
 	author = {Scality},
   title = {Zenko {C}loudServer},
 	howpublished = {\url{https://github.com/scality/cloudserver/}},
-  note = {(visited on 01/01/01)},
 }
 
 @article{docker,
@@ -1724,3 +1729,36 @@ https://mariadb.com/kb/en/triggers/
   howpublished = {\url{https://github.com/scality/cloudserver/}},
   note = {(visited on 01/01/01)},
 }
+
+@misc{lobsters:bench,
+  author = {Dimitrios {V}asilas},
+  title = {Losbsters {B}enchmark {T}ool},
+  howpublished = {\url{https://github.com/dvasilas/proteus-lobsters-bench}},
+}
+
+@misc{grpcgo:histogram,
+  author = {g{RPC} {D}evelopers},
+  title = {g{RPC}-{G}o: {H}istogram},
+  howpublished = {\url{https://github.com/grpc/grpc-go/blob/master/benchmark/stats/histogram.go#L33}},
+}
+
+@inproceedings{schroeder:cautionarytale,
+author = {Schroeder, Bianca and Wierman, Adam and Harchol-Balter, Mor},
+title = {Open versus Closed: A Cautionary Tale},
+year = {2006},
+publisher = {USENIX Association},
+address = {USA},
+abstract = {Workload generators may be classified as based on a closed system model, where new job arrivals are only triggered by job completions (followed by think time), or an open system model, where new jobs arrive independently of job completions. In general, system designers pay little attention to whether a workload generator is closed or open.Using a combination of implementation and simulation experiments, we illustrate that there is a vast difference in behavior between open and closed models in real-world settings. We synthesize these differences into eight simple guiding principles, which serve three purposes. First, the principles specify how scheduling policies are impacted by closed and open models, and explain the differences in user level performance. Second, the principles motivate the use of partly open system models, whose behavior we show to lie between that of closed and open models. Finally, the principles provide guidelines to system designers for determining which system model is most appropriate for a given workload.},
+booktitle = {Proceedings of the 3rd Conference on Networked Systems Design \& Implementation - Volume 3},
+pages = {18},
+numpages = {1},
+location = {San Jose, CA},
+series = {NSDI'06}
+}
+
+@misc{tc,
+  author = {Michael {K}errisk},
+  title = {Linux manual page: tc},
+  howpublished = {\url{https://man7.org/linux/man-pages/man8/tc.8.html}},
+}
+
