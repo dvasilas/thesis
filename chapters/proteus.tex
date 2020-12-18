@@ -601,4 +601,13 @@ since our previous implementation was creating a new thread for each incoming re
 \bigskip
 \noindent
 \textbf{Packaging and deployment.}
-\todo{}
+
+As mentioned above, the query processing unit service is packaged as a Docker container.
+This container is common for all QPU classes:
+the QPU's class configuration is specified by a configuration file passed to the service at initialization,
+Deploying a QPU service consists of deploying the QPU container
+and providing the configuration file as a shared volume.
+
+We use Docker Swarm for deploying a QPU graph:
+A Docker compose file specifies the QPU services to be deployed, the configuration file to be passed to each service,
+and the placement of each service.
