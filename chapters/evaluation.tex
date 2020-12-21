@@ -67,6 +67,10 @@ Our simplified workload consists of 95\% front page operations, and 5\% voting o
 We believe that this accurately represent the ration of read and write operations in the available Lobsters applications
 statistics.
 
+\todo{add histogram statistics}
+
+\bigskip
+\noindent
 The evaluation uses the QPU architecture depicted in Figure~\ref{fig:eval_lobsters_qpu_arch}.
 This architecture maintains a materialized view that integrates both integrates stories from the $stories$ table,
 with their vote count.
@@ -186,8 +190,8 @@ when a given query was executed.
 
 For freshness measurements benchmarks,
 we deploy all system components (MySQL instance, QPU graph, and workload generator) on the same server in order to ensure
-that timestamps in the database and materialized view QOU have the same source (Docker containers run on a Linux host use
-the host system's clock).
+that timestamps in the database and materialized view QOU have the same source (Containers on a host share a single OS
+kernel, and thus the system clock).
 This avoid issues caused by clock drift between servers.
 
 \bigskip
@@ -198,7 +202,13 @@ Each server consists of 2 Intel Xeon E5645 CPUs, each with 6 cores, 64 GB RAM, a
 
 \bigskip
 \noindent
+\textbf{Software.}
+\todo{versions}
+
+\bigskip
+\noindent
 \textbf{Configuration.}
+\todo{add ping RTT in cluster}
 We simulate the two geographically distant sites using the Linux tc utility \cite{tc} to add delay to outgoing packets.
 For response time measurements the MySQL instance and the QPU graph except the materialized view QPU are deployed on a single
 server, while the join QPU and workload generator are deployed on separate, dedicated servers.
@@ -208,6 +218,172 @@ As described above, for the freshness measurements, all components are deployed 
 Experiments run for 5 minutes unless otherwise specified, and staring taking measurements after an initial ``warmup period''
 of 30 seconds.
 Repeated run have shown that results are stable and consistent across multiple runs.
+
+\section{Query processing performance}
+
+\begin{figure}
+\centering
+  \includegraphics[width=0.7\textwidth]{./figures/evaluation/responseTime.png}
+  \caption{Throughput vs 95th percentile query response time on a MariaDB that resembles is similar to the real Lobsters application (MariaDB), the Proteus deployment shown in Figure~\ref{fig:eval_lobsters_qpu_arch}
+  with the Materialized View QPU placed on the application site (Proteus application), the same Proteus deployment with the Materialized View QPU placed on the client site (Proteus-client),
+  and a setup in which the workload generator directly contacts MariaDB (MariaDB-only).}
+  \label{fig:responseTime}
+\end{figure}
+
+We compare three deployments that differ on how they store and calculate the per-story vote count,
+and how they distribute computations and state across the nodes of the system.
+MariaDB is equivalent to the real Lobsters application:
+it pre-computes and stores vote counts in a column of the Lobsters $stories$ table.
+This serves as the baseline approach.
+Proteus-application consists of a MariaDB instance and the QPU graph shown in Figure~\ref{fig:eval_lobsters_qpu_arch},
+deployed one the same site as MariaDB.
+In Proteus-client, is same as Proteus-application except that the Materialized View QPU is deployed on the same site as
+the workload generator.
+We also compare with a deployment (MariaDB-only) in which the workload generator is deployed on the site as MariaDB,
+and directly communicates with it, using the same mechanisms as the Materialized View QPU (e.g. worker pools).
+This aims at providing an indication of the highest performance the Materialized View QPU can achieve,
+without taking into account its gRPC server.
+
+Figure~\ref{fig:responseTime} shows throughput -- query response time plots of these systems.
+The ideal throughput -- response time curve would be a horizontal line with low response time.
+The lower bound response time for MariaDB and Proteus-application is 80ms as this is the round-trio time between sites.
+In reality, all systems' plots are ``hockey stick'' curves:
+latency remains relatively low until a point in which the system fails to keep up with the offered low.
+After that point, the system cannot achieve additional throughput, and response time increases almost vertically.
+
+MariaDB-only shows that the Materialized View QPU can scale to 9800 requests/seconds when removing all overheads other
+than the interaction with the database in which the materialized view is stored.
+In reality, the Proteus-application and Proteus-client setups have additional overheads and as a result scale to lower
+throughput values.
+
+MariaDB scales to 5500 requests/second.
+Proteus-application incurs an 24\% overhead, scaling to 4200 requests/second.
+We attribute this overhead to the more complex logic used in the Materialized View QPU compared to the adapter used
+in the MariaDB setup.
+The adapter simply translates user requests to database accesses,
+while the Materialized View QPU includes additional mechanisms, such as parsing received queries in SQL form,
+and receiving records from its input stream and updating the materialized view.
+
+With Proteus-client, clients experience significantly lower query response time.
+This is achieved as moving the Materialized View QPU in the clients site removes the need for a costly round-trip to the
+application site.
+In addition, Proteus-client achieves a 23\% increasing in achieved throughput before response time exceeds 20ms.
+We attribute this improvement in performance in the lower concurrency needed to offer the same load in Proteus-client
+compared to Proteus-application.
+In more detail, offering a certain load (volume of requests/second) requires creating a number of concurrent client threads,
+each performing a request.
+When the round-trip time between sites is 80ms, each of these threads executes significantly longer compared to
+when the round-trip is just a few milliseconds.
+As a result, offering a given amount of load in the Proteus-application setup results in a significantly greater number
+of threads, and thus open connections to the QPU's gRPC server, than in the Proteus-client setup.
+If the number of connections that can be opened is not bounded by a connection pool, this overloads the QPU's gRPC server,
+significantly increasing response times.
+When a connection pool is used, each requests needs to wait for an available connection,
+again increasing the end-to-end response time experience by the client.
+
+\medskip
+\noindent
+In summary, placing materialized views closer to the client benefits read-heavy applications as it removes costly round-trip
+communication across sites, and brings improvements in scalability.
+
+\section{Freshness}
+
+Figure~\ref{fig:fr_latency_throughput} shows update latency as throughput increases, for Proteus-application and Proteus-client.
+AS described above, we define update latency as the delay between an new vote count for a story being committed in the
+database, and the vote count being reflected in the materialized view.
+The ideal throughput -- update latency curve would be a horizontal line with latency close to the lower bound defined by
+the communication latency.
+The lower bound Proteus-application is 40ms while for Proteus-client it is less that 1ms.
+In reality, latency remains low as long as the system can keep up with the increasing update (vote request) load,
+and then increases.
+
+\begin{figure}
+\centering
+  \includegraphics[width=0.7\textwidth]{./figures/evaluation/fr_latency_throughput.png}
+  \caption{Throughput vs 95th percentile update latency.}
+  \label{fig:fr_latency_throughput}
+\end{figure}
+
+Results show the Proteus-client setup scales well; Update latency remains within 5-10ms from the lower bound.
+The Proteus-application setup exhibits a higher update latency:
+For 4250 requests/second, the update latency in Proteus-client is 88\% higher than in Proteus-client, relative to the lower bound.
+This can be attributed to the same reasons as the scalability difference between the two setups.
+
+\bigskip
+\noindent
+Figure~\ref{fig:fresh_reads_throughput} shows the freshness of query results as throughput increases.
+Plots display the percentage of query percentage of query results that returned fresh versions.
+We define a returned result as a single story with its vote count.
+each frontpage request returns 25 stories, and each is considered separately.
+We consider a scenario in which only the most up-to-date version is considered fresh (k=1),
+and one in which the two most up-to-date versions are considered fresh (k<=2).
+
+We observe that:
+\begin{itemize}
+  \item Proteus-application outperforms Proteus-client, as expected.
+  For the k=1 scenario, over 95\% of reads observe the latest versions under the highest load.
+  For the k<=2 scenario, freshness remains nearly constant at over 99\%.
+  \item Freshness in Proteus-client decreases as throughput increases.
+  Proteus-client suffers from up to 80\% stale query results, and freshness decreases constantly as load increases.
+  However, most stale results observe the second most up-to-date version:
+  In the k<=2 scenario for Proteus-client, over 97\% of query results return the first or second most up-to-date version.
+\end{itemize}
+
+These results can be explained using Figure~\ref{fig:fr_latency_throughput}.
+In Proteus-client it takes at lest 45ms for an updated vote count to be reflected in the materialized view,
+but a front page request reaches the view with significantly lower delay.
+When load is low, this does not lead to stale query results because there are a few vote requests (5\%).
+However, as load increases, there are increasingly more stale query results.
+
+This is not the case for Proteus-application.
+There, both types of requests reach the materialized view with similar delay.
+
+\medskip
+\noindent
+In summary,
+
+\begin{figure}
+\centering
+  \includegraphics[width=0.7\textwidth]{./figures/evaluation/fresh_reads_throughput.png}
+  \caption{Throughput vs percentage of query results and that return a fresh version.
+  A returned result is considered fresh if 1) it is the most up-to-date version committed in the database at that time (k=1),
+  2) it is amongst the two most up-to-date versions committed in the database at that time (k<=2).}
+  \label{fig:fresh_reads_throughput}
+\end{figure}
+
+\begin{figure}
+\centering
+  \includegraphics[width=0.7\textwidth]{./figures/evaluation/readV_cdf_throughput.png}
+  \caption{}
+  \label{fig:readV_cdf_throughput}
+\end{figure}
+
+\begin{figure}
+\centering
+  \includegraphics[width=0.7\textwidth]{./figures/evaluation/fr_latency_net_latency.png}
+  \caption{}
+  \label{fig:fr_latency_net_latency}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \begin{minipage}{.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/evaluation/readV_freshness_netLatency_200.png}
+        \caption{}
+        \label{}
+    \end{minipage}%
+    \begin{minipage}{.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/evaluation/readV_freshness_netLatency_400.png}
+        \caption{}
+        \label{}
+    \end{minipage}
+    \caption{}
+\end{figure}
+
+
+
 
 % \section{Navigating the design space of geo-distributed query}
 % (Note: The title might be a bit too fancy. To re-think.)

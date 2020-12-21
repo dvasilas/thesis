@@ -72,23 +72,26 @@ They allow the query processor to perform more work on the write path in order t
 \section{Design decisions and trade-offs in derive state based query processing systems}
 
 Choosing between the derived state techniques described in the previous sections,
-poses a trade-off between work required on the read, and work required on the write path,
-and between work on the read path and the memory and storage overhead of maintaining derived state.
+involves a trade-off between work on the read path on the one side,
+and work on the write path on the memory and storage overheads of maintaining derived state on the other.
 These trade-offs have been studied extensively \cite{valentin:db2advisor, chaudhuri:decadeselftuning}.
-Database systems provide mechanisms for managing this trade-off at runtime, by allowing the database administrator
+Database systems provide mechanisms for managing these trade-offs at runtime, by allowing the database administrator
 to select indexes and materialized views to be created, and by providing mechanisms to automate this choice.
 
 However, the use of derived state for optimizing query processing involves a number of additional design choices:
-\todo{REVIEW: add CAP issues}
 \begin{itemize}
 
-  \item Given a change in the base data, when is the derive state updated to reflect this change?
+  \item Given a change in the base data, when is the derive state updated to reflect this change (synchronously, in the
+  same transaction, or asynchronously)?
 
   \item How is the derived state distributed across the system's nodes?
 
   \item When base data is distributed across multiple data centers, how is the derived state placed across data centers?
 
-\todo{REVIEW: also mention availability of the derived state}
+  \item Given a synchronous maintenance scheme, in presence of network partitions,
+  does the derived state remain available, potentially returning stale results,
+  or it becomes unavailable, ensuring results are always consistent ?
+
 \end{itemize}
 
 These design choices affect multiple aspects of the query processing system's behavior,
@@ -373,26 +376,30 @@ schemes.
 
 \subsection{Derived state topology patterns}
 \label{sec:topology_patterns}
-\todo{MUST HAVE: not a good title: should include the term ``placement''}
+% \todo{MUST HAVE: not a good title: should include the term ``placement''}
 
 % \todo{discuss existing approaches for placement of query processing operators across servers for minimizing cross-server communication}
 
-In our analysis, we have made the implicit assumption so far that base data and derived state are placed in the
-same date center, and that clients are located in the same geographic region,
-and that communication latency among them is not significant.
-However, in modern cloud-scale services this is often not the case.
-Users are often spread across multiple geographic locations.
-As a result, database systems distribute data across geographically distributed data centers,
-in order to reduce latencies and improve fault-tolerance.
+So far in our analysis,
+we have consider a case in which base data, derived state, and clients are local in the same site,
+and, therefore, that communication latency among them is not significant.
+However, in modern cloud-scale services this is often not the case:
+Users are typically spread across multiple geographic locations;
+Database systems distribute or replicate data across geographically distributed data centers,
+in order to reduce latencies and improve availability.
 
-Long-distance inter- data center network links exhibit latencies in the order of tens to hundreds of milliseconds.
-This is an order of magnitude higher than intra- data center latencies as well as latencies perceived by users served
-from a data center close to their location \cite{kleppmann:localfirst}.
+Long-distance inter- data center network links exhibit latencies in the order of tens to hundreds of milliseconds \cite{pbailis:hats}.
+This is an order of magnitude higher than latencies within a data center,
+and latencies experienced by users served from a data center close to their geographic location.
 
-In this setting, design choices about the placement of derived state,
-and about the communication patterns between with base data and derived state and between derived state and clients
+In this setting, design choices about 1) the placement of derived state,
+2) the communication patterns between with base data and, 3) the communication patterns between derived state and clients
 determine whether the read and write path computations require intra- or inter- data center communication.
-We refer to these design choices \textit{topology patterns}.
+Performing inter- data center communication in the read or the write path,
+incurs significant overhead.
+Therefore, in a geo-distributed setting,
+these design decisions play a major role in the query processing system's behavior.
+We refer to these design choices as \textit{topology patterns}.
 
 Design choices related to inter- data center communication exacerbate the trade-offs presented in the previous sections,
 but also pose additional trade-offs related to derived state replication.
