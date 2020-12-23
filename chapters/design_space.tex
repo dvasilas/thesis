@@ -20,7 +20,7 @@ read access patterns to the data.
 
 At an abstract level, derived state can be described by a \textit{write path} and a \textit{read path}
 \cite{kleppmann:designing}.
-\todo{NICE TO HAVE: illustrate with figure}
+% \todo{NICE TO HAVE: illustrate with figure}
 The write path is the process of creating the derived state, and keeping it up-to-date with the base data.
 The read path is the process of reading from the derived state in order to perform a query processing task.
 In other words, the write path is the pre-computation that takes place when a change to the base data occurs,
@@ -100,7 +100,7 @@ including query performance, overhead to write operation, relevance of query res
 We can reason about how these design choices interact and how they affect the query processing system's behavior
 using the read and write path framework.
 To do so, we first describe the tasks involved in the read and write path.
-\todo{NICE TO HAVE: here we need a visualization}
+% \todo{NICE TO HAVE: here we need a visualization}
 
 \medskip
 
@@ -124,7 +124,7 @@ higher that intra- data center communication.
 \subsection{Derived state maintenance schemes}
 \label{sec:sync_async_maintenance}
 
-\todo{MUST HAVE: Figure~\ref{fig:maintenance_schemes} (temporary; borrowed) redo}
+% \todo{MUST HAVE: Figure~\ref{fig:maintenance_schemes} (temporary; borrowed) redo}
 
 Given the following update to a data item $d$:
 \[
@@ -179,16 +179,16 @@ Because asynchronous write path tasks result state derived state, and serving qu
 introduces false-positives and false-negatives, the choice of maintenance scheme poses a trade-off between write latency
 and query processing effectiveness.
 
-\begin{figure}
-  \centering
+% \begin{figure}
+%   \centering
 
-  \includegraphics[width=\textwidth]{./figures/design_space/maintenance.png}
+%   \includegraphics[width=\textwidth]{./figures/design_space/maintenance.png}
 
-  \caption{Sequence diagram for sync (left), sync-insert (middle), async-simple (right) maintenance}
+%   \caption{Sequence diagram for sync (left), sync-insert (middle), async-simple (right) maintenance}
 
-  \label{fig:maintenance_schemes}
+%   \label{fig:maintenance_schemes}
 
-\end{figure}
+% \end{figure}
 
 \bigskip
 
@@ -239,10 +239,10 @@ More specifically, considering an update that changes $d.attributeA$ from $x$ to
 \subsection{Derived state partitioning}
 \label{sec:index_partitioning_design_space}
 
-\todo{MUST HAVE: Figures~\ref{fig:prob1_6_2} and~\ref{fig:prob1_6_1} (temporary; borrowed) redo}
+% \todo{MUST HAVE: Figures~\ref{fig:prob1_6_2} and~\ref{fig:prob1_6_1} (temporary; borrowed) redo}
 
 Scaling derived state both in terms size and and read access requires partitioning it across multiple system nodes.
-In chapter chapter~\ref{ch:background}, we presented the two main index partitioning schemes.
+In Chapter~\ref{ch:background}, we presented the two main index partitioning schemes.
 
 Briefly, the main index partitioning schemes are:
 \begin{itemize}
@@ -286,21 +286,21 @@ an index partition on another node),
 but requires less communication on the read path in the general case
 (index partitions known do not include relevant index entries are not contacted).
 
-\begin{figure}
-    \centering
-    \begin{minipage}{.5\textwidth}
-        \centering
-        \includegraphics[scale=0.3]{figures/design_space/communication_pattern_document_partitioned.png}
-        \caption{}
-        \label{fig:prob1_6_2}
-    \end{minipage}%
-    \begin{minipage}{0.5\textwidth}
-        \centering
-        \includegraphics[scale=0.3]{figures/design_space/communication_pattern_term_partitioned.png}
-        \caption{}
-        \label{fig:prob1_6_1}
-    \end{minipage}
-\end{figure}
+% \begin{figure}
+%     \centering
+%     \begin{minipage}{.5\textwidth}
+%         \centering
+%         \includegraphics[scale=0.3]{figures/design_space/communication_pattern_document_partitioned.png}
+%         \caption{}
+%         \label{fig:prob1_6_2}
+%     \end{minipage}%
+%     \begin{minipage}{0.5\textwidth}
+%         \centering
+%         \includegraphics[scale=0.3]{figures/design_space/communication_pattern_term_partitioned.png}
+%         \caption{}
+%         \label{fig:prob1_6_1}
+%     \end{minipage}
+% \end{figure}
 
 Guided by this analysis we can reason about the performance characteristics of the two approaches.
 
@@ -344,8 +344,7 @@ incurring less overhead to write latency and providing better scalability.
 From the above analysis it is evident that neither of the two approaches is suitable for all needs.
 The choice of which approach to use should be guided by factors including the scale of the system,
 the properties of the dataset (distribution of indexed values over the data items),
-and the characteristics of the workload (query/write ratio, concurrency, query selectivity)
-\todo{note also that this work does not consider the significant latencies involved in geo-distribution. This exaggerates the effects}
+and the characteristics of the workload (query/write ratio, concurrency, query selectivity).
 
 More specifically:
 \begin{itemize}
@@ -411,42 +410,43 @@ however the analysis can also be applied to materialized views.
 
 \subsubsection{Geo-replication}
 Cloud-scale database systems rely on geo-distribution to minimize user-perceived latency and improve fault-tolerance.
-This architecture poses a design choice which stems from an impossibility property, known as the CAP theorem
-\cite{brewer:cap}.
-in the face of network partitions between data centers, geo-replicated databases must choose between strongly consistent
-(CP) and high-available (AP) designs.
-In a strongly-consistent design, replicas are kept synchronized at all times.
-This provides the abstraction of single replica system which simplifies application logic, but exposes users to high
-latencies due to the need for inter- data center communication between replicas in the critical path of each write
-operation.
-In addition, strongly-consistent designs are susceptible to downtimes due to network partitions.
-In a highly-available design, replicas synchronize in the background, out of the critical path of write operations.
-This ensures low latency and availability under network partitions, as each replica serves write operations locally.
-Nevertheless, this allows replicas to accept concurrent conflicting updates and temporary diverge.
+Given a database that is replicated across multiple data centers, we consider the design choices for a
+query engine architecture that maintains materialized views.
 
-\medskip
-
-We first consider a strongly-consistent design.
 One approach is to maintain a replica of the materialized view on each data center.
-With this approach, both the read and write path involve only intra- data center communication.
-Queries can be served from the materialized view at the closest date center.
-Moreover, since the entire dataset is present on each data center,
-keeping materialized view replicas up-to-date with the base data requires only intra- data center communication.
+With this approach, both the read and write path involve only intra- data center communication:
+Queries can be served from the materialized view at the closest date center, without requiring communication with
+remote data centers;
+View maintenance is also local, since the entire dataset is present on each data center.
 The downside of this approach is the storage overhead associated with maintaining multiple replicas of the materialized
 view.
 
-An alternative approach is to have materialized view replicas only on some data centers.
+An alternative approach is to place materialized view replicas on a subset of the data centers.
 This reduces the storage overhead, but means that a query sent to a data center without a materialized view
-either needs to be forwarded to another data center, or processed without the use of a materialized view,
+either needs to be forwarded to another data center, or be processed without the use of the materialized view,
 both of which result in slower query processing.
-This can be suitable for case in which some data centers are queried more often than others.
+This approach can be suitable for cases in which some data centers are queried more often than others.
 Moreover, this approach can be supplemented with the use of caches in data centers without materialized
 views.
 
-\medskip
-
-\todo{GOOD TO HAVE: here we need a paragraph about AP.}
-Mainly, discuss conflicts and derived data.
+\bigskip
+\noindent
+Furthermore, an additional consideration related to derived state maintenance in AP geo-replication
+is the presence of concurrent conflicting updates.
+Highly-available designs use mechanisms for ensuring that replicas eventually converge to the same state despite
+conflicting updates, such as conflict-free data types \cite{Shapiro2011CRDTs}.
+In some cases, these mechanisms modify the effect of an already processed operation when a concurrent conflicting operation
+is received later by the replica.
+As an example, we can consider the case of an add-wins set.
+A replica of the set receives an operation the removes an element from the set, updates its state,
+and modifies a materialized view accordingly.
+Later, the replica receives an operation that adds the same element in the set, and determines that it was concurrent with the
+remove operation.
+Based on the conflict resolution rule (add-wins) the element must appear in the set.
+The replica's state must be updated, and the result must be reflected in the materialized view.
+Conversely, a remove-wins set in the same scenario needs to update the materialized view with the reverse result.
+Therefore, in AP designs, derived state maintenance algorithms need to take into account concurrent conflicting updates,
+and conflict resolution policies, in order to avoid divergence between base data and derived state.
 
 \subsubsection{Geo-partitioning}
 A different geo-distribution strategy is geo-partitioning.
@@ -492,9 +492,9 @@ systems.
 From the examples above it becomes clear that topology patterns play a major role in the performance of geo-distributed
 query processing based on derived state
 
-\section{Conclusion (placeholder title)}
+\section{Conclusion}
 
-\todo{GOOD TO HAVE: we need a vizualization \\ multi-dimensional table? decision tree? something else?}
+% \todo{GOOD TO HAVE: we need a vizualization \\ multi-dimensional table? decision tree? something else?}
 
 \begin{itemize}
   \item The use of derived state to speed-up query processing moves query processing work from the read path to the write

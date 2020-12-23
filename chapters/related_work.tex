@@ -61,13 +61,17 @@ based on factors such as the distribution of values of the indexed attribute,
 the size of the system (number of partitions), the amount of concurrency in index lookups,
 and the selectivity of queries.
 We have described the experimental results of \cite{dsilva:tworings} in more detail in Section~\ref{sec:index_partitioning_design_space}.
-Both strategies are implemented and integrated into HBase in a non-intrusive way.
+Both strategies are implemented into HBase.
 
 While other works \cite{kejriwal:slik, tan:diffindex} have discussed the design choices and trade-offs related to secondary
 indexing in distributed data stores, the work of D'Silva et al. is, in our knowledge, the first to experimentally
 demonstrate that no single approach to secondary indexing can be best for all cases.
-This result has been amongst our initial motivations towards studying a flexible approach,
-able to express different points in the design space of distributed query processing.
+However, this work considers the environment of a cluster of servers and a synchronous maintenance scheme.
+Our work expands on the work of D'Silva et al. in two directions.
+First, we consider the design decisions involved in secondary indexing (and query processing using derived state in general)
+in the context of geo-distribution.
+Second, we propose a framework that application can use to navigate this design space,
+making trade-offs according to their needs.
 
 %  // Replex
 % no need to compromise scalability for functionality.
