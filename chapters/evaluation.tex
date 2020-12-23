@@ -599,6 +599,13 @@ significant data transfer costs.
 
 \section{Conclusion}
 \todo{evaluation conclusion}
+The evaluation presented in this chapter have demonstrated the trade-offs involved in the placement of query processing state.
+Placing materialized views close to the client leads to improvements in query processing performance,
+at the expense of freshness.
+Experiments in this chapter showed that freshness penalties are not prohibitive,
+and that read-heavy applications can place materialized state close to clients without incurring significant
+dat transfer costs.
+
 % \section{Navigating the design space of geo-distributed query}
 % (Note: The title might be a bit too fancy. To re-think.)
 
