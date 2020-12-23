@@ -383,20 +383,38 @@ given a query,
 the Partition Manager QPU forwards the same query to each of its downstream connections.
 This implements the required read path behavior.
 
-\begin{figure}
-\subfloat[]{%
-\centering
-  \includegraphics[width=0.6\textwidth]{./figures/case_studies/qpt_index_partitioning_terms_1.pdf}%
-}
 
-\subfloat[]{%
-  \centering
-  \includegraphics[width=0.6\textwidth]{./figures/case_studies/qpt_index_partitioning_terms_2.pdf}%
-}
-\caption{The query processing capabilities tree for $index$ $partition_1$ (a) and $index$ $partition_2$ (b) of the term-partitioned
+\begin{figure}
+  \begin{subfigure}{0.5\textwidth}
+     \includegraphics[width=\linewidth]{./figures/case_studies/qpt_index_partitioning_terms_1.pdf}%
+     \caption{}
+     \label{fig:qpt_index_partitioning_terms_1}
+  \end{subfigure}%
+  \hspace*{\fill}
+  \begin{subfigure}{0.5\textwidth}
+    \includegraphics[width=\linewidth]{./figures/case_studies/qpt_index_partitioning_terms_2.pdf}%
+    \caption{}
+    \label{fig:qpt_index_partitioning_terms_2}
+  \end{subfigure}%
+\caption{The query processing capabilities tree for $index$ $partition_1$ (\ref{fig:qpt_index_partitioning_terms_1}) and $index$ $partition_2$ (\ref{fig:qpt_index_partitioning_terms_2}) of the term-partitioned
 index in Figure~\ref{fig:index_partitioned_by_term}}
 \label{fig:qpt_index_partitioning_terms}
 \end{figure}
+
+% \begin{figure}
+% \subfloat[]{%
+% \centering
+%   \includegraphics[width=0.6\textwidth]{./figures/case_studies/qpt_index_partitioning_terms_1.pdf}%
+% }
+
+% \subfloat[]{%
+%   \centering
+%   \includegraphics[width=0.6\textwidth]{./figures/case_studies/qpt_index_partitioning_terms_2.pdf}%
+% }
+% \caption{The query processing capabilities tree for $index$ $partition_1$ (a) and $index$ $partition_2$ (b) of the term-partitioned
+% index in Figure~\ref{fig:index_partitioned_by_term}}
+% \label{fig:qpt_index_partitioning_terms}
+% \end{figure}
 
 \medskip
 \noindent
