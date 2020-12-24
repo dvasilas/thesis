@@ -489,7 +489,7 @@ Moreover, it adds to the configuration parameters the QPU instance's downstream 
 \section{Implementation}
 \label{sec:implementation}
 
-The prototype implementation of Proteus consists of 13k lines of Go.
+The prototype implementation of Proteus consists of 13k lines of Go (v1.14).
 The source code is available at \url{https://github.com/dvasilas/proteus}.
 
 % It can operate on a single server or across a cluster of servers.
@@ -497,7 +497,7 @@ The source code is available at \url{https://github.com/dvasilas/proteus}.
 \bigskip
 \noindent
 \textbf{Interface.}
-Applications interface with Proteus through a protocol buffer \cite{protobuf:docs} interface over gRPC \cite{grpc:docs}
+Applications interface with Proteus through a protocol buffer \cite{protobuf:docs} interface over gRPC (v1.31) \cite{grpc:docs}
 gRPC is an remote procedural call (RPC) framework.
 Using gPRC, a client process can directly call a method on a server process, on a different machine, as if it were a local object.
 The workflow for using gPRC consists of defining a service, specifying its interface; methods that can be called remotely
@@ -522,7 +522,7 @@ available, performing the operation, and returning the connection to the pool.
 \noindent
 \textbf{Storage.}
 Overall, query processing units maintain state either in memory, or persistently in AntidoteDB \cite{antidotedb:docs} or
-MariaDB \cite{mariadb:docs}.
+MariaDB (v.10.3.27) \cite{mariadb:docs}.
 However, currently not all QPU implementations support all three state backends.
 For example, our Index QPU implementation supports both in memory and AntidoteDB,
 while the Aggregator and Join QPU implementations support only MariaDB.

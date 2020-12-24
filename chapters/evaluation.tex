@@ -32,6 +32,7 @@ The aim of this evaluation is to answer the following questions:
 
 
 \section{Experimental scenario}
+\label{sec:eval_scenario}
 
 The evaluation in this chapter is based on the case study presented in Section~\ref{sec:lobsters},
 which describes the Lobsters \cite{lobste:rs} web application.
@@ -165,7 +166,11 @@ The choice of using the same database both as the baseline and for storing the m
 the effect of the database performance from the evaluation results,
 providing a comparison that isolates the effects of placement.
 
-In addition, we use an index on the materialized view to support efficient retrieval of the stories with the highest vote count.
+As presented in Section~\ref{sec:implementation} our implementation uses MariaDB in the place of MySQL.
+However, we refer to the database as MySQL throughout this chapter.
+
+Finally, we create an index on the table that implements the materialized view in order to support efficient retrieval of
+the stories with the highest vote count.
 
 \bigskip
 \noindent
@@ -275,11 +280,6 @@ despite all containers being deployed on a single server.
 \textbf{Hardware.}
 Experiments were run on a cluster located in Paris, provided by the Laboratoire d'Informatique de Paris 6 (LIP6).
 Each server consists of 2 Intel Xeon E5645 CPUs, each with 6 cores, 64 GB RAM, an 128 GB SSD disk, and a 4 TB HDD disk.
-
-\bigskip
-\noindent
-\textbf{Software.}
-\todo{add versions}
 
 \bigskip
 \noindent
