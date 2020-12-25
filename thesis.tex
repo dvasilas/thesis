@@ -1,4 +1,4 @@
-\documentclass[a4paper]{report}
+\documentclass[a4paper,usenames,dvipsnames]{report}
 \usepackage{fancyhdr}
 \usepackage[ddmmyyyy,hhmmss]{datetime}
 \usepackage{tcolorbox}
@@ -14,9 +14,9 @@
 \usepackage[]{algorithm}
 \usepackage{algpseudocode}
 \usepackage{amssymb}
-% \usepackage[]{subfig}
 \usepackage{subcaption}
 \usepackage{float}
+\usepackage[]{xcolor}
 
 \def\UrlBreaks{\do\/\do-}
 
@@ -25,18 +25,44 @@
 
 \usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
 
+\colorlet{punct}{red!60!black}
+\definecolor{delim}{RGB}{20,105,176}
+\colorlet{numb}{magenta!60!black}
 
-\usepackage{listings}
+\lstdefinelanguage{json}{
+  basicstyle=\normalfont\ttfamily,
+  breaklines=true,
+  commentstyle=\color{gray},
+  morecomment={[l]{//}},
+  literate=
+    {\#}{{{\color{numb}{\#}}}}{1}
+    {:}{{{\color{punct}{:}}}}{1}
+    {,}{{{\color{punct}{,}}}}{1}
+    {\{}{{{\color{delim}{\{}}}}{1}
+    {\}}{{{\color{delim}{\}}}}}{1}
+    {[}{{{\color{delim}{[}}}}{1}
+    {]}{{{\color{delim}{]}}}}{1},
+    captionpos=b,
+}
+
 \lstset{float,
-  % basicstyle=\scriptsize,
-  % language=SQL,
-  columns=fullflexible,
+  basicstyle=\normalfont\ttfamily,
+  language=SQL,
   % frame=tb,
+  keywordstyle=\color{NavyBlue},
   captionpos=b,
   mathescape=true,
-  tabsize=2,
-  xleftmargin=\parindent,
-  escapeinside={(*@}{@*)}}
+  % tabsize=2,
+  % xleftmargin=\parindent,
+  escapeinside={(*@}{@*)},
+  breaklines=true,
+  morekeywords={SNAPSHOT},
+  literate=
+    *{=}{{{\color{gray}=}}}{1}
+    {<}{{{\color{gray}<}}}{1}
+    {>}{{{\color{gray}>}}}{1}
+    {!}{{{\color{gray}!}}}{1}
+  }
 
 \pagestyle{fancy}
 \lhead{}

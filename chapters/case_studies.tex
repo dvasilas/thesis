@@ -170,20 +170,12 @@ The index partition is responsible for index entries that correspond to attribut
 \medskip
 \noindent
 In the partitioning by document approach,
-each index partitions are configured to be responsible for the entire attribute value space,
+each index partition is configured to be responsible for the entire attribute value space,
 which in the photo album example is $[\#000000$, $\#FFFFFF$].
 As a result, upon initialization, each index partition sends the query: \todo{update query according to changes to QPU chapter}
 
-\begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+\begin{lstlisting}[caption={Query sent during initialization from each index partition to the corresponding Corpus Driver QPU,
+  in the QPU graph shown in Figure~\ref{fig:index_partitioned_by_document}.}]
 SELECT primaryKey, predominantColor
 FROM photoAlbum
 INTERVAL FROM LATEST
@@ -202,18 +194,11 @@ A simplified version of the configuration of the index partitions of the term-pa
 
 \begin{minipage}{.45\textwidth}
 \begin{lstlisting}[
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent,
-          caption={Configuration of the $index$ $partition_1$ in Figure~\ref{fig:index_partitioned_by_term}},captionpos=b
-          ]{}
+  language=json,
+  caption={Configuration of the $index$ $partition_1$ in Figure~\ref{fig:index_partitioned_by_term}}
+]
 {
-  // other configuration
-  // parameters
+  // other configuration parameters
   "indexConfiguration": {
     "table": "photoAlbum",
     "attribute":
@@ -226,15 +211,9 @@ A simplified version of the configuration of the index partitions of the term-pa
 \end{minipage}\hfill
 \begin{minipage}{.45\textwidth}
 \begin{lstlisting}[
-  showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent,
-          caption={Configuration of $index$ $partition_2$ in Figure~\ref{fig:index_partitioned_by_term}},captionpos=b
-          ]{}
+  language=json,
+  caption={Configuration of $index$ $partition_2$ in Figure~\ref{fig:index_partitioned_by_term}},captionpos=b
+]
 {
   // other configuration
   // parameters
@@ -254,18 +233,12 @@ A simplified version of the configuration of the index partitions of the term-pa
 As a result, upon initialization, $index$ $partition_1$ sends the query: \todo{update according to QPU chapter}
 
 \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  caption={Query sent during initialization from $index$ $partition_1$ to to each Selection QPU
+  in the QPU graph shown in Figure~\ref{fig:index_partitioned_by_term}}
+]
 SELECT primaryKey, predominantColor
 FROM photoAlbum
-WHERE predominantColor <= #000000 AND predominantColor < #7FFFFF
+WHERE predominantColor >= #000000 AND predominantColor < #7FFFFF
 SNAPSHOT LATEST
 INTERVAL FROM LATEST
 \end{lstlisting}
@@ -274,18 +247,12 @@ INTERVAL FROM LATEST
 to each downstream Selection QPU, and $index$ $partition_2$ sends the query: \todo{update according to QPU chapter}
 
 \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  caption={Query sent during initialization from $index$ $partition_2$ to to each Selection QPU
+  in the QPU graph shown in Figure~\ref{fig:index_partitioned_by_term}}
+]
 SELECT primaryKey, predominantColor
 FROM photoAlbum
-WHERE predominantColor <= #7FFFFF AND predominantColor <= #FFFFFF
+WHERE predominantColor >= #7FFFFF AND predominantColor <= #FFFFFF
 SNAPSHOT LATEST
 INTERVAL FROM LATEST
 \end{lstlisting}
@@ -295,18 +262,12 @@ to each downstream Selection QPU.
 
 \noindent
 As a result of receiving one the above queries,
-a Selection QPU sends to each downstream Corpus Driver QPU the query:
+each Selection QPU sends to each downstream Corpus Driver QPU the query:
 
 \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  caption={Query sent during initialization from each Selection QPU each Corpus Driver QPU
+  in the QPU graph shown in Figure~\ref{fig:index_partitioned_by_term}}
+]
 SELECT primaryKey, predominantColor
 FROM photoAlbum
 SNAPSHOT LATEST
@@ -326,18 +287,11 @@ $partition_2$, $Corpus$ $Driver_2$ sends to $Selection_2$ a record encoding that
 This input record matches the query:
 
 \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  caption={Query that retrieves image files from the $photoAlbum$ table based the value of the $predominantColor$ attribute}
+]
 SELECT primaryKey, predominantColor
 FROM photoAlbum
-WHERE predominantColor <= #000000 AND predominantColor < #7FFFFF
+WHERE predominantColor >= #000000 AND predominantColor < #7FFFFF
 SNAPSHOT LATEST
 INTERVAL FROM LATEST
 \end{lstlisting}
@@ -428,19 +382,13 @@ We describe how the term-partitioned index architecture processes queries by run
 Given the query:
 
 \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  caption={Query that retrieves image files from the $photoAlbum$ table based the value of the $predominantColor$ attribute},
+  label={lst:predominantcolor_q},
+  ]
 Q = SELECT primaryKey, predominantColor
     FROM photoAlbum
     WHERE predominantColor >= #21B1FF
-      AND predominantColor < #ff7b75
+    AND predominantColor < #ff7b75
     SNAPSHOT LATEST
 \end{lstlisting}
 
@@ -449,19 +397,12 @@ the Partition Manager QPU calculates the intersection between the parse tree of 
 This results to the downstream query:
 
 \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  caption={Sub-query sent from the Partition Manager QPU to $index$ $partition_1$ in Figure~\ref{fig:qpt_index_partitioning_terms}
+  in order to process the query in Listing~\ref{lst:predominantcolor_q}.}]
 Q1 = SELECT primaryKey, predominantColor
      FROM photoAlbum
      WHERE predominantColor >= #21B1FF
-       AND predominantColor < #7FFFFF
+     AND predominantColor < #7FFFFF
      SNAPSHOT LATEST
 \end{lstlisting}
 
@@ -469,19 +410,13 @@ Q1 = SELECT primaryKey, predominantColor
 Similarly, the downstream query for $index$ $partition_2$ is:
 
 \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+caption={Sub-query sent from the Partition Manager QPU to $index$ $partition_2$ in Figure~\ref{fig:qpt_index_partitioning_terms}
+  in order to process the query in Listing~\ref{lst:predominantcolor_q}.}]
+]
 Q2 = SELECT primaryKey, predominantColor
      FROM photoAlbum
      WHERE predominantColor >= #800000
-       AND predominantColor < #ff7b75
+     AND predominantColor < #ff7b75
      SNAPSHOT FROM LATEST
 \end{lstlisting}
 
@@ -536,18 +471,11 @@ Queries can select between the two partitioned index tiers using a special ``con
 The query:
 
 \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  caption={Query that retrieves an image file from the $photoAlbum$ table based the value of its $predominantColor$ attribute.}
+]
 SELECT primaryKey, predominantColor
 FROM photoAlbum
-WHERE predominantColor == #ff7b75
+WHERE predominantColor = #ff7b75
 AND tier = sync
 \end{lstlisting}
 
@@ -555,18 +483,11 @@ AND tier = sync
 will be forwarded to the document-partitioned index, while the query:
 
 \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  caption={Query that retrieves an image file from the $photoAlbum$ table based the value of its $predominantColor$ attribute.}
+]
 SELECT primaryKey, predominantColor
 FROM photoAlbum
-WHERE predominantColor == #ff7b75
+WHERE predominantColor = #ff7b75
 AND tier = async
 \end{lstlisting}
 
@@ -821,15 +742,8 @@ This requires complex application-side logic, and is error-prone.
 In this case study, we focus on a subset of Lobster's functionality that can de modeled as follows:
 
 \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  caption={The database schema used in this case study.}
+  ]
 TABLE users (id int, username text)
 TABLE stories (id int, author_id int, title text, url text);
 TABLE votes (user_id int, story_id int, vote int);
@@ -840,16 +754,9 @@ We demonstrate a QPU architecture that expresses a materialized view which pre-c
 The goal of this view is to facilitate the query that Lobsters executes for retrieving a requested story:
 
 \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent,
-          commentstyle = \color{gray}
-        ]
+  caption={Query that retrieves a story along with its vote count, based on its ID.},
+  label={lst:get_story_q}
+  ]
 Q_story = SELECT id, author_id, title, url, vote_count
           FROM stories
           JOIN (
@@ -863,19 +770,21 @@ Q_story = SELECT id, author_id, title, url, vote_count
 \noindent
 Figure~\ref{fig:lobsters_architecture_basic} shows the QPU architecture that implements this materialized view.
 We pass $Q\_story$ as configuration to the Materialized view QPU.
-Upon initialization, the Materialized view QPU sends the following as a downstream query to the Join QPU,
-with the additional predicates:
+Upon initialization, the Materialized view QPU sends the following as the following downstream query to the Join QPU:
+
 
 \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent
-        ]
+  caption={Query from the Materialized View QPU to the Join QPU in Figure~\ref{fig:lobsters_architecture_basic}
+  during initialization.},
+  ]
+SELECT id, author_id, title, url, vote_count
+FROM stories
+JOIN (
+  SELECT story_id, SUM(vote) as vote_count
+  FROM votes
+  GROUP BY story_id
+) view
+ON stories.id = view.story_id
 SNAPSHOT LATEST
 INTERVAL FROM LATEST
 \end{lstlisting}
@@ -890,16 +799,9 @@ INTERVAL FROM LATEST
 The Join QPU in turn generates two downstream queries:
 
 \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent,
-          commentstyle = \color{gray}
-        ]
+  caption={Quey sent by the Join QPU to the $stories$ Corpus Driver QPU in Figure~\ref{fig:lobsters_architecture_basic}
+  during initialization.}
+]
 Q1 = SELECT id, author_id, title, url
      FROM stories
      SNAPSHOT LATEST
@@ -907,16 +809,9 @@ Q1 = SELECT id, author_id, title, url
 \end{lstlisting}
 
 \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent,
-          commentstyle = \color{gray}
-        ]
+  caption={Quey sent by the Join QPU to the Sum QPU in Figure~\ref{fig:lobsters_architecture_basic}
+  during initialization.}
+]
 Q2 = SELECT story_id, SUM(vote)
      FROM votes
      GROUP BY story_id
@@ -977,18 +872,11 @@ to the query processing architecture, thus simplifying the application code.
 We expand the Lobsters case study by examining the operation of loading the application's frontpage.
 The frontpage consists of the $K$ stories with the highest vote count ($K$ being a parameter).
 
-The Lobsters implementation uses the following query to retrieve the information required for loading the frontpage:
+The Lobsters implementation uses the following query to retrieve the information required for loading the front page:
 
 \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent
-        ]
+  caption={Query that retrieves the stories in the Lobsters front page.}
+  ]
 SELECT id, author, title, url, vote_count
 FROM stories
 JOIN (

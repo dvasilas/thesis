@@ -65,17 +65,7 @@ adding a comment to a story are performed.
 For this evaluation, we consider a simplified version of the Lobsters application.
 In particular, we consider the following database schema:
 
-\begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent,
-          commentstyle = \color{gray}
-        ]
+\begin{lstlisting}[caption={Simplified Lobsters schema used in this evaluation.}]
 TABLE users (id bigint, username varchar(50))
 TABLE stories (id bigint, user_id bigint, title varchar(150), description mediumtext, short_id varchar(6));
 TABLE votes (id bigint, user_id bigint, story_id bigint, vote tinyint);
@@ -109,7 +99,7 @@ Number of votes & [0-10) & [10-20) & [20-30) & [30-40) & [40-50) & [50-60) \\
 The statistics provided by the maintainers of Lobsters \cite{lobste:stats} include the distribution of votes to stories (Table~\ref{tab:votes_per_story}).
 As expected, most stories (81.4\%) receive between 0 and 20 votes.
 For our experiments, we use a more skewed (and less realistic) distribution:
-We configure 60\% of votes to target the 25 stories in the frontpage, and 40\% to follow the distribution shown in Table~\ref{tab:votes_per_story}.
+We configure 60\% of votes to target the 25 stories in the front page, and 40\% to follow the distribution shown in Table~\ref{tab:votes_per_story}.
 We choose this distribution because our initial benchmarks showed that with votes following the distribution given by the statistics,
 very few votes are performed on the stories on the front page to have meaningful impact on freshness.
 
@@ -128,17 +118,7 @@ This architecture maintains a materialized view that integrates stories from the
 with their vote count.
 The view definition the following query:
 
-\begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent,
-          commentstyle = \color{gray}
-        ]
+\begin{lstlisting}[caption={Definition of the materialized view maintained by the QPU graph shown in Figure~\ref{fig:eval_lobsters_qpu_arch}.}]
 SELECT id, author_id, title, url, vote_count
 FROM stories
 JOIN (

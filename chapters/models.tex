@@ -393,11 +393,12 @@ and simple enough to allow this work to focus on the architecture design of the 
   Moreover, queries can combine multiple $Selection$ operators with logical operators.
   For example, the query:
 
-  \begin{lstlisting}
-  SELECT order_id
-  FROM Orders
-  WHERE status != "shipped" AND order_date <= 10-10-2020
-  \end{lstlisting}
+\begin{lstlisting}[
+  caption={Query that retrieves order records based on their status and order date attributes.}]
+SELECT order_id
+FROM Orders
+WHERE status != "shipped" AND order_date <= 10-10-2020
+\end{lstlisting}
 
   specifies an \textit{attribute predicate} using the conjunction of two $Selection$ operators.
 
@@ -421,11 +422,13 @@ and simple enough to allow this work to focus on the architecture design of the 
   The result of an aggregation function is a new table that contains a data item for each aggregation group.
   Each data item contains the result of the aggregation function as an attribute, and has the value of the grouping attribute as primary key.
 
-  \begin{lstlisting}
-  SELECT customer_id, SUM(amount)
-  FROM Orders
-  GROUP BY customer_id
-  \end{lstlisting}
+\begin{lstlisting}[
+  caption={Query that computes the sum of the total amount for the orders of each customer.}
+]
+SELECT customer_id, SUM(amount)
+FROM Orders
+GROUP BY customer_id
+\end{lstlisting}
 
   groups the data items in Orders based on the value of the $customer\_id$ attribute,
   and applies the SUM function to the $amount$ attribute of every data item in each group.

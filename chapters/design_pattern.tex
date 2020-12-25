@@ -157,15 +157,9 @@ The application stores individual votes for stories in a votes table.
 It uses a materialized view to integrate the vote count to each story:
 
 \begin{lstlisting}[
-          language=SQL,
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          stringstyle=\color{mymauve},
-          frame=L,
-          xleftmargin=\parindent
-        ]
+    caption={Definition of a materialized view that computes the vote count of each story and joins it with
+    the rest of the story's attributes.}
+]
 TABLE stories (id int, title text, url text)
 TABLE votes (story_id int)
 
@@ -1005,6 +999,7 @@ where
 
 Using pseudocode, we can represent the query processing state's API as follows:
 
+\todo{}
 \begin{lstlisting}[caption={Pseudocode for the QPU's query processing state},captionpos=b,label={lst:qpustate}, frame=tlrb]
 type AttributeName string
 
@@ -1045,6 +1040,7 @@ In that way, QPU's can process queries about any timestamp that they have receiv
 
 Each QPU invokes an initialization function when it starts its execution.
 
+\todo{}
 \begin{lstlisting}[caption={Initialization function signature},captionpos=b,label={lst:init_func}]
 type DownstreamConnection {
   endpoint string
@@ -1078,6 +1074,7 @@ $QPF_q$ is responsible for emitting records to $R_q$.
 Moreover, if $QPF_q$ initiates input streams $I_{q-1}$, $I_{q-2}$, ..., then $QPF_q$ is responsible for handing the return
 values of callback functions for records received through $I_{q-i}$.
 
+\todo{}
 \begin{lstlisting}[caption={Query processing function signature},captionpos=b,label={lst:query_processing_func}]
 function ProcessQuery(QueryRequest, QPState, [DownstreamConn],
                       ResponseStream)
@@ -1105,6 +1102,7 @@ The input stream callback function is responsible for processing a record receiv
 The callback function can read from and write to the query processing unit state,
 and a (potentially empty) list of $StreamRecord$ to the query processing function.
 
+\todo{}
 \begin{lstlisting}[caption={Input stream callback function signature},captionpos=b,label={lst:callback_func}]
 function ProcessInputRecord(StreamRecord, QueryRequest, QPState)
           returns [StreamRecord]
@@ -1437,9 +1435,9 @@ The capabilities of a QPU-based query processing system are emergent from the fu
 as well as the graph topology.
 For example, consider the QPU graph depicted in Figure~\ref{fig:qpu_graph_emergent_properties}, where:
 
-\begin{lstlisting}[caption={Customer and Orders tables attributes},captionpos=b,]
-Table Customers(CustomerID, Email, Address)
-Table Orders(OrderID, CustomerID, OrderStatus, OrderDate)
+\begin{lstlisting}[caption={Customer and Orders tables attributes}]
+TABLE Customers(CustomerID, Email, Address)
+TABLE Orders(OrderID, CustomerID, OrderStatus, OrderDate)
 \end{lstlisting}
 
 \begin{itemize}
