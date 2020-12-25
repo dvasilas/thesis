@@ -875,6 +875,7 @@ The frontpage consists of the $K$ stories with the highest vote count ($K$ being
 The Lobsters implementation uses the following query to retrieve the information required for loading the front page:
 
 \begin{lstlisting}[
+  basicstyle=\normalfont\ttfamily,
   caption={Query that retrieves the stories in the Lobsters front page.}
   ]
 SELECT id, author, title, url, vote_count

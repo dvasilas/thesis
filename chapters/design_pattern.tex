@@ -999,8 +999,15 @@ where
 
 Using pseudocode, we can represent the query processing state's API as follows:
 
-\todo{}
-\begin{lstlisting}[caption={Pseudocode for the QPU's query processing state},captionpos=b,label={lst:qpustate}, frame=tlrb]
+\begin{lstlisting}[
+  language=Java,
+  basicstyle=\normalfont\ttfamily,
+  keywordstyle=\color{black},
+  basicstyle=\normalfont\ttfamily,
+  breaklines=true,
+  captionpos=b,
+  caption={Pseudocode for the QPU's query processing state}
+]
 type AttributeName string
 
 type AttributeValue union {
@@ -1040,8 +1047,12 @@ In that way, QPU's can process queries about any timestamp that they have receiv
 
 Each QPU invokes an initialization function when it starts its execution.
 
-\todo{}
-\begin{lstlisting}[caption={Initialization function signature},captionpos=b,label={lst:init_func}]
+\begin{lstlisting}[
+  basicstyle=\normalfont\ttfamily,
+  caption={Initialization function signature},
+  captionpos=b,
+  label={lst:init_func}
+  ]
 type DownstreamConnection {
   endpoint string
   capabilities QPCapabilities
@@ -1074,10 +1085,14 @@ $QPF_q$ is responsible for emitting records to $R_q$.
 Moreover, if $QPF_q$ initiates input streams $I_{q-1}$, $I_{q-2}$, ..., then $QPF_q$ is responsible for handing the return
 values of callback functions for records received through $I_{q-i}$.
 
-\todo{}
-\begin{lstlisting}[caption={Query processing function signature},captionpos=b,label={lst:query_processing_func}]
-function ProcessQuery(QueryRequest, QPState, [DownstreamConn],
-                      ResponseStream)
+\begin{lstlisting}[
+  basicstyle=\normalfont\ttfamily,
+  caption={Query processing function signature},
+  captionpos=b,
+  label={lst:query_processing_func},
+  breaklines=true
+]
+function ProcessQuery(QueryRequest, QPState, [DownstreamConn], ResponseStream)
 \end{lstlisting}
 
 \noindent
@@ -1102,8 +1117,12 @@ The input stream callback function is responsible for processing a record receiv
 The callback function can read from and write to the query processing unit state,
 and a (potentially empty) list of $StreamRecord$ to the query processing function.
 
-\todo{}
-\begin{lstlisting}[caption={Input stream callback function signature},captionpos=b,label={lst:callback_func}]
+\begin{lstlisting}[
+  basicstyle=\normalfont\ttfamily,
+  caption={Input stream callback function signature},
+  captionpos=b,
+  label={lst:callback_func}
+]
 function ProcessInputRecord(StreamRecord, QueryRequest, QPState)
           returns [StreamRecord]
 \end{lstlisting}

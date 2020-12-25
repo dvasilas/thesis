@@ -280,7 +280,7 @@ In our prototype, we have implemented the following QPU classes:
   Moreover, it can be configured to delay, re-order or drop stream records, based on a specified distribution.
   The goal of this class is to simulate various network conditions for testing purposes.
 
-  \item \todo{TODO: Query Router}
+  % \item \todo{TODO: Query Router}
 
 \end{itemize}
 
@@ -317,15 +317,10 @@ a series of QPU instance declarations, and a series of declarations of connectio
 A placement context is denotes a node or collection of nodes.
 It has the following syntax:
 
-\todo{}
 \begin{lstlisting}[
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  language=qpulang,
+  caption={Syntax used for placement context assignment.},
+]
 PlacementCtx([endpoint], PlacementCtxName)
 \end{lstlisting}
 
@@ -334,15 +329,10 @@ where $[endpoint]$ is a collection of system nodes, expressed as hostnames, or I
 and $PlacementCtxName$ is the name of the context assigned to these nodes.
 For example, the description:
 
-\todo{}
 \begin{lstlisting}[
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  language=qpulang,
+  caption={Assigning placement contexts to four nodes.},
+]
 PlacementCtx([10.200.4.56], "node_1")
 PlacementCtx([10.200.3.45], "node_2")
 PlacementCtx([10.200.4.56, 10.200.3.45], "dc_eu")
@@ -357,15 +347,10 @@ and both nodes to the context ``dc\_eu''.
 \noindent
 A QPU context declaration has the following syntax:
 
-\todo{}
 \begin{lstlisting}[
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  language=qpulang,
+  caption={Syntax used for specifying the configuration of a query processing unit.},
+]
 Configuration = {
   config_parameter_1: value_1,
   config_parameter_2: value_2,
@@ -382,15 +367,11 @@ The configuration specifies the configuration parameters passed to the QPU durin
 \medskip
 \noindent
 Specifying a connection between QPUs has the following syntax:
-\todo{}
+
 \begin{lstlisting}[
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  language=qpulang,
+  caption={Syntax used for specifying a connection between two query processing units.},
+]
 qpu_object_1.connectTo(qpu_object_2)
 \end{lstlisting}
 
@@ -401,15 +382,10 @@ This defines that $qpu\_object\_1$ has a downstream connection to $qpu\_object\_
 \noindent
 Finally, the following syntax can be used to describe the placement of QPUs across system nodes:
 
-\todo{}
 \begin{lstlisting}[
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  language=qpulang,
+  caption={Syntax used for specifying the placement of a query processing unit},
+]
 qpu_object.place([PlacementCtxName])
 \end{lstlisting}
 
@@ -417,15 +393,11 @@ qpu_object.place([PlacementCtxName])
 The $place$ method assigns a set of \textit{placement constraint} to query processing unit.
 The QPU can be placed on any node that satisfies the constraint.
 For example, based on the description:
-\todo{}
+
 \begin{lstlisting}[
-          showspaces=false,
-          basicstyle=\ttfamily,
-          commentstyle=\color{gray},
-          rulecolor=\color{black},
-          frame=L,
-          xleftmargin=\parindent
-        ]{}
+  language=qpulang,
+  caption={Creating two query processing units, and specyfing their placement on system nodes.},
+]
 PlacementCtx([10.200.4.56], "node_1")
 PlacementCtx([10.200.4.56, 10.200.3.45], "dc_eu")
 
