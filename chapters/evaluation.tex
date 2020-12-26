@@ -312,7 +312,7 @@ Repeated runs have shown that results are stable and consistent across runs.
     \end{figure}
 
 We compare three deployments that differ in how they store and calculate the per-story vote count,
-and how they distribute computations and state across the nodes of the system (Figure~\ref{v})
+and how they distribute computations and state across the nodes of the system (Figure~\ref{fig:eval_deployments})
 \textbf{Baseline/remote} (Fig.~\ref{fig:deployments_baseline_remote}) is equivalent to the real Lobsters application:
 it pre-computes and stores vote counts in a column of the Lobsters $stories$ table.
 This serves as the baseline approach.

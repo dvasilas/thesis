@@ -656,36 +656,36 @@ results, for example in streaming join computations, maintain \textit{query proc
 
 \medskip
 \noindent
-\textbf{Initialization, query processing, and input stream callback function.}
-\todo{procedure / method}
-The functionality of a query processing unit can be modeled using three functions:
+\textbf{Initialization, query processing, and input stream callback method.}
+The functionality of a query processing unit can be modeled using three methods:
 \begin{itemize}
-  \item The \textit{initialization function} (section~\ref{sec:initialization_func}), which is executed when the QPU is
+  \item The \textit{initialization method} (section~\ref{sec:initialization_func}), which is executed when the QPU is
   initialized.
 
-  \item The \textit{query processing function} (section~\ref{sec:query_processing_func}), which is executed for each
+  \item The \textit{query processing method} (section~\ref{sec:query_processing_func}), which is executed for each
   query request received by the QPU, and is responsible for processing the query and sending results to the response stream.
 
-  \item The \textit{input stream callback function} (section~\ref{sec:callback_func}), which is executed for each record
+  \item The \textit{input stream callback method} (section~\ref{sec:callback_func}), which is executed for each record
   received through an input stream.
+  \todo{callback to processing}
 
 \end{itemize}
 
-The QPU model defines the signatures of these functions, and each QPU class provides implementations for them.
-The functionality of a QPU class is defined by the implementations that the class provides for the three QPU functions.
+The QPU model defines the signatures of these methods, and each QPU class provides implementations for them.
+The functionality of a QPU class is defined by the implementations that the class provides for the three QPU methods.
 
 \bigskip
 
 A conceptual depiction of the query processing unit model is shown in Figure~\ref{fig:qpu_abstraction}.
 When the QPU's query API is called, an output stream ($R_A$) is established between the unit and the sender,
-and the unit's query processing function is invoked for the given query.
-The query processing function can read the QPU's state, and can perform downstream queries to other units.
+and the unit's query processing method is invoked for the given query.
+The query processing method can read the QPU's state, and can perform downstream queries to other units.
 For each downstream query, a corresponding stream is established ($Q_{A.1}$ and $Q_{A.2}$).
-When a record is received from one of the streams, the QPU's callback function is invoked.
-Each invocation of the callback function processes a received record, and returns the result to the query processing
-function.
-Upon receiving a result from a callback function,
-the query processing function can potentially write to the QPU's state and/or emit a record to the output stream.
+When a record is received from one of the streams, the QPU's callback method is invoked.
+Each invocation of the callback method processes a received record, and returns the result to the query processing
+method.
+Upon receiving a result from a callback method,
+the query processing method can potentially write to the QPU's state and/or emit a record to the output stream.
 
 
 \subsection{Query Processing Unit component model specification}
@@ -1042,14 +1042,14 @@ Essentially, the QPU's query processing state is versioned.
 In that way, QPU's can process queries about any timestamp that they have received updates for.
 
 
-\subsubsection{Initialization function}
+\subsubsection{Initialization method}
 \label{sec:initialization_func}
 
-Each QPU invokes an initialization function when it starts its execution.
+Each QPU invokes an initialization method when it starts its execution.
 
 \begin{lstlisting}[
   basicstyle=\normalfont\ttfamily,
-  caption={Initialization function signature},
+  caption={Initialization method signature},
   captionpos=b,
   label={lst:init_func}
   ]
@@ -1062,7 +1062,7 @@ function Init(QPState, [DownstreamConn])
 \end{lstlisting}
 
 \noindent
-Listing~\ref{lst:init_func} shows the initialization function's signature.
+Listing~\ref{lst:init_func} shows the initialization method's signature.
 $ProcessQuery$ receives as arguments:
 \begin{itemize}
   \item $QPState$, which is a handler that enables $Init$ to read from and write to QPU's query processing state.
@@ -1073,21 +1073,21 @@ $ProcessQuery$ receives as arguments:
 \end{itemize}
 
 
-\subsubsection{Query processing function}
+\subsubsection{Query processing method}
 \label{sec:query_processing_func}
 
-The query processing function is responsible for processing a single query.
+The query processing method is responsible for processing a single query.
 It spawns a result stream and sends the results back to the requestor over that stream.
 
 For each query $q$ being processed, the QPU initiates an output stream, $R_q$,
 and executes an instance of the query processing function, $QPF_q$.
 $QPF_q$ is responsible for emitting records to $R_q$.
 Moreover, if $QPF_q$ initiates input streams $I_{q-1}$, $I_{q-2}$, ..., then $QPF_q$ is responsible for handing the return
-values of callback functions for records received through $I_{q-i}$.
+values of callback methods for records received through $I_{q-i}$.
 
 \begin{lstlisting}[
   basicstyle=\normalfont\ttfamily,
-  caption={Query processing function signature},
+  caption={Query processing method signature},
   captionpos=b,
   label={lst:query_processing_func},
   breaklines=true
@@ -1097,7 +1097,7 @@ function ProcessQuery(QueryRequest, QPState, [DownstreamConn], ResponseStream)
 
 \noindent
 \begin{sloppypar}
-Listing~\ref{lst:query_processing_func} shows the query processing function's signature.
+Listing~\ref{lst:query_processing_func} shows the query processing method's signature.
 In addition to $QPState$ and $[DownstreamConn]$, $ProcessQuery$ receives:
 \end{sloppypar}
 \begin{itemize}
@@ -1107,19 +1107,19 @@ In addition to $QPState$ and $[DownstreamConn]$, $ProcessQuery$ receives:
 
 \end{itemize}
 
-An instance of the query processing function is executed for each received query request,
-therefore query processing unit can run multiple instances of the query processing function in parallel.
+An instance of the query processing method is executed for each received query request,
+therefore query processing unit can run multiple instances of the query processing method in parallel.
 
-\subsubsection{Input stream callback function}
+\subsubsection{Input stream callback method}
 \label{sec:callback_func}
 
-The input stream callback function is responsible for processing a record received through an input stream.
-The callback function can read from and write to the query processing unit state,
-and a (potentially empty) list of $StreamRecord$ to the query processing function.
+The input stream callback method is responsible for processing a record received through an input stream.
+The callback method can read from and write to the query processing unit state,
+and a (potentially empty) list of $StreamRecord$ to the query processing method.
 
 \begin{lstlisting}[
   basicstyle=\normalfont\ttfamily,
-  caption={Input stream callback function signature},
+  caption={Input stream callback method signature},
   captionpos=b,
   label={lst:callback_func}
 ]
@@ -1128,9 +1128,9 @@ function ProcessInputRecord(StreamRecord, QueryRequest, QPState)
 \end{lstlisting}
 
 \noindent
-Listing~\ref{lst:callback_func} shows the query processing function's signature.
+Listing~\ref{lst:callback_func} shows the query processing method's signature.
 
-An instance of the callback function is executed for each record received through an input stream.
+An instance of the callback method is executed for each record received through an input stream.
 
 \subsection{Stream semantics}
 
@@ -1212,7 +1212,7 @@ can interoperate to perform query processing tasks.
 
 A QPU class is an \textit{instantiation} of the query processing unit model:
 it defines the implementations of the \textbf{initialization}, \textbf{query processing} and \textbf{input stream callback}
-functions.
+methods.
 
 In this section, we present a categorization of QPU classes according to their general characteristics,
 and demonstrate some examples of QPU classes.
@@ -1241,7 +1241,7 @@ We categorize QPU classes in three groups, according to their general characteri
     and emits ths join operation result as its output stream.
 
     \item \textbf{Aggregator classes}:
-    Aggregator QPU classes encapsulate aggregation function such as count, sum, average, and min or max.
+    Aggregator QPU classes encapsulate aggregation functions such as count, sum, average, and min or max.
     An aggregator QPU performs a streaming aggregation over an input stream;
     It emits a record at its output stream for each input record that changes the computed aggregation value.
   \end{itemize}
@@ -1255,22 +1255,22 @@ We categorize QPU classes in three groups, according to their general characteri
     \item \textbf{Secondary index and Materialized view:}
     A secondary index (or materialized view) QPU receives its index or view definition as a configuration parameter.
 
-    The QPU's initialization function establishes an input steam by sending an \textit{interval} query
+    The QPU's initialization method establishes an input steam by sending an \textit{interval} query
     (a query without an upper bound timestamp) to its downstream connection:
     In that way, the QPU effectively \textit{subscribes to notifications} for updates to the corpus.
-    For each record received through the input stream, the callback function updates the query processing state accordingly.
+    For each record received through the input stream, the callback method updates the query processing state accordingly.
     When a query request is received,
-    the query processing function computes the results by reading from the query processing state,
+    the query processing method computes the results by reading from the query processing state,
     and emits them to the output stream.
 
     % For simplicity we assume that a secondary index QPU maintains an index for a single attribute (and the same for materialized view QPUs respectively).
     \item \textbf{Cache:}
-    When receiving a query request, a cache QPU's query processing function first determines if the query result is stored
+    When receiving a query request, a cache QPU's query processing method first determines if the query result is stored
     in the query processing state.
-    If yes, the function retrieves the corresponding query results and emits them at the output stream.
-    Alternatively, the query processing function sends a query request at the QPU's downstream connection,
+    If yes, the method retrieves the corresponding query results and emits them at the output stream.
+    Alternatively, it sends a query request at the QPU's downstream connection,
     with the given query.
-    The callback function stores each received record, and then returns it to the query processing function with emits it
+    The callback method stores each received record, and then returns it to the query processing method with emits it
     at the output stream.
     \end{itemize}
 
@@ -1286,7 +1286,7 @@ We categorize QPU classes in three groups, according to their general characteri
     encapsulated by the corresponding QPU classes.
 
     A partition manager QPU has downstream connections to a set of QPUs representing partitions.
-    When a query request is received, the QPU's query processing function determines which partitions need to be contacted,
+    When a query request is received, the QPU's query processing method determines which partitions need to be contacted,
     generated the corresponding queries and sends them as downstream query requests.
     To enable this, the partition manager QPU maintains information about the partitioning scheme and the portion of
     the partitioned space that corresponds to each of its downstream connections connections at its query processing
@@ -1295,7 +1295,7 @@ We categorize QPU classes in three groups, according to their general characteri
 
     \item \textbf{Load balancer and replica manager:}
     QPUs of these classes have similar functionalities with the partition manager class.
-    Given a query, the query processing function of a load balancer or replica manager QPU selects the most suitable
+    Given a query, the query processing method of a load balancer or replica manager QPU selects the most suitable
     among the QPU's downstream connections according to a certain criterion (defined by QPU's class and configuration),
     forwards the given query to that connection, and then forwards the resulting input stream to the output stream.
     \end{itemize}
@@ -1306,7 +1306,7 @@ We categorize QPU classes in three groups, according to their general characteri
   Because of their functionality, corpus driver QPUs are only used as leaves of the QPU graph.
   In fact, as we explain in section~\ref{sec:graph_topology}, every leaf node of the QPU can only be a corpus driver QPU.
 
-  When a query request is received, the query processing function of a corpus driver QPU uses the interface and mechanisms
+  When a query request is received, the query processing method of a corpus driver QPU uses the interface and mechanisms
   of they corpus database in order to generate and emit the output stream that corresponds to the given query.
   This can include reading from the database that stores the corpus, subscribing to update notifications,
   or performing queries.
@@ -1325,11 +1325,11 @@ We categorize QPU classes in three groups, according to their general characteri
 \textbf{Filter}
 
 Algorithms~\ref{algo:filter_query_processing_func} and~\ref{algo:filter_algorithm_func} show the query processing and
-input stream callback functions respectively for the filter QPU class using pseudocode.
+input stream callback methods respectively for the filter QPU class using pseudocode.
 
 
 \begin{algorithm}
-\caption{Filter QPU class query processing function}
+\caption{Filter QPU class query processing method}
 \label{algo:filter_query_processing_func}
 \begin{algorithmic}
 \Function{ProcessQuery}{queryReq, qpState, [downstreamConn], outputStream}
@@ -1366,11 +1366,11 @@ input stream callback functions respectively for the filter QPU class using pseu
 \textbf{Secondary index}
 
 Algorithms~\ref{algo:index_init_func}, ~\ref{algo:index_query_processing_func}, and~\ref{algo:index_callback_func}
-show the initialization, query processing, and input stream callback functions respectively for the secondary index QPU
+show the initialization, query processing, and input stream callback methods respectively for the secondary index QPU
 class using pseudocode.
 
 \begin{algorithm}
-\caption{Secondary index QPU class initialization function}
+\caption{Secondary index QPU class initialization method}
 \label{algo:index_init_func}
 \begin{algorithmic}
 \Function{Init}{qpState, [downstreamConn]}
@@ -1386,7 +1386,7 @@ class using pseudocode.
 \end{algorithm}
 
 \begin{algorithm}
-\caption{Secondary index QPU class query processing function}
+\caption{Secondary index QPU class query processing method}
 \label{algo:index_query_processing_func}
 \begin{algorithmic}
 \Function{ProcessQuery}{null, qpState, [downstreamConn], outputStream}
@@ -1404,7 +1404,7 @@ class using pseudocode.
 \end{algorithm}
 
 \begin{algorithm}
-\caption{Secondary index QPU class input stream callback function}
+\caption{Secondary index QPU class input stream callback method}
 \label{algo:index_callback_func}
 \begin{algorithmic}
 \Function{ProcessInputRecord}{inRecord, queryReq, qpState}
@@ -1562,7 +1562,7 @@ any QPU class that can be defined using the QPU model may have additional requir
 \label{sec:computation_model}
 
 The query execution computations of QPU-based query processing systems are \textit{fully decentralized}.
-The distributed computations directly emerge from the initialization, query processing and callback functions of the QPUs
+The distributed computations directly emerge from the initialization, query processing and callback methods of the QPUs
 the query processing system consists of.
 In order to describe the characteristics of query execution in QPU graphs, we first describe the execution of the query
 {\obeylines\obeyspaces
@@ -1574,7 +1574,7 @@ In order to describe the characteristics of query execution in QPU graphs, we fi
 
 by the QPU graph of Figure~\ref{fig:qpu_graph_emergent_properties}.
 
-When a $Join$ receives a query request for $Q$, its query processing function generates two downstream queries:
+When a $Join$ receives a query request for $Q$, its query processing method generates two downstream queries:
 {\obeylines\obeyspaces
 \texttt{Q1 = SELECT CustomerID, Email
         ~~~~~FROM Customers
@@ -1591,7 +1591,7 @@ When a $Join$ receives a query request for $Q$, its query processing function ge
 
 $Join$ sends a query request for $Q1$ to $Filter_1$, and a query request for $Q2$ to $Filter_2$.
 
-When a $Filter_1$ receives $Q1$, its query processing function generates the query and sends it as downstream query request
+When a $Filter_1$ receives $Q1$, its query processing method generates the query and sends it as downstream query request
 to $Corpus$ $driver_1$:
 
 {\obeylines\obeyspaces
@@ -1615,7 +1615,7 @@ $Filter_2$ emits at its output stream only the input stream updates for which
 \texttt{OrderStatus != "shipped" AND OrderDate < 2020-09-14}}
 is true.
 Because $Q1$'s $PredicateExpression$ is empty, $Filter_1$'s output stream is identical to its input stream.
-Finally, $Join$ receives the results of $Q1$ and $Q2$ as input streams; its query processing function join updates from
+Finally, $Join$ receives the results of $Q1$ and $Q2$ as input streams; its query processing method join updates from
 the two streams where
 {\obeylines\obeyspaces
 \texttt{Customers.CustomerID = Orders.CustomerID}}
@@ -1623,7 +1623,7 @@ and emits the results at its output stream.
 
 \medskip
 \noindent
-More generally, given a query $q$, the query processing function of a QPU $Q_0$ may either process $q$ by reading from its
+More generally, given a query $q$, the query processing method of a QPU $Q_0$ may either process $q$ by reading from its
 query processing state --- for example in the case of a materialized view QPU --- or generate and send query requests to
 some of its downstream connections, $Q_1$, $Q_2$ .., in order to initialize input streams required for processing the query.
 In both cases, the QPU computed the results of $q$ and emits them at the output stream that corresponds to $q$.
@@ -1646,9 +1646,9 @@ secondary indexes and materialized views.
 We call this type computation in a QPU DAG, \textit{state maintenance mode}.
 There are the following differences between query execution and state maintenance mode:
 \begin{itemize}
-  \item Query execution is performed in response to a client query (by the query processing function of the QPU that receives the query)
+  \item Query execution is performed in response to a client query (by the query processing method of the QPU that receives the query)
   while state maintenance is performed in response to the initialization of a secondary index of materialized view QPU
-  (by the initialization function of the corresponding QPU).
+  (by the initialization method of the corresponding QPU).
   \item The goal of query execution is to process a client query,
   while the goal state maintenance is to establish a long running stream of notification for corpus updates that
   will be used to incrementally update a derived state data structure.
@@ -1661,7 +1661,7 @@ There are the following differences between query execution and state maintenanc
 \noindent
 State maintenance can be configured to be performed either synchronously or asynchronously, depending on the type of send
 operation used for sending update records.
-Synchronous state maintenance is achieved by configuring all QPUs 
+Synchronous state maintenance is achieved by configuring all QPUs.
 
 \medskip
 \noindent
@@ -1674,7 +1674,7 @@ Response streams flow upwards through that sub-graph, each stream corresponding 
 \medskip
 \noindent
 Finally, as described in section~\ref{ref:specification}, a QPU can process multiple queries in parallel,
-executing an instance of its query processing function and having an output stream for each query request being processed.
+executing an instance of its query processing method and having an output stream for each query request being processed.
 Therefore, multiple different query execution and state maintenance sub-graph can co-exist in parallel in the same QPU DAG.
 
 
@@ -1684,7 +1684,7 @@ So far in this chapter we have presented a high level description for certain pa
 functionality.
 In this section we present this parts in details.
 More specifically, we present the data structure that represent QPUs' query processing capabilities,
-and describe how this structure is used by the query processing function to generate downstream queries for a given query.
+and describe how this structure is used by the query processing method to generate downstream queries for a given query.
 
 \subsubsection{Query parse tree}
 \label{sec:query_parse_tree}
@@ -1696,7 +1696,7 @@ and describe how this structure is used by the query processing function to gene
   \label{fig:parse_tree}
 \end{figure}
 
-The first step of a QPU's query processing function is to parse the given query from a string to a form that can be used
+The first step of a QPU's query processing method is to parse the given query from a string to a form that can be used
 for query processing computations.
 This form is a \textit{parse tree}.
 
