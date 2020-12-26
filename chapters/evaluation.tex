@@ -1,6 +1,3 @@
-% This thesis is built on the belief that ...
-% This chapter evaluates the  ...
-
 In this chapter, we aim to validate our analysis of the trade-offs involved in query processing state placement decisions,
 and to evaluate the effectiveness of our design and prototype implementation in providing an effective mechanism to applications
 for navigating these trade-offs.
@@ -25,7 +22,6 @@ The aim of this evaluation is to answer the following questions:
 
 \end{itemize}
 
-
 \section{Experimental scenario}
 \label{sec:eval_scenario}
 
@@ -46,9 +42,6 @@ and statistics about the application's data usage patterns are available \cite{l
 \item It resembles a class of popular large-scale web applications, such as Reddit and Hacker News.
 \end{itemize}
 
-
-
-
 \bigskip
 \noindent
 In Lobsters, users post, comment, and vote on ``stories''.
@@ -65,8 +58,6 @@ That is why the Lobsters application instead adds an additional column to the $s
 hotness value for each story.
 The application updates the value of the hotness column when operations are performed,
 such as upvoting or downvoting a story, or adding a comment to a story.
-
-\todo{the Lobsters application uses MySQL for storing its state}
 
 For this evaluation, we consider a version of the Lobsters application, that consists of two operations:
 voting for stories, and requesting the front page.
@@ -142,15 +133,12 @@ In the actual QPU graph deployed for the experiments, each Selection QPU is merg
 in a single unit that performs both functionalities.
 In addition, the Materialized View is merged with the Join QPU.
 
-The Materialized view QPU implementation used in these experiments stores its state in a MySQL instance.
-This is a separate MySQL instance from the one that is used the Lobsters database.
+The Materialized view QPU implementation used in these experiments stores its state in a MariaDB instance.
+This is a separate instance from the one that is used the Lobsters database.
 It is deployed alongside and only accessible by the Materialized view QPU.
 The choice of using the same database both as the baseline and for storing the materialized view is aimed at eliminating
 the effect of the database performance from the evaluation results,
 providing a comparison that isolates the effects of placement.
-
-As presented in Section~\ref{sec:implementation} our implementation uses MariaDB in the place of MySQL.
-However, we refer to the database as MySQL throughout this chapter.
 
 Finally, we create an index on the table that implements the materialized view in order to support efficient retrieval of
 the stories with the highest vote count.
@@ -172,12 +160,13 @@ We evaluate the effects and trade-offs of materialized view placement by compari
 
 
 \section{Experimental Setup}
+\label{sec:eval_setup}
 
 While the Lobsters Ruby-on-Rails application is open-source,
 we use a simplified version of it in order to isolate its interaction with the database.
 We implement an adapter that translates front page and vote requests to the queries that the real
-Lobsters application would issue, and issues those queries either to the Lobsters database (MySQL),
-or MySQL and Proteus, depending on the experiment configuration.
+Lobsters application would issue, and issues those queries either to the Lobsters database (MariaDB),
+or MariaDB and Proteus, depending on the experiment configuration.
 This allows us to isolate the interaction between the application and the database, which is the focus of this work,
 and remove other tasks that the Lobsters application performs, which quickly become a bottleneck.
 
@@ -185,7 +174,7 @@ We implement this adapter as a server-side component:
 it is deployed along with the database on the server site, and plays the role of a simplified web server:
 It exposes a gRPC endpoint, similar to the QPU gRPC server, and clients issue operations to it as RPC requests.
 We choose this configuration because our initial experiments showed that issuing a large number of concurrent transactions
-to MySQL under a 80 ms client-server round-trip time results in errors both in the database,
+to MariaDB under a 80 ms client-server round-trip time results in errors both in the database,
 and the Go MySQL library.
 
 \bigskip
@@ -256,7 +245,7 @@ The returned version for each front page story is computed by comparing the upda
 
 A limitation of this mechanism is that it requires comparing timestamps taken on different servers.
 To address that, in the benchmarks in which we take freshness measurements,
-we deploy all system components (Lobsters MySQL database, QPU graph, workload generator) as containers,
+we deploy all system components (Lobsters database, QPU graph, workload generator) as containers,
 on a singly physical machine.
 Because they share a single OS kernel, all timestamps used for computing freshness metrics are based
 on the host operating system's clock, and thus can be meaningfully compared.
@@ -275,7 +264,7 @@ Each server consists of 2 Intel Xeon E5645 CPUs, each with 6 cores, 64 GB RAM, a
 The average ping latency between servers in the cluster is less than 1ms.
 We simulate the two geographically distant sites by using the Linux tc utility \cite{tc} to add delay to outgoing packets.
 
-For response time measurements, the Lobsters MySQL instance and the QPUs, except the Materialized view QPU are deployed
+For response time measurements, the Lobsters MariaDB instance and the QPUs, except the Materialized view QPU are deployed
 on a single server on the server site, and the workload generator is on a server in the client site.
 The Materialized view QPU is deployed on a separate dedicated server, either on the application or the client site,
 according on the placement scheme being tested.
@@ -288,16 +277,50 @@ Repeated runs have shown that results are stable and consistent across runs.
 
 \section{Query processing performance}
 \label{sec:eval_query_processing_perf}
+
+\begin{figure}[H]
+        \centering
+        \begin{subfigure}[b]{0.24\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{./figures/evaluation/evaluation_deployments_baseline_remote.pdf}
+            \caption{Baseline/remote}
+            \label{fig:deployments_baseline_remote}
+        \end{subfigure}
+        \hfill
+        \begin{subfigure}[b]{0.24\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{./figures/evaluation/evaluation_deployments_proteus_remote.pdf}
+            \caption{Proteus/remote}
+            \label{fig:deployments_proteus_remote}
+        \end{subfigure}
+        \hfill
+        \begin{subfigure}[b]{0.24\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{./figures/evaluation/evaluation_deployments_proteus_local.pdf}
+            \caption{Proteus/local}
+            \label{fig:deployments_proteus_local}
+        \end{subfigure}
+        \hfill
+        \begin{subfigure}[b]{0.24\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{./figures/evaluation/evaluation_deployments_internal.pdf}
+            \caption{Materialized-view-internal}
+            \label{fig:deployments_mv_internal}
+        \end{subfigure}
+        \caption{Deployments used in this evaluation.}
+        \label{fig:eval_deployments}
+    \end{figure}
+
 We compare three deployments that differ in how they store and calculate the per-story vote count,
-and how they distribute computations and state across the nodes of the system.
-\textbf{Baseline/remote} is equivalent to the real Lobsters application:
+and how they distribute computations and state across the nodes of the system (Figure~\ref{v})
+\textbf{Baseline/remote} (Fig.~\ref{fig:deployments_baseline_remote}) is equivalent to the real Lobsters application:
 it pre-computes and stores vote counts in a column of the Lobsters $stories$ table.
 This serves as the baseline approach.
-\textbf{Proteus/remote} consists of the QPU graph shown in Figure~\ref{fig:eval_lobsters_qpu_arch},
+\textbf{Proteus/remote} (Fig.~\ref{fig:deployments_proteus_remote}) consists of the QPU graph shown in Figure~\ref{fig:eval_lobsters_qpu_arch},
 deployed on the server site.
-In \textbf{Proteus/local}, the Materialized view QPU is deployed on the client site.
+In \textbf{Proteus/local} (Fig.~\ref{fig:deployments_proteus_local}),the Materialized view QPU is deployed on the client site.
 This is intended to evaluate the effect of placing the materialized view close the client.
-We also compare with a deployment (\textbf{Materialized-view-internal}) in which the workload generator
+We also compare with a deployment (\textbf{Materialized-view-internal}, Fig~\ref{fig:deployments_mv_internal}) in which the workload generator
 directly issues request to the Materialized view QPU's state, bypassing the QPU's gRPC server
 (the workload generator and materialized view are co-located on the same server).
 This aims at providing an indication of the best performance the Materialized view QPU can achieve,
@@ -312,7 +335,7 @@ without taking into account its gRPC server (which we have identified as a perfo
 
 Figure~\ref{fig:responseTime} shows throughput--query response time plots of these deployments.
 The ideal throughput--response time curve would be a horizontal line with low response time.
-The lower bound response time for MySQL and Proteus/remote is 80 ms as this is the round-trip time between sites.
+The lower bound response time for Baseline/remote and Proteus/remote is 80 ms as this is the round-trip time between sites.
 In reality, all systems' plots have a ``hockey stick'' shape:
 latency remains relatively low until a point in which the system fails to keep up with the offered load.
 After that point, the system cannot achieve additional throughput, and response time increases.
@@ -325,22 +348,22 @@ bypassing the client-server gRPC communication.
 Because of that, we conclude that the gRPC communication incurs a significant overhead in the throughout that
 can be achieved by the system.
 
-Proteus/remote scales to 4200 requests/second, which is a 24\% overhead compared to the baseline deployment (MySQL),
+Proteus/remote scales to 4200 requests/second, which is a 24\% overhead compared to the baseline deployment (Baseline/remote),
 which scales to 5500 requests/second.
-Both those deployments eventually read and write state to a MySQL instance, with a similar (but not identical) database scheme.
-Their difference lies in the mechanism the use for translating requests to database accesses.
-The adapter used in the MySQL deployment uses a simple logic that translates vote and front page request to database transactions.
-Conversely, the  Materialized view QPU used in the Proteus/remote deployment contains more complex logic,
-which includes additional mechanisms,
+Both those deployments eventually read and write state to a MariaDB instance.
+The difference is how they translate requests to database accesses.
+The adapter used in the Baseline/remote deployment uses a simple logic that translates vote and front page request to database transactions.
+Conversely, the Materialized view QPU used in the Proteus/remote deployment contains more complex logic,
 such as parsing received queries in SQL form, and receiving records from its input stream and updating the materialized view.
 We attribute the observed 24\% overhead to the more complex logic.
 
 In the Proteus/local deployment, query response time is significantly lower.
-This is achieved because moving the Materialized view QPU in the clients site removes the need for a costly round-trip to
-the server site, and thus remove the 80 ms lower bound.
-In addition, Proteus/local achieves a 23\% increase in achieved throughput before response time exceeds 20ms.
+This is achieved because moving the Materialized view QPU to the client site removes the need for a costly round-trip to
+the server site, and thus removes the 80 ms lower bound.
+In addition, Proteus/local achieves a 28\% increase in achieved throughput compared to the Baseline/remote deployment
+(we consider the maximum achieved throughput for which response time does not exceed 20ms and 100ms respectively).
 We attribute this improvement to the lower concurrency required to generate the same load in Proteus/local
-compared to Proteus/remote and MySQL.
+compared to Proteus/remote and Baseline/remote.
 In more detail, offering a certain load (volume of requests/second) requires creating a number of concurrent client threads,
 each performing a request.
 When the round-trip time between sites is 80 ms, each of these threads executes significantly longer compared to
@@ -354,15 +377,31 @@ again increasing the end-to-end response time experienced by the client.
 
 \medskip
 \noindent
-\textbf{Conclusion.} We have observed that placing materialized views closer to the client benefits read-heavy applications
+\textbf{Conclusion.} Our experiments confirm that placing materialized views closer to the client benefits read-heavy applications
 by removing costly round-trip communication across sites, and achieves scalability improvements.
 
 
 \section{Freshness}
 \label{sec:eval_freshness}
 
-\subsection{Freshness and Throughput}
+\subsection{Freshness vs Throughput}
 \label{sec:eval_freshness_throughput}
+
+In the real Lobsters application (and the Baseline/remote deployment),
+the vote count is maintained is maintained in the $stories$ table.
+Because of the consistency guarantees of MariaDB,
+the vote count of a story, is always up-to-date with the state of the $votes$ table.
+However, maintaining a materialized view placed at a remote site synchronously adds prohibitive overhead to write operations.
+Because of that the QPU graph in this evaluation maintains the materialized view asynchronously, and, as a result,
+its state might be stale relative to the state of the base data.
+
+In this section, we present, for the experiments describe in the previous section,
+the measurements for the freshness metrics presented in Section~\ref{sec:eval_setup} (update latency and returned version).
+Our aim is to examine the effect of asynchronous derived state maintenance in the freshness of query results.
+We present results for both placement schemes (Proteus/local and Proteus/remote).
+Query results for the Baseline/remote deployment are always up-to-date,
+and update latency is 0.
+
 
 \begin{figure}[H]
 \centering
@@ -373,19 +412,22 @@ by removing costly round-trip communication across sites, and achieves scalabili
 
 Figure~\ref{fig:fr_latency_throughput} shows 95th percentile update latency as throughput increases,
 for the Proteus/remote and Proteus/local deployments.
-AS described above, we define update latency as the delay between a vote being committed in the
-Lobsters database, and the updated vote count being reflected in the materialized view.
-The ideal throughput -- update latency curve would be a horizontal line with latency close to the lower bound defined by
+As described above, update latency is the delay between committing a vote in the Lobsters database,
+and the corresponding vote count update in the materialized view.
+The ideal throughput--update latency curve would be a horizontal line with latency close to the lower bound defined by
 the communication latency.
-The lower bound for Proteus/remote is 40 ms while for Proteus/local it is less that 1ms.
+The lower bound for Proteus/remote is 40 ms while for Proteus/local it is less than 1ms.
 In reality, latency remains low as long as the system can keep up with the offered vote request load,
 and then increases.
 
-Results show the Proteus/local setup scales well; Update latency remains within 5-10ms from the lower bound.
+Results show the Proteus/local setup scales well; Update latency remains within 5-10 ms of the lower bound.
 The Proteus/remote setup exhibits a higher update latency:
 For 4250 requests/second, the update latency in Proteus/remote is 88\% higher than in Proteus/local,
 relative to the lower bound.
-This can be attributed to the same reasons as the scalability difference between the two deployments.
+This can be attributed to the same reasons as the scalability difference between the two deployments:
+The Materialized view QPU in Proteus/remote is more loaded because more connections are concurrently ongoing
+for the same load value, compared to Proteus/local,
+leading to increased latency for applying updates to the view.
 
 \begin{figure}[H]
 \centering
@@ -403,15 +445,12 @@ It depicts the delay at each step that vote records follow through the QPU graph
 
 A vote record's path consists of the following steps:
 \begin{enumerate}
-  \item Once transaction that insert the vote record in the Lobsters database is committed,
-  a trigger is executed.
-  This trigger sends a message to the notification server (Section~\ref{sec:implementation}) running on the same server,
-  through a socket connection.
-  The notification server then sends constructs an update record and sends it to the Corpus Driver QPU through a gRPC stream.
-  This step is shown as \textbf{notification server} in Figure~\ref{fig:fr_latency_throughput_breakdown}.
+  \item When the transaction that inserts a vote record in the Lobsters database commits,
+  a trigger sends a message to the notification server (Section~\ref{sec:implementation}).
+  The notification server then constructs an update record and sends it to the Corpus Driver QPU through a gRPC stream.
+  The duration of this step is shown as \textbf{notification server} in Figure~\ref{fig:fr_latency_throughput_breakdown}.
 
-  \item The Corpus driver receives an update record, and forwards it to any active query output stream that it matches.
-  In this case, the record is forwarded to the Sum QPU (\textbf{corpus driver}).
+  \item The Corpus driver receives an update record, and forwards it to the Sum QPU (\textbf{corpus driver}).
 
   \item The Sum QPU receives an update record, computes an updated vote count,
   and sends a corresponding record to the Join QPU (\textbf{sum}).
@@ -456,17 +495,17 @@ and one in which the two most recent versions are considered fresh (k$\leq$2).
 
 We observe that:
 \begin{itemize}
-  \item Proteus/remote outperforms Proteus/local, as expected.
+  \item Proteus/remote has better freshness than Proteus/local, as expected.
   For the k=1 scenario, over 95\% of reads observe the latest versions under the highest load.
   For the k$\leq$2 scenario, freshness remains nearly constant at over 99\%.
   \item Freshness in Proteus/local decreases as throughput increases.
   Proteus/local suffers from up to 80\% stale query results (for k=1), and freshness decreases constantly as load increases.
   However, most stale results observe the second most up-to-date version:
-  However, in the k$\leq$2 scenario over 97\% of query results are fresh.
+  in the k$\leq$2 scenario over 97\% of query results are fresh.
 \end{itemize}
 
 These results can be explained using Figure~\ref{fig:fr_latency_throughput}.
-In Proteus/local, it takes at lest 45ms for an updated vote count to be reflected in the materialized view,
+In Proteus/local, it takes at least 45 ms for an updated vote count to be reflected in the materialized view,
 but a front page request reaches the view with significantly lower delay.
 When load is low, this does not lead to stale query results because there are a few vote requests (5\%).
 However, as load increases, queries observe increasingly more stale materialized view  entries.
@@ -489,7 +528,7 @@ under a load of 4250 requests/second, for the Proteus/remote and Proteus/local d
 Results show that:
 \begin{itemize}
   \item In both deployments, most queries return the latest or second most recent version.
-  \item Proteus/remote outperforms Proteus/local:
+  \item Proteus/remote has better freshness than Proteus/local:
   Under the same conditions, Proteus/remote exhibits 4.5\% stale returned results,
   while Proteus/local 20\% (4.4X).
   However, in Proteus/local only 2.2\% of queries results are more stale than the second most recent version.
@@ -505,7 +544,7 @@ query results rarely more stale than the second most recent version.
 Moreover, update latency and versions freshness scale well as the system's load increases.
 
 
-\subsection{Freshness and round-trip latency}
+\subsection{Freshness vs round-trip latency}
 \label{sec:eval_freshness_rtt}
 
 The experiments in the previous section evaluated the effect of the query processing state placement under a constant
@@ -565,6 +604,22 @@ and to a lesser degree by the system's load.
 
 \section{Data transfer between sites}
 \label{sec:eval_data_transfer}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c||c|c|c||}
+\hline
+Deployment & Baseline/remote & Proteus/remote & Proteus/local \\
+\hline
+Cross-site data transfer (MB) & 0 & 0 & 7.7 \\
+\hline
+Data transfer out to internet (MB) & $\approx$7700 & $\approx$7700 & $\approx$7700 \\
+\hline
+\end{tabular}
+\caption{Measured data transfer for a 5 minute benchmark with a load of 4000 requests/second.}
+\label{tab:data_transfer}
+\end{table}
+
 Distributing a query engine across multiple sites entails data transfer between sites.
 If the system is deployed on a public cloud platform, this incurs an additional cost,
 because data transfer between data centers is part of public clouds' pricing models.
@@ -587,12 +642,30 @@ We conclude that, in this the evaluation scenario, the materialized view can be 
 significant data transfer costs.
 
 \section{Conclusion}
-The evaluation presented in this chapter have demonstrated the trade-offs involved in the placement of query processing state.
-Placing materialized views close to the client leads to improvements in query processing performance,
+
+The aim of the experimental evaluation presented in this chapter is to validate our analysis of the trade-offs
+involved in the placement of derived state,
+and to evaluate the effectiveness of Proteus in allowing applications to navigate these trade-offs.
+In particular, we focus on the decision of placing materialized views close to the client or close to the base data.
+
+The evaluation confirms our analysis.
+It demonstrates that there are benefits and drawbacks to both placement options:
+Placing materialized views close to the client achieves improvements in response time and throughput,
 at the expense of freshness.
-Experiments in this chapter showed that freshness penalties are not prohibitive,
-and that read-heavy applications can place materialized state close to clients without incurring significant
-dat transfer costs.
+Conversely, placing materialized views close to the base data ensures fresh query results,
+but brings limitations to response time and throughput.
+This validates the central argument of this thesis:
+No single placement decision is optimal for all needs.
+In the application scenario used in this evaluation,
+client-site placement of materialized views is more suitable for applications that require low query response times or high
+query load, and can tolerate stale query results;
+server-site placement is better-suited for applications for which query processing performance is not critical,
+but require up-to-date query results.
+
+Furthermore, the evaluation demonstrates that Proteus can be used to efficiently implement both placement schemes,
+Therefore, by using Proteus, applications can make fine-grained derived state placement decisions
+-- for example using different placement schemes for different types of queries within an application.
+As described in Chapter~\ref{ch:proteus}, this can be achieved by simple configuration changes.
 
 % \section{Navigating the design space of geo-distributed query}
 % (Note: The title might be a bit too fancy. To re-think.)
