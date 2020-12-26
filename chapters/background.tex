@@ -203,7 +203,7 @@ parameters is known as the view selection problem \cite{gupta:viewselection, mam
 \subsection{Distributed Query Processing}
 \label{sec:distributed_qp}
 So far we covered query processing from the perspective of a single-node database, without considering data distribution.
-However, data is inherently distributed \cite{bacon:spanner, cockroachdb:docs} and therefore query processing needs to
+However, data is inherently distributed \cite{corbett:spanner, cockroachdb:docs} and therefore query processing needs to
 efficiently operate on distributed data.
 In addition, query processing computations need to be able to be distributed and run in parallel on multiple nodes to
 achieve better scalability.
@@ -213,7 +213,7 @@ Query processing is based on \textit{decomposing} queries into sub-queries that 
 The database uses query decomposition heuristics based on two optimization criteria:
 minimizing response time and minimizing network traffic.
 
-Spanner \cite{bacon:spanner} is sharded, geo-replicated relational database system.
+Spanner \cite{corbett:spanner} is sharded, geo-replicated relational database system.
 Spanner uses a \textit{distributed union} operator in the query tree to represent query distribution.
 Distributed union is used to a sub-query to each shard of a table, and concatenate the results.
 It provides a building block for more complex distributed operators such as distributed joins between independently
@@ -413,7 +413,7 @@ Geo-replication (replication across geographically distributed data centers) can
 failures and network problems,
 and improve read latency for clients distributed across multiple geographic locations.
 Synchronous geo-replication, as implemented in Google's Megastore \cite{baker:megastore}
-and Spanner \cite{corbett:spanner, bacon:spanner},
+and Spanner \cite{corbett:spanner},
 achieves strong consistency at the cost of high write latency.
 In asynchronous geo-replication, as used in Dynamo \cite{deCandia:dynamo}, PNUTS \cite{cooper:pnuts08, cooper:pnuts19},
 Walter \cite{sovran:walter}, COPS \cite{lloyd:cops}, Cassandra \cite{lakshman:cassandra}, and Bigtable \cite{chang:bigtable}
