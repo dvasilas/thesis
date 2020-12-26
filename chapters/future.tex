@@ -124,3 +124,27 @@ and if that sub-query fails, then the QPU retries by sending the sub-query to a 
 This mechanism can be used to construct query engines with redundant query execution paths.
 For example, in the case of a materialized view, a secondary execution path that computed queries without accessing
 the view can be used as a secondary path in case the materialized view fails.
+
+\subsection{Data storage tier APIs}
+
+The query engine design presented in this thesis is based on the assumption that the data storage tier exposes
+two interfaces (Section~\ref{sec:storage_tier_api}):
+An interface for iterating over the corpus data (list), and one for subscribing to notifications for changes to the
+corpus data (subscribe).
+The list interface is used for evaluating queries over the corpus by executing query processing operators over data streams
+created by iterating over the corpus;
+the subscribe interface is used for keeping derived state up-to-date with changes to the base data.
+
+While it is realistic to assume that most storage systems provide a list interface,
+or interfaces that can be composed to achieve an equivalent functionality,
+that is not the case for the subscribe interface.
+Indeed, we have extended AntidoteDB and CloudServer (\S\ref{sec:implementation}) with Proteus-specific
+notification mechanisms,
+as such mechanisms were not initially available in these systems.
+
+Proteus could be used with storage systems supporting a subset of the required interfaces.
+However, this would result in some of the capabilities presented in this thesis not being available.
+More specifically, if used with a data storage system that does not support the subscribe interface,
+derived state QPUs would not support incremental updates.
+Instead, those QPUs would need to periodically rebuild their state by scanning the corpus, using the list interface.
+The query processing unit design already supports periodic rebuilding of derived state.
