@@ -656,7 +656,7 @@ results, for example in streaming join computations, maintain \textit{query proc
 
 \medskip
 \noindent
-\textbf{Initialization, query processing, and input stream callback method.}
+\textbf{Initialization, query processing, and input stream processor method.}
 The functionality of a query processing unit can be modeled using three methods:
 \begin{itemize}
   \item The \textit{initialization method} (section~\ref{sec:initialization_func}), which is executed when the QPU is
@@ -665,9 +665,8 @@ The functionality of a query processing unit can be modeled using three methods:
   \item The \textit{query processing method} (section~\ref{sec:query_processing_func}), which is executed for each
   query request received by the QPU, and is responsible for processing the query and sending results to the response stream.
 
-  \item The \textit{input stream callback method} (section~\ref{sec:callback_func}), which is executed for each record
+  \item The \textit{input stream processor method} (stream processor method for short) (section~\ref{sec:callback_func}), which is executed for each record
   received through an input stream.
-  \todo{callback to processing}
 
 \end{itemize}
 
@@ -681,10 +680,10 @@ When the QPU's query API is called, an output stream ($R_A$) is established betw
 and the unit's query processing method is invoked for the given query.
 The query processing method can read the QPU's state, and can perform downstream queries to other units.
 For each downstream query, a corresponding stream is established ($Q_{A.1}$ and $Q_{A.2}$).
-When a record is received from one of the streams, the QPU's callback method is invoked.
-Each invocation of the callback method processes a received record, and returns the result to the query processing
+When a record is received from one of the streams, the QPU's stream processor method is invoked.
+Each invocation of the stream processor method processes a received record, and returns the result to the query processing
 method.
-Upon receiving a result from a callback method,
+Upon receiving a result from a stream processor method,
 the query processing method can potentially write to the QPU's state and/or emit a record to the output stream.
 
 
@@ -1083,7 +1082,7 @@ For each query $q$ being processed, the QPU initiates an output stream, $R_q$,
 and executes an instance of the query processing function, $QPF_q$.
 $QPF_q$ is responsible for emitting records to $R_q$.
 Moreover, if $QPF_q$ initiates input streams $I_{q-1}$, $I_{q-2}$, ..., then $QPF_q$ is responsible for handing the return
-values of callback methods for records received through $I_{q-i}$.
+values of stream processor methods for records received through $I_{q-i}$.
 
 \begin{lstlisting}[
   basicstyle=\normalfont\ttfamily,
@@ -1110,16 +1109,16 @@ In addition to $QPState$ and $[DownstreamConn]$, $ProcessQuery$ receives:
 An instance of the query processing method is executed for each received query request,
 therefore query processing unit can run multiple instances of the query processing method in parallel.
 
-\subsubsection{Input stream callback method}
+\subsubsection{Input stream processor method}
 \label{sec:callback_func}
 
-The input stream callback method is responsible for processing a record received through an input stream.
-The callback method can read from and write to the query processing unit state,
+The input stream processor method is responsible for processing a record received through an input stream.
+It can read from and write to the query processing unit state,
 and a (potentially empty) list of $StreamRecord$ to the query processing method.
 
 \begin{lstlisting}[
   basicstyle=\normalfont\ttfamily,
-  caption={Input stream callback method signature},
+  caption={Stream processor method signature},
   captionpos=b,
   label={lst:callback_func}
 ]
@@ -1130,7 +1129,7 @@ function ProcessInputRecord(StreamRecord, QueryRequest, QPState)
 \noindent
 Listing~\ref{lst:callback_func} shows the query processing method's signature.
 
-An instance of the callback method is executed for each record received through an input stream.
+An instance of the stream processor method is executed for each record received through an input stream.
 
 \subsection{Stream semantics}
 
@@ -1211,7 +1210,7 @@ This ensures that QPU instance with different functionalities (classes) and conf
 can interoperate to perform query processing tasks.
 
 A QPU class is an \textit{instantiation} of the query processing unit model:
-it defines the implementations of the \textbf{initialization}, \textbf{query processing} and \textbf{input stream callback}
+it defines the implementations of the \textbf{initialization}, \textbf{query processing} and \textbf{stream processor}
 methods.
 
 In this section, we present a categorization of QPU classes according to their general characteristics,
@@ -1258,7 +1257,7 @@ We categorize QPU classes in three groups, according to their general characteri
     The QPU's initialization method establishes an input steam by sending an \textit{interval} query
     (a query without an upper bound timestamp) to its downstream connection:
     In that way, the QPU effectively \textit{subscribes to notifications} for updates to the corpus.
-    For each record received through the input stream, the callback method updates the query processing state accordingly.
+    For each record received through the input stream, the stream processor method updates the query processing state accordingly.
     When a query request is received,
     the query processing method computes the results by reading from the query processing state,
     and emits them to the output stream.
@@ -1270,7 +1269,7 @@ We categorize QPU classes in three groups, according to their general characteri
     If yes, the method retrieves the corresponding query results and emits them at the output stream.
     Alternatively, it sends a query request at the QPU's downstream connection,
     with the given query.
-    The callback method stores each received record, and then returns it to the query processing method with emits it
+    The stream processor method stores each received record, and then returns it to the query processing method with emits it
     at the output stream.
     \end{itemize}
 
@@ -1325,7 +1324,7 @@ We categorize QPU classes in three groups, according to their general characteri
 \textbf{Filter}
 
 Algorithms~\ref{algo:filter_query_processing_func} and~\ref{algo:filter_algorithm_func} show the query processing and
-input stream callback methods respectively for the filter QPU class using pseudocode.
+stream processor methods respectively for the filter QPU class using pseudocode.
 
 
 \begin{algorithm}
@@ -1347,7 +1346,7 @@ input stream callback methods respectively for the filter QPU class using pseudo
 \end{algorithm}
 
 \begin{algorithm}
-\caption{Filter QPU class input stream callback signature}
+\caption{Filter QPU class stream processor method signature}
 \label{algo:filter_algorithm_func}
 \begin{algorithmic}
 \Function{ProcessInputRecord}{inRecord, queryReq, qpState}
@@ -1366,7 +1365,7 @@ input stream callback methods respectively for the filter QPU class using pseudo
 \textbf{Secondary index}
 
 Algorithms~\ref{algo:index_init_func}, ~\ref{algo:index_query_processing_func}, and~\ref{algo:index_callback_func}
-show the initialization, query processing, and input stream callback methods respectively for the secondary index QPU
+show the initialization, query processing, and stream processor methods respectively for the secondary index QPU
 class using pseudocode.
 
 \begin{algorithm}
@@ -1404,7 +1403,7 @@ class using pseudocode.
 \end{algorithm}
 
 \begin{algorithm}
-\caption{Secondary index QPU class input stream callback method}
+\caption{Secondary index QPU class stream processor method}
 \label{algo:index_callback_func}
 \begin{algorithmic}
 \Function{ProcessInputRecord}{inRecord, queryReq, qpState}
@@ -1562,7 +1561,7 @@ any QPU class that can be defined using the QPU model may have additional requir
 \label{sec:computation_model}
 
 The query execution computations of QPU-based query processing systems are \textit{fully decentralized}.
-The distributed computations directly emerge from the initialization, query processing and callback methods of the QPUs
+The distributed computations directly emerge from the initialization, query processing and stream processor methods of the QPUs
 the query processing system consists of.
 In order to describe the characteristics of query execution in QPU graphs, we first describe the execution of the query
 {\obeylines\obeyspaces

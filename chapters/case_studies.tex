@@ -921,7 +921,7 @@ Therefore, the TopK-MV \textit{materializes} a bounded number of entries, based 
 Furthermore, the TopK-MV QPU continues receiving updates from the Sum QPU, and updating its
 ordered list of $(vote\_count$, $story\_id)$ entries.
 When the $vote\_count$ of a non-materialized entry becomes one of the top-K,
-the unit's callback method discards the materialized entry with the lowest $vote\_count$,
+the unit's stream processor method discards the materialized entry with the lowest $vote\_count$,
 and triggers the materialization of that entry.
 
 The Top-K QPU uses the technique of \textit{partial materialization} in order to bound the size of pre-computed state.
