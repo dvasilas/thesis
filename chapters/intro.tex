@@ -1,10 +1,9 @@
 % \section{Background and motivation}
 
 Today's global-scale services handle large volumes of data and serve large volumes of requests from users distributed worldwide.
-They rely on large-scale data systems,
-which distribute data across multiple geographically distant data centers,
-to reduce response time and tolerate failures.
-Moreover, services increasingly spread their application data between on-premise and remote cloud nodes,
+They rely on large-scale data serving systems which distribute data across multiple geographically distant data centers
+in order to reduce response time and tolerate failures.
+Moreover, services increasingly spread their data between on-premise and remote cloud nodes,
 as well as between multiple cloud providers, in order to increase reliability and reduce costs.
 
 An important aspect of the data systems that developers rely on for building applications is a powerful query language.
@@ -14,50 +13,44 @@ and a robust query language.
 Query processing is an essential component of data systems' technology, as its role is to bridge declarative query languages,
 in which queries specify the patterns and conditions that results must meet, and efficient execution.
 
-\bigskip
-\noindent
-In this thesis, we study the challenges of supporting efficient query processing in contexts in which users and data are
-distributed across multiple geographic locations.
-In particular, we consider a corpus of data items, each composed of a primary key and a set of secondary attributes;
-The corpus is distributed across multiple data centers worldwide, and is potentially spread across multiple data systems.
-We examine the design decisions and trade-offs involved in the design of a query engine for enabling applications to
-retrieving data item using queries on secondary attributes.
-
-A query engine implements operators for performing transformations over the corpus (selections, aggregations, joins).
-In addition, it employs techniques aimed at reducing query processing time.
-These techniques commonly involve the materialization of \textit{derived state};
+In this thesis, we study the challenges of supporting efficient query processing in contexts in
+which users and data are distributed across multiple geographic locations.
+In particular, we examine the design decisions and trade-offs involved in the design of a query engine over geo-distributed
+data, which serves users distributed worldwide.
+We consider a query engine that implement operators for performing transformations over a corpus (selections, aggregations, joins)
+and, in addition, employs techniques for accelerating query processing.
+These techniques commonly involve the materialization of \textit{derived state}.
 This includes maintaining copies of the data organized in forms that facilitate different access patterns (indexes),
 and pre-computing the results of expensive recurring operations (materialized views).
 
-\bigskip
-\noindent
-Users expect query engines to serve requests in a timely fashion and provide accurate results.
-Moreover, query engines must incur low overhead to other aspects of data systems' operation and to their operational cost.
+The design of such a query engine must meet multiple requirements.
+Applications expect query engines to serve requests in a timely fashion and to provide accurate results.
+Moreover, query processing must incur low overhead to other aspects of data systems' operation and to their operational cost.
 
 % It is well known that
+Query processing in a geo-distributed context involves several challenges.
 In geo-distributed deployments,
 latencies between data centers can be orders of magnitude higher that those within a data center.
-Moreover, network resources between data centers are often limited and costly,
-and this the amount of data transferred across data centers affects network consumption and hence the system's operational cost.
+Moreover, network resources between data centers are often limited and costly.
 Because of these factors,
-in deployments in which corpus and users are spread across multiple geographic locations
+in geo-distributed query processing
 the requirements of low response time, accurate query results and low overhead to the system's performance and operational
 cost are incompatible and cannot be achieved all at once:
 % incompatible and thus query engines must balance trade-offs between desirable properties.
 
 \begin{itemize}
   \item User-perceived query response time is composed of two components:
-  query network time, which accounts for the time spent to send the query from the user to the query engine over the network
+  query network time, which accounts for the time spent to send a query from the user to the query engine over the network
   and the time spent to send search results back to the user, and query processing time.
   Techniques for reducing query processing time, like the above-mentioned, have been extensively studied in the context of database systems.
-  However, in geo-distributed deployments query network time becomes a significant factor to query response time.
+  However, in geo-distributed scenarios, query network time becomes a significant factor to query response time.
 
-  \item At the same time, the derived state structures that query engines use to speed-up query processing must be kept up-to-date with changes to the corpus.
-  This is achieved by propagating the effects of write operations from the corpus to the query engine's derived state.
-  As a result, each index or view that is materialized by the query engine incurs additional overhead to write operations.
+  \item At the same time, the derived state structures that query engines use to accelerate query processing must be kept up-to-date with changes to the corpus.
+  This requires propagating and applying the effects of write operations to the derived state.
+  Because of that, maintaining indexes and materialized views incurs overhead to the latency of write operations.
   An approach employed by query engines to address this issue is to perform this maintenance task asynchronously,
   outside of the critical path of write operations.
-  This, however, entails that derived state is only eventually consistent with the corpus, and can be temporarily stale relative to the corpus.
+  This, however, entails that derived state is only eventually consistent, and can be temporarily stale relative to the corpus.
   Serving queries from stale indexes or materialized views may result in query results not being consistent with the state of the corpus.
 \end{itemize}
 
@@ -69,16 +62,13 @@ Assuming asynchronous maintenance, this means that derived state can become sign
 In addition, in write-dominated workloads, this results in significant data transfer between data centers for state maintenance.
 
 At the other end of the design space,
-derived state can be partitioned into non-overlapping parts and assign each part to a data center,
-so that each part is responsible for the data items in the local data center.
+derived state can be partitioned into non-overlapping parts and each part assigned to a data center
 This approach improves derived state freshness.
-However, every query needs to be forwarded to every derived state part, resulting in significant overhead in query network time.
+However, every query needs to be forwarded to every part of the derived state, resulting in significant overhead in query network time.
 Moreover, in query-dominated workloads this increases data transfer between data centers for query processing.
 
-\bigskip
-\noindent
-It becomes apparent that, in this setting, design decisions about the query engine's architecture,
-and more specifically about the distribution and placement of derive state,
+It becomes apparent that, in this setting, design decisions and about the distribution and placement of derive state
+and the communication patterns between the corpus, the users and the derived state,
 result in trade-offs between query response time, query result consistency, and the system's operational cost.
 Techniques such as caching of query results add additional points in this design space.
 
@@ -87,24 +77,19 @@ modern applications have diverse query processing requirements.
 User-facing queries have strict response time requirements, as response times directly affect revenues.
 On the other hand, query engines that serve social media applications are required to ingest new content rapidly \cite{busch:earlybird}.
 
-Additionally, different design decisions about derived state distribution and placement are better suited to different workload characteristics.
-A design that requires only local communication between the corpus and derived state is better suited for a
-write-dominated workload in terms of data transfer costs.
-Conversely, a design that does require cross data center communication for query processing is more cost-effective
-for a query-dominated workload.
+In addition to that, different design decisions about derived state distribution and placement are better suited to different workload characteristics.
+A design that requires only local communication between the corpus and derived state is better suited for write-dominated workloads in terms of data transfer costs.
+Conversely, a design that requires only local communication for query processing is more cost-effective for query-dominated workloads.
 
-\bigskip
-\noindent
-Based the above analysis, it becomes evident that no single query engine architecture design can be suitable for all
-needs.
+It therefore becomes evident that no single query engine design can be suitable for all needs.
 However, existing query engines are designed to be general-purpose systems;
 They aim at handling a variety of use cases and workloads.
-In the context of geo-distribution, a general-purpose query engine architecture might be inefficient for certain workloads
+In the context of geo-distribution, general-purpose query engines are often inefficient for certain workloads
 and application requirements.
-Specialized solutions can be much more efficient, but adjusting a query engine's architecture for a specific application
-can be time and resource consuming.
+Specialized solutions can be much more efficient,
+but adjusting derived state distribution and placement in current query engine architectures can be time and resource consuming.
 
-In this work, we make the case for a \textit{flexible} query engine architecture that can be adjusted to the requirements
+In this thesis, we make the case for a \textit{flexible} query engine architecture that can be adjusted to the requirements
 and characteristics of different applications in a case-by-case basis, with low engineering effort.
 
 \section{Contributions}
@@ -113,7 +98,7 @@ Traditional monolithic query engine architectures do not provide the flexibility
 between query response time, query result consistency, and operational cost according to the characteristics and
 requirements of different geo-distributed applications.
 
-To address this challenge, we introduce a new \textit{modular} query engine architecture.
+To address this challenge, we propose a new \textit{modular} query engine architecture.
 Our key insight is that query processing can be decomposed into a set primitives,
 such as selecting from a set of data items the ones that satisfy a given condition,
 or constructing from a set of data items a secondary index on a given attribute.
@@ -135,8 +120,8 @@ These include relational operators, such as selections, aggregations, and joins,
 derived state structures, such as indexes, materialized views and caches,
 and ``routing'' functionalities, such as load balancing, and managing index partitions.
 
-Query Processing Units are aimed to be used as building blocks for constructing query engine architecture.
-A query engine is a directed acyclic graph, with QPUs as vertices;
+Query Processing Units are aimed to be used as building blocks for constructing query engine architectures.
+A query engine is a directed acyclic graph (DAG), with QPUs as vertices;
 Graph edges indicate communication paths between QPUs.
 An edge from $QPU_A$ to $QPU_B$ indicates that $QPU_A$ can invoke the interface of $QPU_B$,
 and that, as a result, it can receive an input stream from $QPU_B$.
@@ -144,11 +129,12 @@ By specifying the QPU class and configuration of each graph vertex, as well as t
 one can control how query engine's derived state is partitioned,
 and the communication patterns required for query processing and state maintenance.
 Because the operation of a QPU depends only on its interaction with other QPUs and not its placement,
-the query engine's state and computations can be flexibly placed across the system.
+each QPU can be strategically placed across the system.
 
-QPU-based query engines run a bidirectional data-flow computation.
+A QPU DAG runs a bidirectional data-flow computation.
 The corpus is situated at the leaf nodes of the graph, while queries enter the graph through root nodes.
-Updates to the corpus stream ``upwards'' through the query engine graph, and incrementally update the QPUs’ internal data structures;
+Updates to the corpus stream ``upwards''
+\footnote{upwards and downwards are our representational convention} through the query engine graph, and incrementally update the QPUs’ internal data structures;
 Conversely, queries stream ``downwards'', are incrementally transformed in sub-queries which are processed in different parts of the graph.
 Partial results are then incrementally combined (flowing back upward) to produce the query response.
 
