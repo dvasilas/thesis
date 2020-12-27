@@ -5,7 +5,7 @@ Rather, achieving efficient query processing requires the ability to \textit{tun
 and characteristics of specific use cases.
 Existing query processing systems provide some tunning capabilities, for example index and materialized view selection.
 
-However, as discussed in section~\ref{sec:topology_patterns} in modern, global-scale systems in which clients and data
+However, as discussed in Section~\ref{sec:topology_patterns}, in modern, internet-scale systems in which clients and data
 are geo-distributed,
 design decisions about \textit{placement} of derived state (indexes, caches, materialized views) involve additional
 trade-offs and magnifies the effects of existing trade-offs.
@@ -1190,53 +1190,6 @@ however messages may be arbitrarily delayed.
 These guarantees are not based on assumptions about the transport layer, but as we discuss in In chapter~\ref{ch:evaluation}
 are implemented by query processing units on top of potentially unreliable connections.
 
-
-\subsection{Query processing unit consistency semantics}
-
-\todo{//// Outline ////}
-
-\noindent
-Internal consistency
-
-\noindent
-We refer to a derived state QPU as \textit{internally consistent} in time $t$ if its query processing state
-reflects all updates with timestamp $\leq$ $t$ and no updates with timestamp $>$ $t$.
-
-Since the query processing storage is multi-versioned, with each version corresponding to an update,
-the query processing state with version $T$ $\in$ $StateVersions$
-\[
-  \nexists~T' \in StateVersions : T' > T \land T < t
-\]
-by definition reflects only updates with timestamps $\leq$ $t$ and no updates timestamp $>$ $t$.
-In order to guarantee that this version is internally consistent, the QPU must ensure that this version reflects
-\textbf{all} updates with timestamp $\leq$ $t$.
-
-Showing that this is ensured consists of three parts.
-\begin{itemize}
-  \item Updates entering the QPU graph in-order according to their timestamp.
-  We can assume the interface between database and corpus driver QPU guarantees that.
-  \item Updates are not reordered by the stream connections.
-  This is part of our assumptions about the stream semantics.
-  \item Updates are not reordered by relational operator QPUs.
-  This is trivial for QPUs with a single input stream.
-  We need to show that QPUs that merge more that one stream produce ordered streams ...
-\end{itemize}
-
-If these three conditions are true then each QPU receives and processes updates in order.
-Therefore, is has processed an update with timestamp $t$ then it has also processed all updates with timestamp $\leq$ $t$.
-
-\medskip
-\noindent
-Query consistency
-
-\noindent
-We refer to a query with time interval $[t_1, t_2)$ as \textit{consistent} if all corpus driver and derived state QPUs
-that take part in its execution are internally consistent at time $t_2$.
-
-\noindent
-//// Outline ////
-
-
 \subsection{QPU classes}
 \label{sec:qpu_classes}
 
@@ -1510,7 +1463,6 @@ where $SelectExpression$ contains one or more attributes of the $Orders$ table.
 \item $Filter_1$ can send downstream queries to $DB$ $driver_1$ and filter the resulting input stream based on a given
 attribute predicate.
 Therefore, $Filter_1$ can process queries of the form:
-\todo{}
 \begin{lstlisting}
 SELECT SelectExpression FROM Customers
 WHERE PredicateExpression
@@ -1727,13 +1679,6 @@ and describe how this structure is used by the query processing method to genera
 \subsubsection{Query parse tree}
 \label{sec:query_parse_tree}
 
-\begin{figure}[t]
-  \centering
-    \includegraphics[width=\textwidth]{./figures/design_pattern/parse_tree.pdf}
-  \caption{Query parse tree}
-  \label{fig:parse_tree}
-\end{figure}
-
 The first step of a QPU's query processing method is to parse the given query from a string to a form that can be used
 for query processing computations.
 This form is a \textit{parse tree}.
@@ -1751,22 +1696,27 @@ More specifically, a parse tree is composed to two types of nodes:
   Syntactic categories are internal nodes of the parse tree.
 \end{itemize}
 
+\begin{figure}[H]
+  \centering
+    \includegraphics[width=\textwidth]{./figures/design_pattern/parse_tree.pdf}
+  \caption{Query parse tree for the query in Listing~\ref{lst:qpt_example_query}.}
+  \label{fig:parse_tree}
+\end{figure}
+
 \noindent
-For example, the parse tree for the query:
-\begin{lstlisting}
+For example, the parse tree for the following query is depicted in Figure~\ref{fig:parse_tree}:
+\begin{lstlisting}[
+  caption={Query used to demonstrate the query parse tree data structure.},
+  label={lst:qpt_example_query},
+]
 SELECT OrderID, OrderStatus, Email
 FROM Customers JOIN Orders ON Customers.CustomerID = Orders.CustomerID
 WHERE OrderStatus != "shipped" AND OrderDate < 2020-09-14
 INTERVAL FROM LATEST TO LATEST
 \end{lstlisting}
 
-\noindent
-is depicted in Figure~\ref{fig:parse_tree}.
-
 \subsubsection{Domain tree}
 \label{sec:qpc_tree}
-
-\todo{change merge to rule based approach: go over corpus driver, index, partition, ... to explain how a QPU computes its domain tree based on those of its connections}
 
 In this section, we present the domain tree data structure.
 The domain tree represents a query processing unit's query interface domain,
@@ -1775,7 +1725,8 @@ Because each query can be represented as a query parse tree,
 a domain tree is constructed by merging the query parse trees of the queries that in the QPU's query interface domain.
 Each QPU maintains a domain tree for each of its downstream connections.
 The QPU's local graph view consists of this collection of domains trees.
-
+Moreover, each unit constructs its own domain tree based on the domains trees of its connections,
+and its functionality.
 % The goal of the domain tree is to represent the parse tree of all queries that a QPU can process.
 The domain tree is an extension of the query parse tree, which we presented in the previous section.
 It uses an additional type of tree node, called \textbf{conjunction}.
@@ -1783,43 +1734,94 @@ A conjunction node represents the \textit{different potential sub-trees} that a 
 can be evaluated to.
 Essentially, a conjunction node expresses the different branches of a syntax rule.
 
-Figures~\ref{fig:qpt_corpus_driver_customers},~\ref{fig:qpt_corpus_driver_orders},~\ref{fig:qpt_filter_customers},~\ref{fig:qpt_filter_orders}, and~\ref{fig:qpt_join}
-show the domain trees for the QPUs in the ``customers - orders'' example.
+\medskip
+\noindent
+Query processing units use a straightforward algorithm based on transformation and merge rules construct their domain trees.
+This algorithm is specific to each QPU class:
+\begin{itemize}
+  \item A Corpus driver unit constructs its domain tree based on the schema of the corpus table it is responsible for.
+  More specifically,
+  it 1) uses the table's name as TableExpression node,
+  2) creates a SelectExpression subtree according to the table's attributes,
+  and 3) constructs the IntervalExpression sub-tree according to its configuration.
 
-\begin{figure}[t]
-  \centering
-    \includegraphics[width=\textwidth]{./figures/design_pattern/qpt_corpus_driver_customers.pdf}
-  \caption{Query processing tree for $corpus$ $driver_1$}
-  \label{fig:qpt_corpus_driver_customers}
-\end{figure}
+  \item A Filter QPU constructs its domain tree by extending the PredicateExpression node of the domain tree of its
+  downstream connection, according to the attributes in the SelectExpression node
+  (Figures~\ref{fig:qpt_filter_customers} and~\ref{fig:qpt_filter_orders})
 
-\begin{figure}[t]
-  \centering
-    \includegraphics[width=\textwidth]{./figures/design_pattern/qpt_corpus_driver_orders.pdf}
-  \caption{Query processing tree for $corpus$ $driver_2$}
-  \label{fig:qpt_corpus_driver_orders}
-\end{figure}
+  \item A Join QPU merges the two domain trees of its connections as follows.
+  It creates a new TableExpression subtree, using the TableExpressions node of the input domain trees, and the
+  join syntax rule (Listing~\ref{lst:query_language}),
+  and merges the PredicateExpression subtrees of the the input domain trees using a straightforward tree merge algorithm
+  (Figure~\ref{fig:qpt_join}).
 
-\begin{figure}[t]
-  \centering
-    \includegraphics[width=\textwidth]{./figures/design_pattern/qpt_filter_customers.pdf}
-  \caption{Query processing tree $filter_1$}
-  \label{fig:qpt_filter_customers}
-\end{figure}
+  \item A Partition Manager unit constructs its domain tree by combining the trees of the PredicateExpression subtrees
+  of its connections.
+  For example, consider the case of a partition manager QPU connected to two index QPUs.
+  The first index QPU is responsible for index entries in the interval $[V_A$, $V_B)$,
+  and the second for $[V_B$, $V_C)$.
+  The Partition Manager's domain tree will represent the interval $[V_A$, $V_C)$.
+\end{itemize}
 
-\begin{figure}[t]
-  \centering
-    \includegraphics[width=\textwidth]{./figures/design_pattern/qpt_filter_orders.pdf}
-  \caption{Query processing tree for $filter_2$}
+\begin{figure}[H]
+        \centering
+        \begin{subfigure}[b]{0.48\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{./figures/design_pattern/qpt_filter_customers.pdf}
+            \caption{Domain tree for $filter_1$ QPU in Figure~\ref{fig:qpu_graph_emergent_properties}.}
+            \label{fig:qpt_filter_customers}
+        \end{subfigure}
+        \hfill
+        \begin{subfigure}[b]{0.48\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{./figures/design_pattern/qpt_filter_orders.pdf}
+  \caption{Domain tree for $filter_2$ QPU in Figure~\ref{fig:qpu_graph_emergent_properties}.}
   \label{fig:qpt_filter_orders}
-\end{figure}
+        \end{subfigure}
+        \hfill
+        \begin{subfigure}[b]{\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{./figures/design_pattern/qpt_join.pdf}
+            \caption{Domain tree for $join$ QPU in Figure~\ref{fig:qpu_graph_emergent_properties}.}
+            \label{fig:qpt_join}
+        \end{subfigure}
+        \caption{Domain trees for the QPU graph in Figure~\ref{fig:qpu_graph_emergent_properties}.}
+    \end{figure}
 
-\begin{figure}[t]
-  \centering
-    \includegraphics[width=\textwidth]{./figures/design_pattern/qpt_join.pdf}
-  \caption{Query processing tree for $join$}
-  \label{fig:qpt_join}
-\end{figure}
+% \begin{figure}[H]
+%   \centering
+%     \includegraphics[width=\textwidth]{./figures/design_pattern/qpt_corpus_driver_customers.pdf}
+%   \caption{Query processing tree for $corpus$ $driver_1$}
+%   \label{fig:qpt_corpus_driver_customers}
+% \end{figure}
+
+% \begin{figure}[H]
+%   \centering
+%     \includegraphics[width=\textwidth]{./figures/design_pattern/qpt_corpus_driver_orders.pdf}
+%   \caption{Query processing tree for $corpus$ $driver_2$}
+%   \label{fig:qpt_corpus_driver_orders}
+% \end{figure}
+
+% \begin{figure}[H]
+%   \centering
+%   \includegraphics[width=\textwidth]{./figures/design_pattern/qpt_filter_customers.pdf}
+%   \caption{Query processing tree $filter_1$}
+%   \label{fig:qpt_filter_customers}
+% \end{figure}
+
+% \begin{figure}[H]
+%   \centering
+%   \includegraphics[width=\textwidth]{./figures/design_pattern/qpt_filter_orders.pdf}
+%   \caption{Query processing tree for $filter_2$}
+%   \label{fig:qpt_filter_orders}
+% \end{figure}
+
+% \begin{figure}[H]
+%   \centering
+%   \includegraphics[width=\textwidth]{./figures/design_pattern/qpt_join.pdf}
+%   \caption{Query processing tree for $join$}
+%   \label{fig:qpt_join}
+% \end{figure}
 
 QPU trees have two functionalities:
 \begin{itemize}
@@ -1906,9 +1908,8 @@ QPU trees have two functionalities:
 
 \section{Discussion}
 
-\textbf{QPU-based query processing systems and ad-hoc queries}.
+\subsection{QPU-based query processing systems and ad-hoc queries}.
 
-\noindent
 The goal of the QPU-based design pattern is to enable \textit{workload-driven design}.
 A QPU graph is designed based a predefined set of query patterns.
 As a result, a QPU graph does not support any ad-hoc query,
@@ -1918,8 +1919,40 @@ Supporting additional query patterns, not supported by a certain QPU graph requi
 new QPU graph.
 
 
+\subsection{Query processing unit consistency semantics}
+
+The query engine architecture presented maintains derived state, including indexes and materialized views,
+in a system that is separate to the data storage tier.
+This creates two considerations about the consistency of query results:
+the consistency between base data and derived state,
+and the consistency between different indexes or materialized views, or shards of an index/view,
+maintained by the query engines.
+We discuss former in this section, and outline the latter as a direction for future work (\S\ref{sec:future_consistent_snapshots}).
+
+We refer to a stateful QPU as \textit{internally consistent} in time $t$,
+if its state has been updated according to all updates with timestamp $\leq$ $t$, and no updates with timestamp $>$ $t$.
+Our design ensures that 1) if a query $q$ with a timestamp $t_q$ is issued to a stateful QPU $Q$,
+and $Q$ has received and processed an update with timestamp $\geq$ $t_q$,
+then $Q$ can evaluate $q$ on an internally consistent snapshot of its state with timestamp $t_q$,
+and 2) any $Q$ can evaluate any subsequent query on an internally consistent snapshot of its state with timestamp $\geq$ $t_q$.
+Essentially, this property ensures that any state snapshot of a stateful QPU reflects a (potentially stale) snapshot
+of the corpus data.
+
+The query processing unit design achieves that as follows:
+\begin{itemize}
+  \item We assume that updates the data storage tier propagates updates to the QPU graph in-order, according to their timestamps.
+
+  \item The stream connection between two QPUs ensures that streams records are not lost or re-ordered.
+
+  \item Given a stream of input records with increasing timestamps,
+  relational operator QPUs emits result records that also have increasing timestamps (potentially a subset of the input timestamps).
+\end{itemize}
+
 \section{Conclusion}
-\todo{}
+This chapter presented the design of a modular and composable query engine architecture.
+It introduced the Query Processing Unit, presented its specification,
+and described how it can be used as a building block for constructing query engine architectures.
+
 % Given $q$, the query processing function of a QPU $Q$ at the root of the QPU graph sends query request to some its
 % downstream connection, in order to initialize input stream required for processing the query.
 % Upon receiving a query request from $Q$, each of its downstream connection performs the same process.
