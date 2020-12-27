@@ -170,7 +170,7 @@ The concept of materialized views has been employed by a number of application-l
 Noria \cite{gjengset:noria} is a web application backend,
 designed with the aim of delivering the same fast reads as an in-memory cache in front of a database,
 without the application having to manage the cache.
-Noria's system design bares several similarities to our design.
+Noria's system design shares several similarities with our design.
 Applications register long-term queries with Noria for repeated use.
 Noria constructs a data-flow graph that connects database tables at its inputs to materialized views at its leaves,
 and incrementally evaluates these queries when the underlying data changes.
@@ -261,7 +261,7 @@ Queries originating in a particular region are evaluated over the partial index 
 The underlying assumption in this approach is that users are interested more in documents located in their own region,
 and local documents are more relevant for queries originating from the same region.
 
-This problem bares several similarities to the problem of multi-cloud federated metadata search discussed in Section~\ref{sec:zenko}.
+This problem is similar to the problem of multi-cloud federated metadata search discussed in Section~\ref{sec:zenko}.
 Similarly to the multi-site web search problem,
 in multi-cloud metadata search a corpus is partitioned into disjoint datasets, each placed on a geographically distant
 data center.
@@ -493,7 +493,7 @@ indexing using MapReduce.
 In particular, this work presents and evaluates four different strategies for applying the MapReduce paradigm
 to the task of indexing very large document collections.
 
-The query processing unit computation model bares certain similarities to the MapReduce paradigm.
+The query processing unit computation model could be compared with the MapReduce paradigm.
 In MapReduce, each map task is independent and not aware of its context in the overall job.
 Because of this property, the map task can be performed by a large number of map workers in parallel,
 each operating on a different subset of the input dataset.
