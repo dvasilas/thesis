@@ -4,15 +4,9 @@
 author = {Busch, Michael and Gade, Krishna and Larson, Brian and Lok, Patrick and Luckenbill, Samuel and Lin, Jimmy},
 title = {Earlybird: Real-Time Search at Twitter},
 year = {2012},
-isbn = {9780769547473},
 publisher = {IEEE Computer Society},
-address = {USA},
-url = {https://doi.org/10.1109/ICDE.2012.149},
-doi = {10.1109/ICDE.2012.149},
-abstract = {The web today is increasingly characterized by social and real-time signals, which we believe represent two frontiers in information retrieval. In this paper, we present Early bird, the core retrieval engine that powers Twitter's real-time search service. Although Early bird builds and maintains inverted indexes like nearly all modern retrieval engines, its index structures differ from those built to support traditional web search. We describe these differences and present the rationale behind our design. A key requirement of real-time search is the ability to ingest content rapidly and make it searchable immediately, while concurrently supporting low-latency, high-throughput query evaluation. These demands are met with a single-writer, multiple-reader concurrency model and the targeted use of memory barriers. Early bird represents a point in the design space of real-time search engines that has worked well for Twitter's needs. By sharing our experiences, we hope to spur additional interest and innovation in this exciting space.},
 booktitle = {Proceedings of the 2012 IEEE 28th International Conference on Data Engineering},
 pages = {1360–-1369},
-numpages = {10},
 series = {ICDE '12}
 }
 
@@ -132,7 +126,6 @@ author = {Ankita Kejriwal and Arjun Gopalan and Ashish Gupta and Zhihao Jia and 
 title = {{SLIK}: Scalable Low-Latency Indexes for a Key-Value Store},
 booktitle = {2016 {USENIX} Annual Technical Conference ({USENIX} {ATC} 16)},
 year = {2016},
-isbn = {978-1-931971-30-0},
 url = {https://www.usenix.org/conference/atc16/technical-sessions/presentation/kejriwal}
 }
 
@@ -144,30 +137,18 @@ url = {https://www.usenix.org/conference/atc16/technical-sessions/presentation/k
   title     = {Diff-{I}ndex: {D}ifferentiated {I}ndex in {D}istributed {L}og-{S}tructured {D}ata
                {S}tores},
   booktitle = {Proceedings of the 17th International Conference on Extending Database
-               Technology, {EDBT} 2014, Athens, Greece, March 24-28, 2014},
+               Technology, {EDBT} 2014},
   pages     = {700--711},
-  publisher = {OpenProceedings.org},
   year      = {2014},
-  url       = {https://doi.org/10.5441/002/edbt.2014.76},
-  doi       = {10.5441/002/edbt.2014.76},
-  timestamp = {Tue, 16 Jan 2018 17:46:10 +0100},
-  biburl    = {https://dblp.org/rec/conf/edbt/TanTTF14.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
 @inproceedings{tang:deferredindexing,
 author = {Tang, Yuzhe and Iyengar, Arun and Tan, Wei and Fong, Liana and Liu, Ling and Palanisamy, Balaji},
 title = {Deferred {L}ightweight {I}ndexing for {L}og-{S}tructured {K}ey-{V}alue {S}tores},
 year = {2015},
-isbn = {9781479980062},
 publisher = {IEEE Press},
-url = {https://doi.org/10.1109/CCGrid.2015.150},
-doi = {10.1109/CCGrid.2015.150},
-abstract = {The recent shift towards write-intensive workload on big data (e.g., financial trading, social user-generated data streams) has pushed the proliferation of log-structured key-value stores, represented by Google's BigTable [1], Apache HBase [2] and Cassandra [3]. While providing key-based data access with a Put/Get interface, these key-value stores do not support value-based access methods, which significantly limits their applicability in modern web and database applications. In this paper, we present DELI, a DEferred Lightweight Indexing scheme on the log-structured key-value stores. To index intensively updated big data in real time, DELI aims at making the index maintenance as lightweight as possible. The key idea is to apply an append-only design for online index maintenance and to collect index garbage at carefully chosen time. DELI optimizes the performance of index garbage collection through tightly coupling its execution with a native routine process called compaction. The DELI's system design is fault-tolerant and generic (to most key-value stores); we implemented a prototype of DELI based on HBase without internal code modification. Our experiments show that the DELI offers significant performance advantage for the write-intensive index maintenance.},
 booktitle = {Proceedings of the 15th IEEE/ACM International Symposium on Cluster, Cloud, and Grid Computing},
 pages = {11-–20},
-numpages = {10},
-location = {Shenzhen, China},
 series = {CCGRID '15}
 }
 
@@ -175,7 +156,6 @@ series = {CCGRID '15}
 title	= {Megastore: {P}roviding {S}calable, {H}ighly {A}vailable {S}torage for {I}nteractive {S}ervices},
 author	= {Jason Baker and Chris Bond and James C. Corbett and JJ Furman and Andrey Khorlin and James Larson and Jean-Michel Leon and Yawei Li and Alexander Lloyd and Vadim Yushprakh},
 year	= {2011},
-URL	= {http://www.cidrdb.org/cidr2011/Papers/CIDR11_Paper32.pdf},
 booktitle	= {Proceedings of the Conference on Innovative Data system Research (CIDR)},
 pages	= {223--234}
 }
@@ -184,17 +164,8 @@ pages	= {223--234}
 author = {Bacon, David F. and Bales, Nathan and Bruno, Nico and Cooper, Brian F. and Dickinson, Adam and Fikes, Andrew and Fraser, Campbell and Gubarev, Andrey and Joshi, Milind and Kogan, Eugene and Lloyd, Alexander and Melnik, Sergey and Rao, Rajesh and Shue, David and Taylor, Christopher and van der Holst, Marcel and Woodford, Dale},
 title = {Spanner: {B}ecoming a {SQL} {S}ystem},
 year = {2017},
-isbn = {9781450341974},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/3035918.3056103},
-doi = {10.1145/3035918.3056103},
-abstract = {Spanner is a globally-distributed data management system that backs hundreds of mission-critical services at Google. Spanner is built on ideas from both the systems and database communities. The first Spanner paper published at OSDI'12 focused on the systems aspects such as scalability, automatic sharding, fault tolerance, consistent replication, external consistency, and wide-area distribution. This paper highlights the database DNA of Spanner. We describe distributed query execution in the presence of resharding, query restarts upon transient failures, range extraction that drives query routing and index seeks, and the improved blockwise-columnar storage format. We touch upon migrating Spanner to the common SQL dialect shared with other systems at Google.},
 booktitle = {Proceedings of the 2017 ACM International Conference on Management of Data},
 pages = {331--343},
-numpages = {13},
-keywords = {cloud computing, transactional databases, sql, distributed systems},
-location = {Chicago, Illinois, USA},
 series = {SIGMOD '17}
 }
 
@@ -202,53 +173,32 @@ series = {SIGMOD '17}
 author = {Cooper, Brian F. and Ramakrishnan, Raghu and Srivastava, Utkarsh and Silberstein, Adam and Bohannon, Philip and Jacobsen, Hans-Arno and Puz, Nick and Weaver, Daniel and Yerneni, Ramana},
 title = {PNUTS: {Y}ahoo!'s {H}osted {D}ata {S}erving {P}latform},
 year = {2008},
-issue_date = {August 2008},
+month = aug,
 publisher = {VLDB Endowment},
 volume = {1},
 number = {2},
-issn = {2150-8097},
-url = {https://doi.org/10.14778/1454159.1454167},
-doi = {10.14778/1454159.1454167},
-abstract = {We describe PNUTS, a massively parallel and geographically distributed database system for Yahoo!'s web applications. PNUTS provides data storage organized as hashed or ordered tables, low latency for large numbers of concurrent requests including updates and queries, and novel per-record consistency guarantees. It is a hosted, centrally managed, and geographically distributed service, and utilizes automated load-balancing and failover to reduce operational complexity. The first version of the system is currently serving in production. We describe the motivation for PNUTS and the design and implementation of its table storage and replication layers, and then present experimental results.},
 journal = {Proc. VLDB Endow.},
-month = aug,
 pages = {1277–-1288},
-numpages = {12}
 }
 
 @article{cooper:pnuts19,
 author = {Cooper, Brian F. and Narayan, P. P. S. and Ramakrishnan, Raghu and Srivastava, Utkarsh and Silberstein, Adam and Bohannon, Philip and Jacobsen, Hans-Arno and Puz, Nick and Weaver, Daniel and Yerneni, Ramana},
 title = {PNUTS to {S}herpa: {L}essons from {Y}ahoo!'s {C}loud {D}atabase},
 year = {2019},
-issue_date = {August 2019},
 publisher = {VLDB Endowment},
 volume = {12},
 number = {12},
-issn = {2150-8097},
-url = {https://doi.org/10.14778/3352063.3352146},
-doi = {10.14778/3352063.3352146},
-abstract = {In this paper, we look back at the evolution of Yahoo!'s geo-replicated cloud data store from a research project called PNUTS to a globally deployed production system called Sherpa, share some of the lessons learned along the way, and finally, compare PNUTS with current operational cloud stores.},
 journal = {Proc. VLDB Endow.},
-month = aug,
 pages = {2300–-2307},
-numpages = {8}
+month = aug,
 }
 
 @inproceedings{sovran:walter,
 author = {Sovran, Yair and Power, Russell and Aguilera, Marcos K. and Li, Jinyang},
 title = {Transactional {S}torage for {G}eo-{R}eplicated {S}ystems},
 year = {2011},
-isbn = {9781450309776},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/2043556.2043592},
-doi = {10.1145/2043556.2043592},
-abstract = {We describe the design and implementation of Walter, a key-value store that supports transactions and replicates data across distant sites. A key feature behind Walter is a new property called Parallel Snapshot Isolation (PSI). PSI allows Walter to replicate data asynchronously, while providing strong guarantees within each site. PSI precludes write-write conflicts, so that developers need not worry about conflict-resolution logic. To prevent write-write conflicts and implement PSI, Walter uses two new and simple techniques: preferred sites and counting sets. We use Walter to build a social networking application and port a Twitter-like application.},
 booktitle = {Proceedings of the Twenty-Third ACM Symposium on Operating Systems Principles},
 pages = {385-–400},
-numpages = {16},
-keywords = {transactions, parallel snapshot isolation, key-value store, geo-distributed systems, distributed storage, asynchronous replication},
-location = {Cascais, Portugal},
 series = {SOSP '11}
 }
 
@@ -256,17 +206,8 @@ series = {SOSP '11}
 author = {Lloyd, Wyatt and Freedman, Michael J. and Kaminsky, Michael and Andersen, David G.},
 title = {Don't {S}ettle for {E}ventual: {S}calable {C}ausal {C}onsistency for {W}ide-{A}rea {S}torage with {COPS}},
 year = {2011},
-isbn = {9781450309776},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/2043556.2043593},
-doi = {10.1145/2043556.2043593},
-abstract = {Geo-replicated, distributed data stores that support complex online applications, such as social networks, must provide an "always-on" experience where operations always complete with low latency. Today's systems often sacrifice strong consistency to achieve these goals, exposing inconsistencies to their clients and necessitating complex application logic. In this paper, we identify and define a consistency model---causal consistency with convergent conflict handling, or causal+---that is the strongest achieved under these constraints.We present the design and implementation of COPS, a key-value store that delivers this consistency model across the wide-area. A key contribution of COPS is its scalability, which can enforce causal dependencies between keys stored across an entire cluster, rather than a single server like previous systems. The central approach in COPS is tracking and explicitly checking whether causal dependencies between keys are satisfied in the local cluster before exposing writes. Further, in COPS-GT, we introduce get transactions in order to obtain a consistent view of multiple keys without locking or blocking. Our evaluation shows that COPS completes operations in less than a millisecond, provides throughput similar to previous systems when using one server per cluster, and scales well as we increase the number of servers in each cluster. It also shows that COPS-GT provides similar latency, throughput, and scaling to COPS for common workloads.},
 booktitle = {Proceedings of the Twenty-Third ACM Symposium on Operating Systems Principles},
 pages = {401-–416},
-numpages = {16},
-keywords = {scalable wide-area replication, read transactions, ALPS systems, key-value storage, causal + consistency},
-location = {Cascais, Portugal},
 series = {SOSP '11}
 }
 
@@ -274,39 +215,21 @@ series = {SOSP '11}
 author = {Lakshman, Avinash and Malik, Prashant},
 title = {Cassandra: A {D}ecentralized {S}tructured {S}torage {S}ystem},
 year = {2010},
-issue_date = {April 2010},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
 volume = {44},
 number = {2},
-issn = {0163-5980},
-url = {https://doi.org/10.1145/1773912.1773922},
-doi = {10.1145/1773912.1773922},
-abstract = {Cassandra is a distributed storage system for managing very large amounts of structured data spread out across many commodity servers, while providing highly available service with no single point of failure. Cassandra aims to run on top of an infrastructure of hundreds of nodes (possibly spread across different data centers). At this scale, small and large components fail continuously. The way Cassandra manages the persistent state in the face of these failures drives the reliability and scalability of the software systems relying on this service. While in many ways Cassandra resembles a database and shares many design and implementation strategies therewith, Cassandra does not support a full relational data model; instead, it provides clients with a simple data model that supports dynamic control over data layout and format. Cassandra system was designed to run on cheap commodity hardware and handle high write throughput while not sacrificing read efficiency.},
 journal = {SIGOPS Oper. Syst. Rev.},
 month = apr,
 pages = {35–-40},
-numpages = {6}
 }
 
 @article{chang:bigtable,
 author = {Chang, Fay and Dean, Jeffrey and Ghemawat, Sanjay and Hsieh, Wilson C. and Wallach, Deborah A. and Burrows, Mike and Chandra, Tushar and Fikes, Andrew and Gruber, Robert E.},
 title = {Bigtable: {A} {D}istributed {S}torage {S}ystem for {S}tructured {D}ata},
 year = {2008},
-issue_date = {June 2008},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
 volume = {26},
 number = {2},
-issn = {0734-2071},
-url = {https://doi.org/10.1145/1365815.1365816},
-doi = {10.1145/1365815.1365816},
-abstract = {Bigtable is a distributed storage system for managing structured data that is designed to scale to a very large size: petabytes of data across thousands of commodity servers. Many projects at Google store data in Bigtable, including web indexing, Google Earth, and Google Finance. These applications place very different demands on Bigtable, both in terms of data size (from URLs to web pages to satellite imagery) and latency requirements (from backend bulk processing to real-time data serving). Despite these varied demands, Bigtable has successfully provided a flexible, high-performance solution for all of these Google products. In this article, we describe the simple data model provided by Bigtable, which gives clients dynamic control over data layout and format, and we describe the design and implementation of Bigtable.},
 journal = {ACM Trans. Comput. Syst.},
 month = jun,
-articleno = {4},
-numpages = {26},
-keywords = {Large-Scale Distributed Storage}
 }
 
 @online{lsm:vsbtree,
@@ -321,18 +244,11 @@ keywords = {Large-Scale Distributed Storage}
 author = {O'Neil, Patrick and Cheng, Edward and Gawlick, Dieter and O'Neil, Elizabeth},
 title = {The {L}og-{S}tructured {M}erge-{T}ree ({LSM}-{T}ree)},
 year = {1996},
-issue_date = {1996},
 publisher = {Springer-Verlag},
-address = {Berlin, Heidelberg},
 volume = {33},
 number = {4},
-issn = {0001-5903},
-url = {https://doi.org/10.1007/s002360050048},
-doi = {10.1007/s002360050048},
-journal = {Acta Inf.},
-month = jun,
 pages = {351-–385},
-numpages = {35}
+month = jun,
 }
 
 @online{leveldb:implnotes,
@@ -362,35 +278,19 @@ numpages = {35}
 author = {Gray, Jim and Helland, Pat and O'Neil, Patrick and Shasha, Dennis},
 title = {The Dangers of Replication and a Solution},
 year = {1996},
-issue_date = {June 1996},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
 volume = {25},
 number = {2},
-issn = {0163-5808},
-url = {https://doi.org/10.1145/235968.233330},
-doi = {10.1145/235968.233330},
-abstract = {Update anywhere-anytime-anyway transactional replication has unstable behavior as the workload scales up: a ten-fold increase in nodes and traffic gives a thousand fold increase in deadlocks or reconciliations. Master copy replication (primary copy) schemes reduce this problem. A simple analytic model demonstrates these results. A new two-tier replication algorithm is proposed that allows mobile (disconnected) applications to propose tentative update transactions that are later applied to a master copy. Commutative update transactions avoid the instability of other replication schemes.},
 journal = {SIGMOD Rec.},
 month = jun,
-pages = {173–182},
-numpages = {10}
+pages = {173–-182},
 }
 
 @inproceedings{10.1145/233269.233330,
 author = {Gray, Jim and Helland, Pat and O'Neil, Patrick and Shasha, Dennis},
 title = {{T}he {D}angers of {R}eplication and a {S}olution},
 year = {1996},
-isbn = {0897917944},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/233269.233330},
-doi = {10.1145/233269.233330},
-abstract = {Update anywhere-anytime-anyway transactional replication has unstable behavior as the workload scales up: a ten-fold increase in nodes and traffic gives a thousand fold increase in deadlocks or reconciliations. Master copy replication (primary copy) schemes reduce this problem. A simple analytic model demonstrates these results. A new two-tier replication algorithm is proposed that allows mobile (disconnected) applications to propose tentative update transactions that are later applied to a master copy. Commutative update transactions avoid the instability of other replication schemes.},
 booktitle = {Proceedings of the 1996 ACM SIGMOD International Conference on Management of Data},
 pages = {173–-182},
-numpages = {10},
-location = {Montreal, Quebec, Canada},
 series = {SIGMOD '96}
 }
 
@@ -418,30 +318,18 @@ series = {SIGMOD '96}
 author = {Graefe, Goetz},
 title = {{Q}uery {E}valuation {T}echniques for {L}arge {D}atabases},
 year = {1993},
-issue_date = {June 1993},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
 volume = {25},
 number = {2},
-issn = {0360-0300},
-url = {https://doi.org/10.1145/152610.152611},
-doi = {10.1145/152610.152611},
-abstract = {Database management systems will continue to manage large data volumes. Thus, efficient algorithms for accessing and manipulating large sets and sequences will be required to provide acceptable performance. The advent of object-oriented and extensible database systems will not solve this problem. On the contrary, modern data models exacerbate the problem: In order to manipulate large sets of complex objects as efficiently as today's database systems manipulate simple records, query-processing algorithms and software will become more complex, and a solid understanding of algorithm and architectural issues is essential for the designer of database management software.This survey provides a foundation for the design and implementation of query execution facilities in new database management systems. It describes a wide array of practical query evaluation techniques for both relational and postrelational database systems, including iterative execution of complex query evaluation plans, the duality of sort- and hash-based set-matching algorithms, types of parallel query execution and their implementation, and special operators for emerging database application domains.},
 journal = {ACM Comput. Surv.},
-month = jun,
 pages = {73–-169},
-numpages = {97},
-keywords = {relational database systems, dynamic query evaluation plans, object-oriented database systems, extensible database systems, set-matching algorithms, operator model of parallelization, sort-hash duality, parallel algorithms, iterators, complex query evaluation plans}
+month = jun,
 }
 
 @article{hellerstein:databasearchitecture,
-url = {http://dx.doi.org/10.1561/1900000002},
 year = {2007},
 volume = {1},
-journal = {Foundations and TrendsÂ® in Databases},
+journal = {Foundations and Trends in Databases},
 title = {Architecture of a {D}atabase {S}ystem},
-doi = {10.1561/1900000002},
-issn = {1931-7883},
 number = {2},
 pages = {141--259},
 author = {Joseph M. Hellerstein and Michael Stonebraker and James Hamilton}
@@ -452,7 +340,6 @@ author = {Joseph M. Hellerstein and Michael Stonebraker and James Hamilton}
   title     = {The State of the art in distributed query processing},
   journal   = {{ACM} Comput. Surv.},
   year      = {2000},
-  url       = {https://doi.org/10.1145/371578.371598}
 }
 
 @book{silberschatz:dbbook,
@@ -462,22 +349,12 @@ author = {Joseph M. Hellerstein and Michael Stonebraker and James Hamilton}
   title     = {Database System Concepts, Seventh Edition},
   publisher = {McGraw-Hill Book Company},
   year      = {2020},
-  url       = {https://www.db-book.com/db7/index.html}
 }
 
 @book{Silberschatz2010,
-  added-at = {2010-07-18T14:00:17.000+0200},
-  address = {New York},
   author = {Silberschatz, Abraham and Korth, Henry F. and Sudarshan, S.},
-  biburl = {https://www.bibsonomy.org/bibtex/2f918632bd9810e92303843bba065d27d/voj},
-  edition = 6,
-  interhash = {f7b2016b63d72e5cfd3bc55af1deedbb},
-  intrahash = {f918632bd9810e92303843bba065d27d},
-  keywords = {databases textbook},
   publisher = {McGraw-Hill},
-  timestamp = {2010-07-18T14:00:17.000+0200},
   title = {Database system concepts},
-  url = {http://www.db-book.com/},
   year = 2010
 }
 
@@ -491,7 +368,6 @@ author = {Joseph M. Hellerstein and Michael Stonebraker and James Hamilton}
   booktitle = {Proceedings of the 1979 {ACM} {SIGMOD} International Conference on
                Management of Data},
   year      = {1979},
-  url       = {https://doi.org/10.1145/582095.582099}
 }
 
 @inproceedings{zhou:lazymvMaintenance,
@@ -502,7 +378,6 @@ author = {Joseph M. Hellerstein and Michael Stonebraker and James Hamilton}
   booktitle = {Proceedings of the 33rd International Conference on Very Large Data
                Bases},
   year      = {2007},
-  url       = {http://www.vldb.org/conf/2007/papers/research/p231-zhou.pdf},
 }
 
 @inproceedings{larson:outerjoinviewmaintenance,
@@ -512,7 +387,6 @@ author = {Joseph M. Hellerstein and Michael Stonebraker and James Hamilton}
   booktitle = {Proceedings of the 23rd International Conference on Data Engineering,
                {ICDE}},
   year      = {2007},
-  url       = {https://doi.org/10.1109/ICDE.2007.367851},
 }
 
 @inproceedings{lee:multiplejoinviewmaintenance,
@@ -522,7 +396,6 @@ author = {Joseph M. Hellerstein and Michael Stonebraker and James Hamilton}
   booktitle = {{DOLAP} 2005, {ACM} 8th International Workshop on Data Warehousing
                and OLAP},
   year      = {2005},
-  url       = {https://doi.org/10.1145/1097002.1097021}
 }
 
 @inproceedings{zhuge:viewmaintenance,
@@ -534,7 +407,6 @@ author = {Joseph M. Hellerstein and Michael Stonebraker and James Hamilton}
   booktitle = {Proceedings of the 1995 {ACM} {SIGMOD} International Conference on
                Management of Data},
   year      = {1995},
-  url       = {https://doi.org/10.1145/223784.223848}
 }
 
 @article{gupta:viewselection,
@@ -543,7 +415,6 @@ author = {Joseph M. Hellerstein and Michael Stonebraker and James Hamilton}
   title     = {Selection of Views to Materialize in a Data Warehouse},
   journal   = {{IEEE} Trans. Knowl. Data Eng.},
   year      = {2005},
-  url       = {https://doi.org/10.1109/TKDE.2005.16}
 }
 
 @article{mami:viewselection,
@@ -552,7 +423,6 @@ author = {Joseph M. Hellerstein and Michael Stonebraker and James Hamilton}
   title     = {A survey of view selection methods},
   journal   = {{SIGMOD} Record},
   year      = {2012},
-  url       = {https://doi.org/10.1145/2206869.2206874}
 }
 
 @inproceedings{epstein:ingres,
@@ -563,7 +433,6 @@ author = {Joseph M. Hellerstein and Michael Stonebraker and James Hamilton}
   booktitle = {Proceedings of the 1978 {ACM} {SIGMOD} International Conference on
                Management of Data},
   year      = {1978},
-  url       = {https://doi.org/10.1145/509252.509292}
 }
 
 @online{cockroachdb:docs,
@@ -618,11 +487,7 @@ author = {Bryan Kate and Eddie Kohler and Michael S. Kester and Neha Narula and 
 title = {Easy Freshness with Pequod Cache Joins},
 booktitle = {11th {USENIX} Symposium on Networked Systems Design and Implementation ({NSDI} 14)},
 year = {2014},
-isbn = {978-1-931971-09-6},
-address = {Seattle, WA},
 pages = {415--428},
-url = {https://www.usenix.org/conference/nsdi14/technical-sessions/presentation/kate},
-publisher = {{USENIX} Association},
 month = apr,
 }
 
@@ -698,11 +563,6 @@ month = apr,
   title     = {Highly Available Transactions: Virtues and Limitations},
   journal   = {Proceedings of the VLDB Endowment},
   year      = {2013},
-  url       = {http://www.vldb.org/pvldb/vol7/p181-bailis.pdf},
-  doi       = {10.14778/2732232.2732237},
-  timestamp = {Sat, 25 Apr 2020 13:59:01 +0200},
-  biburl    = {https://dblp.org/rec/journals/pvldb/BailisDFGHS13.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
 @article{ramsay/retrievaltimesinvestigation,
@@ -713,11 +573,6 @@ month = apr,
                Wide Web},
   journal   = {Interacting with Computers},
   year      = {1998},
-  url       = {https://doi.org/10.1016/S0953-5438(97)00019-2},
-  doi       = {10.1016/S0953-5438(97)00019-2},
-  timestamp = {Fri, 13 Mar 2020 10:53:50 +0100},
-  biburl    = {https://dblp.org/rec/journals/iwc/RamsayBP98.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
 @article{ceaparu:userfrustration,
@@ -729,11 +584,6 @@ month = apr,
   title     = {Determining Causes and Severity of End-User Frustration},
   journal   = {International Journal of Human-Computer Interaction},
   year      = {2004},
-  url       = {https://doi.org/10.1207/s15327590ijhc1703\_3},
-  doi       = {10.1207/s15327590ijhc1703\_3},
-  timestamp = {Thu, 18 Jun 2020 22:01:41 +0200},
-  biburl    = {https://dblp.org/rec/journals/ijhci/CeaparuLBRS04.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
 @inproceedings{bouch:qualityeyebeholder,
@@ -745,11 +595,6 @@ month = apr,
   booktitle = {Proceedings of the {CHI} 2000 Conference on Human factors in computing
                systems},
   year      = {2000},
-  url       = {https://doi.org/10.1145/332040.332447},
-  doi       = {10.1145/332040.332447},
-  timestamp = {Tue, 06 Nov 2018 16:58:43 +0100},
-  biburl    = {https://dblp.org/rec/conf/chi/BouchKB00.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
 @online{akamai:travelsiteperformance,
@@ -766,11 +611,6 @@ month = apr,
   title     = {Information Retrieval - Implementing and Evaluating Search Engines},
   publisher = {{MIT} Press},
   year      = {2010},
-  url       = {http://mitpress.mit.edu/books/information-retrieval},
-  isbn      = {978-0-262-02651-2},
-  timestamp = {Sun, 06 Oct 2013 17:17:13 +0200},
-  biburl    = {https://dblp.org/rec/books/daglib/0031897.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
 @inproceedings{shukla:schemaagnostic,
@@ -779,9 +619,6 @@ month = apr,
   booktitle = {Proceedings of the VLDB Endowment},
   year = {2015},
   month = {September},
-  abstract = {Azure DocumentDB is Microsoftâs multi-tenant distributed database service for managing JSON documents at Internet scale. DocumentDB is now generally available to Azure developers. In this paper, we describe the DocumentDB indexing subsystem. DocumentDB indexing enables automatic indexing of documents without requiring a schema or secondary indices. Uniquely, DocumentDB provides real-time consistent queries in the face of very high rates of document updates. As a multi-tenant service, DocumentDB is designed to operate within extremely frugal resource budgets while providing predictable performance and robust resource isolation to its tenants. This paper describes the DocumentDB capabilities, including document representation, query language, document indexing approach, core index support, and early production experiences.},
-  url = {https://www.microsoft.com/en-us/research/publication/schema-agnostic-indexing-azure-documentdb/},
-  edition = {Proceedings of the VLDB Endowment},
 }
 
 @inproceedings{bouzeghoub:datafreshness,
@@ -791,11 +628,6 @@ month = apr,
   booktitle = {{IQIS} 2004, International Workshop on Information Quality in Information
                Systems},
   year      = {2004},
-  url       = {https://doi.org/10.1145/1012453.1012464},
-  doi       = {10.1145/1012453.1012464},
-  timestamp = {Tue, 06 Nov 2018 16:57:28 +0100},
-  biburl    = {https://dblp.org/rec/conf/iqis/BouzeghoubP04.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
 @inproceedings{bright:latencyrecency,
@@ -805,11 +637,6 @@ month = apr,
   booktitle = {Proceedings of 28th International Conference on Very Large Data Bases,
                {VLDB}},
   year      = {2002},
-  url       = {http://www.vldb.org/conf/2002/S16P01.pdf},
-  doi       = {10.1016/B978-155860869-6/50055-X},
-  timestamp = {Thu, 12 Mar 2020 11:33:39 +0100},
-  biburl    = {https://dblp.org/rec/conf/vldb/BrightR02.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
 @inproceedings{cho:dbfreshness,
@@ -819,11 +646,6 @@ month = apr,
   booktitle = {Proceedings of the 2000 {ACM} {SIGMOD} International Conference on
                Management of Data},
   year      = {2000},
-  url       = {https://doi.org/10.1145/342009.335391},
-  doi       = {10.1145/342009.335391},
-  timestamp = {Wed, 14 Nov 2018 10:56:19 +0100},
-  biburl    = {https://dblp.org/rec/conf/sigmod/ChoG00.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
 @inproceedings{avigdor:obsolescent,
@@ -833,11 +655,6 @@ month = apr,
   booktitle = {Proceedings of the 1999 {ACM} {CIKM} International Conference on Information
                and Knowledge Management},
   year      = {1999},
-  url       = {https://doi.org/10.1145/319950.320029},
-  doi       = {10.1145/319950.320029},
-  timestamp = {Tue, 06 Nov 2018 16:57:49 +0100},
-  biburl    = {https://dblp.org/rec/conf/cikm/Gal99.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
 @inproceedings{labrinidis:balancingperfomancefreshness,
@@ -847,26 +664,14 @@ month = apr,
   booktitle = {Proceedings of 29th International Conference on Very Large Data Bases,
                {VLDB}},
   year      = {2003},
-  url       = {http://www.vldb.org/conf/2003/papers/S13P01.pdf},
-  doi       = {10.1016/B978-012722442-8/50042-2},
-  timestamp = {Thu, 12 Mar 2020 11:33:36 +0100},
-  biburl    = {https://dblp.org/rec/conf/vldb/LabrinidisR03.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
 @book{kleppmann:designing,
   added-at = {2017-10-10T12:33:35.000+0200},
   author    = {Martin Kleppmann},
-  biburl = {https://www.bibsonomy.org/bibtex/20e57a7b78887d15a8a2aec44dac76b04/schmitz},
-  interhash = {092ae166c4379328d15362d9c16d4234},
-  intrahash = {0e57a7b78887d15a8a2aec44dac76b04},
-  isbn = {9781449373320},
-  keywords = {bigdata bigdataseminar datascience},
   publisher = {O'Reilly Media},
-  timestamp = {2017-10-10T12:33:35.000+0200},
   title = {Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems},
-  url = {https://books.google.de/books?id=BM7woQEACAAJ},
-  year = 2017
+  year = {2017},
 }
 
 @inproceedings{nah:waitingtime,
@@ -895,11 +700,6 @@ month = apr,
   booktitle = {Proceedings of the 21st {ACM} Symposium on Operating Systems Principles
                {SOSP}},
   year      = {2007},
-  url       = {https://doi.org/10.1145/1294261.1294281},
-  doi       = {10.1145/1294261.1294281},
-  timestamp = {Wed, 14 Nov 2018 10:55:11 +0100},
-  biburl    = {https://dblp.org/rec/conf/sosp/DeCandiaHJKLPSVV07.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
 @inproceedings{qi:secondaryindexconsistency,
@@ -912,11 +712,6 @@ month = apr,
   booktitle = {2017 {IEEE} International Parallel and Distributed Processing Symposium
                Workshops {IPDPS}},
   year      = {2017},
-  url       = {https://doi.org/10.1109/IPDPSW.2017.92},
-  doi       = {10.1109/IPDPSW.2017.92},
-  timestamp = {Wed, 16 Oct 2019 14:14:51 +0200},
-  biburl    = {https://dblp.org/rec/conf/ipps/QiCLZ17.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
 -- Ch: Design space --
@@ -930,7 +725,6 @@ month = apr,
   title     = {{DB2} Advisor: An Optimizer Smart Enough to Recommend Its Own Indexes},
   booktitle = {Proceedings of the 16th International Conference on Data Engineering},
   year      = {2000},
-  url       = {https://doi.org/10.1109/ICDE.2000.839397}
 }
 
 @inproceedings{chaudhuri:decadeselftuning,
@@ -940,7 +734,6 @@ month = apr,
   booktitle = {Proceedings of the 33rd International Conference on Very Large Data
                Bases, University of Vienna, Austria},
   year      = {2007},
-  url       = {http://www.vldb.org/conf/2007/papers/special/p3-chaudhuri.pdf}
 }
 
 @inproceedings{dsilva:tworings,
@@ -954,7 +747,6 @@ month = apr,
   booktitle = {Proceedings of the Workshops of the {EDBT/ICDT} 2017 Joint Conference
                {(EDBT/ICDT})},
   year      = {2017},
-  url       = {http://ceur-ws.org/Vol-1810/DOLAP\_paper\_10.pdf}
 }
 
 
@@ -973,7 +765,6 @@ month = apr,
   booktitle = {Proceedings of the 2019 {ACM} {SIGPLAN} International Symposium on
                New Ideas, New Paradigms, and Reflections on Programming and Software},
   year      = {2019},
-  url       = {https://doi.org/10.1145/3359591.3359737}
 }
 
 @inproceedings{brewer:cap,
@@ -983,7 +774,6 @@ month = apr,
   booktitle = {Proceedings of The Seventh Workshop on Hot Topics in Operating Systems,
                HotOS-VII},
   year      = {1999},
-  url       = {https://doi.org/10.1109/HOTOS.1999.798396},
 }
 
 @online{cockroachdb:geopartitioning,
@@ -1005,7 +795,6 @@ month = apr,
                Configurable Middleware},
   journal   = {{IEEE} Distributed Syst. Online},
   year      = {2005},
-  url       = {https://doi.org/10.1109/MDSO.2005.47}
 }
 
 -- Ch: Related work --
@@ -1019,7 +808,6 @@ month = apr,
   booktitle = {Proceedings of the 2018 International Conference on Management of
                Data, {SIGMOD} Conference},
   year      = {2018},
-  url       = {https://doi.org/10.1145/3183713.3196900}
 }
 
 @article{kohler:click,
@@ -1031,7 +819,6 @@ month = apr,
   title     = {The click modular router},
   journal   = {{ACM} Trans. Comput. Syst.},
   year      = {2000},
-  url       = {https://doi.org/10.1145/354871.354874}
 }
 
 @inproceedings{escriva:hyperdex,
@@ -1041,9 +828,7 @@ month = apr,
   title     = {HyperDex: a distributed, searchable key-value store},
   booktitle = {{ACM} {SIGCOMM} 2012 Conference, {SIGCOMM} '12},
   pages     = {25--36},
-  publisher = {{ACM}},
   year      = {2012},
-  url       = {https://doi.org/10.1145/2342356.2342360}
 }
 
 @inproceedings{tai:replex,
@@ -1054,26 +839,15 @@ month = apr,
                Dahlia Malkhi},
   title     = {Replex: {A} Scalable, Highly Available Multi-Index Data Store},
   booktitle = {2016 {USENIX} Annual Technical Conference, {USENIX} {ATC} 2016},
-  publisher = {{USENIX} Association},
   year      = {2016},
-  url       = {https://www.usenix.org/conference/atc16/technical-sessions/presentation/tai}
 }
 
 @inproceedings{yates:multisitefeasibility,
 author = {Baeza-Yates, Ricardo and Gionis, Aristides and Junqueira, Flavio and Plachouras, Vassilis and Telloli, Luca},
 title = {On the Feasibility of Multi-Site Web Search Engines},
 year = {2009},
-isbn = {9781605585123},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/1645953.1646009},
-doi = {10.1145/1645953.1646009},
-abstract = {Web search engines are often implemented as centralized systems. Designing and implementing a Web search engine in a distributed environment is a challenging engineering task that encompasses many interesting research questions. However, distributing a search engine across multiple sites has several advantages, such as utilizing less compute resources and exploiting data locality. In this paper we investigate the cost-effectiveness of building a distributed Web search engine. We propose a model for assessing the total cost of a distributed Web search engine that includes the computational costs and the communication cost among all distributed sites. We then present a query-processing algorithm that maximizes the amount of queries answered locally, without sacrificing the quality of the results compared to a centralized search engine. We simulate the algorithm on real document collections and query workloads to measure the actual parameters needed for our cost model, and we show that a distributed search engine can be competitive compared to a centralized architecture with respect to real cost.},
 booktitle = {Proceedings of the 18th ACM Conference on Information and Knowledge Management},
-pages = {425–434},
-numpages = {10},
-keywords = {query processing, cost model, distributed systems, web search},
-location = {Hong Kong, China},
+pages = {425--434},
 series = {CIKM '09}
 }
 
@@ -1081,17 +855,8 @@ series = {CIKM '09}
 author = {Cambazoglu, B Barla and Plachouras, Vassilis and Baeza-Yates, Ricardo},
 title = {Quantifying Performance and Quality Gains in Distributed Web Search Engines},
 year = {2009},
-isbn = {9781605584836},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/1571941.1572013},
-doi = {10.1145/1571941.1572013},
-abstract = {Distributed search engines based on geographical partitioning of a central Web index emerge as a feasible solution to the immense growth of the Web, user bases, and query traffic. However, there is still lack of research in quantifying the performance and quality gains that can be achieved by such architectures. In this paper, we develop various cost models to evaluate the performance benefits of a geographically distributed search engine architecture based on partial index replication and query forwarding. Specifically, we focus on possible performance gains due to the distributed nature of query processing and Web crawling processes. We show that any response time gain achieved by distributed query processing can be utilized to improve search relevance as the use of complex but more accurate algorithms can now be enabled for document ranking. We also show that distributed Web crawling leads to better Web coverage and try to see if this improves the search quality. We verify the validity of our claims over large, real-life datasets via simulations.},
 booktitle = {Proceedings of the 32nd International ACM SIGIR Conference on Research and Development in Information Retrieval},
-pages = {411–418},
-numpages = {8},
-keywords = {index partitioning, web crawling, data centers, distributed query processing},
-location = {Boston, MA, USA},
+pages = {411-–418},
 series = {SIGIR '09}
 }
 
@@ -1099,17 +864,8 @@ series = {SIGIR '09}
 author = {Cambazoglu, B. Barla and Varol, Emre and Kayaaslan, Enver and Aykanat, Cevdet and Baeza-Yates, Ricardo},
 title = {Query Forwarding in Geographically Distributed Search Engines},
 year = {2010},
-isbn = {9781450301534},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/1835449.1835467},
-doi = {10.1145/1835449.1835467},
-abstract = {Query forwarding is an important technique for preserving the result quality in distributed search engines where the index is geographically partitioned over multiple search sites. The key component in query forwarding is the thresholding algorithm by which the forwarding decisions are given. In this paper, we propose a linear-programming-based thresholding algorithm that significantly outperforms the current state-of-the-art in terms of achieved search efficiency values. Moreover, we evaluate a greedy heuristic for partial index replication and investigate the impact of result cache freshness on query forwarding performance. Finally, we present some optimizations that improve the performance further, under certain conditions. We evaluate the proposed techniques by simulations over a real-life setting, using a large query log and a document collection obtained from Yahoo!.},
 booktitle = {Proceedings of the 33rd International ACM SIGIR Conference on Research and Development in Information Retrieval},
-pages = {90–97},
-numpages = {8},
-keywords = {linear programming, optimization, search engines, distributed ir, query forwarding, index replication, result caching},
-location = {Geneva, Switzerland},
+pages = {90–-97},
 series = {SIGIR '10}
 }
 
@@ -1117,17 +873,8 @@ series = {SIGIR '10}
 author = {Franc\`{e}s, Guillem and Bai, Xiao and Cambazoglu, B. Barla and Baeza-Yates, Ricardo},
 title = {Improving the Efficiency of Multi-Site Web Search Engines},
 year = {2014},
-isbn = {9781450323512},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/2556195.2556249},
-doi = {10.1145/2556195.2556249},
-abstract = {A multi-site web search engine is composed of a number of search sites geographically distributed around the world. Each search site is typically responsible for crawling and indexing the web pages that are in its geographical neighborhood. A query is selectively processed on a subset of search sites that are predicted to return the best-matching results. The scalability and efficiency of multi-site web search engines have attracted a lot of research attention in recent years. In particular, research has focused on replicating important web pages across sites, forwarding queries to relevant sites, and caching results of previous queries. Yet, these problems have only been studied in isolation, but no prior work has properly investigated the interplay between them.In this paper, we take this challenge up and conduct what we believe is the first comprehensive analysis of a full stack of techniques for efficient multi-site web search. Specifically, we propose a document replication technique that improves the query locality of the state-of-the-art approaches with various replication budget distribution strategies. We devise a machine learning approach to decide the query forwarding patterns, achieving a significantly lower false positive ratio than a state-of-the-art thresholding approach with little negative impact on search result quality. We propose three result caching strategies that reduce the number of forwarded queries and analyze the trade-off they introduce in terms of storage and network overheads. Finally, we show that the combination of the best-of-the-class techniques yields very promising search efficiency, rendering multi-site, geographically distributed web search engines an attractive alternative to centralized web search engines.},
 booktitle = {Proceedings of the 7th ACM International Conference on Web Search and Data Mining},
-pages = {3–12},
-numpages = {10},
-keywords = {document replication, result caching, query processing, query forwarding, efficiency, distributed web search},
-location = {New York, New York, USA},
+pages = {3–-12},
 series = {WSDM '14}
 }
 
@@ -1138,29 +885,15 @@ volume = {49},
 number = {1},
 pages = {51--66},
 year = {2013},
-issn = {0306--4573},
-doi = {https://doi.org/10.1016/j.ipm.2012.01.002},
-url = {http://www.sciencedirect.com/science/article/pii/S0306457312000039},
 author = {Enver Kayaaslan and B. Barla Cambazoglu and Cevdet Aykanat},
-keywords = {Web search, Distributed information retrieval, Document replication, Query processing, Query forwarding, Result caching},
-abstract = {Large-scale web search engines are composed of multiple data centers that are geographically distant to each other. Typically, a user query is processed in a data center that is geographically close to the origin of the query, over a replica of the entire web index. Compared to a centralized, single-center search engine, this architecture offers lower query response times as the network latencies between the users and data centers are reduced. However, it does not scale well with increasing index sizes and query traffic volumes because queries are evaluated on the entire web index, which has to be replicated and maintained in all data centers. As a remedy to this scalability problem, we propose a document replication framework in which documents are selectively replicated on data centers based on regional user interests. Within this framework, we propose three different document replication strategies, each optimizing a different objective: reducing the potential search quality loss, the average query response time, or the total query workload of the search system. For all three strategies, we consider two alternative types of capacity constraints on index sizes of data centers. Moreover, we investigate the performance impact of query forwarding and result caching. We evaluate our strategies via detailed simulations, using a large query log and a document collection obtained from the Yahoo! web search engine.}
 }
 
 @inproceedings{cambazoglu:yahoorefreshing,
 author = {Cambazoglu, Berkant Barla and Junqueira, Flavio P. and Plachouras, Vassilis and Banachowski, Scott and Cui, Baoqiu and Lim, Swee and Bridge, Bill},
 title = {A Refreshing Perspective of Search Engine Caching},
 year = {2010},
-isbn = {9781605587998},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/1772690.1772710},
-doi = {10.1145/1772690.1772710},
-abstract = {Commercial Web search engines have to process user queries over huge Web indexes under tight latency constraints. In practice, to achieve low latency, large result caches are employed and a portion of the query traffic is served using previously computed results. Moreover, search engines need to update their indexes frequently to incorporate changes to the Web. After every index update, however, the content of cache entries may become stale, thus decreasing the freshness of served results. In this work, we first argue that the real problem in today's caching for large-scale search engines is not eviction policies, but the ability to cope with changes to the index, i.e., cache freshness. We then introduce a novel algorithm that uses a time-to-live value to set cache entries to expire and selectively refreshes cached results by issuing refresh queries to back-end search clusters. The algorithm prioritizes the entries to refresh according to a heuristic that combines the frequency of access with the age of an entry in the cache. In addition, for setting the rate at which refresh queries are issued, we present a mechanism that takes into account idle cycles of back-end servers. Evaluation using a real workload shows that our algorithm can achieve hit rate improvements as well as reduction in average hit ages. An implementation of this algorithm is currently in production use at Yahoo!.},
 booktitle = {Proceedings of the 19th International Conference on World Wide Web},
-pages = {181–190},
-numpages = {10},
-keywords = {web search engines, caching, index updates, refresh},
-location = {Raleigh, North Carolina, USA},
+pages = {181–-190},
 series = {WWW '10}
 }
 
@@ -1181,7 +914,6 @@ series = {WWW '10}
   title     = {The RAMCloud Storage System},
   journal   = {{ACM} Trans. Comput. Syst.},
   year      = {2015},
-  url       = {https://doi.org/10.1145/2806887},
 }
 
 @inproceedings{frances:multisiteimprovingefficiency,
@@ -1193,13 +925,8 @@ series = {WWW '10}
   booktitle = {Seventh {ACM} International Conference on Web Search and Data Mining,
                {WSDM} 2014, New York, NY, USA, February 24-28, 2014},
   pages     = {3--12},
-  publisher = {{ACM}},
   year      = {2014},
-  url       = {https://doi.org/10.1145/2556195.2556249},
   doi       = {10.1145/2556195.2556249},
-  timestamp = {Sun, 22 Sep 2019 18:15:38 +0200},
-  biburl    = {https://dblp.org/rec/conf/wsdm/FrancesBCB14.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
 @inproceedings {gjengset:noria,
@@ -1207,8 +934,6 @@ series = {WWW '10}
   title = {Noria: dynamic, partially-stateful data-flow for high-performance web applications},
   booktitle = {13th {USENIX} Symposium on Operating Systems Design and Implementation ({OSDI} 18)},
   year = {2018},
-  url = {https://www.usenix.org/conference/osdi18/presentation/gjengset},
-  publisher = {{USENIX} Association}
 }
 
 @online{lobste:rs,
@@ -1283,8 +1008,6 @@ author = {Zhou, Jingren and Larson, Paul and Goldstein, Jonathan},
 title = {Partially Materialized Views},
 year = {2005},
 month = {June},
-abstract = {We propose a new type of materialized view called a partially materialized view. A partially materialized view only materializes some of the rows, for example, the most frequently accessed rows, which reduces storage space and view maintenance effort. One or more control tables are associated with the view and define which rows are currently materialized. As a result, one can easily change which rows of the view are stored and maintained. We show how to extend view matching and maintenance algorithms to partially materialized views and outline several potential applications of the new view type. Experimental results in Microsoft SQL Server show that compared with fully materialized views, partially materialized views have lower storage requirements, better buffer pool efficiency, better query performance, and significantly lower maintenance costs.},
-url = {https://www.microsoft.com/en-us/research/publication/partially-materialized-views/},
 number = {MSR-TR-2005-77},
 }
 
@@ -1297,13 +1020,7 @@ number = {MSR-TR-2005-77},
   booktitle = {Proceedings of the 23rd International Conference on Data Engineering,
                {ICDE} 2007, The Marmara Hotel, Istanbul, Turkey, April 15-20, 2007},
   pages     = {526--535},
-  publisher = {{IEEE} Computer Society},
   year      = {2007},
-  url       = {https://doi.org/10.1109/ICDE.2007.367898},
-  doi       = {10.1109/ICDE.2007.367898},
-  timestamp = {Wed, 16 Oct 2019 14:14:56 +0200},
-  biburl    = {https://dblp.org/rec/conf/icde/ZhouLGD07.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
 
@@ -1333,7 +1050,6 @@ number = {MSR-TR-2005-77},
   booktitle = {Proceedings of the 10th {USENIX} Symposium on Networked Systems Design
                and Implementation, {NSDI}},
   year      = {2013},
-  url       = {https://www.usenix.org/conference/nsdi13/technical-sessions/presentation/nishtala},
 }
 
 @online{antidotedb:docs,
@@ -1359,17 +1075,9 @@ number = {MSR-TR-2005-77},
 author = {Merkel, Dirk},
 title = {Docker: Lightweight Linux Containers for Consistent Development and Deployment},
 year = {2014},
-issue_date = {March 2014},
-publisher = {Belltown Media},
-address = {Houston, TX},
 volume = {2014},
-number = {239},
-issn = {1075-3583},
-abstract = {Docker promises the ability to package applications and their dependencies into lightweight containers that move easily between different distros, start up quickly and are isolated from each other.},
 journal = {Linux J.},
 month = mar,
-articleno = {2},
-numpages = {1}
 }
 
 @online{docker:swarm,
@@ -1404,7 +1112,6 @@ numpages = {1}
   title     = {A Taxonomy of Partitioned Replicated Cloud-based Database Systems},
   journal   = {{IEEE} Data Eng. Bull.},
   year      = {2015},
-  url       = {http://sites.computer.org/debull/A15mar/p4.pdf},
 }
 
 @inproceedings {vuppalapati:elasticqueryengine,
@@ -1412,11 +1119,7 @@ author = {Midhul Vuppalapati and Justin Miron and Rachit Agarwal and Dan Truong 
 title = {Building An Elastic Query Engine on Disaggregated Storage },
 booktitle = {17th {USENIX} Symposium on Networked Systems Design and Implementation ({NSDI} 20)},
 year = {2020},
-isbn = {978-1-939133-13-7},
-address = {Santa Clara, CA},
 pages = {449--462},
-url = {https://www.usenix.org/conference/nsdi20/presentation/vuppalapati},
-publisher = {{USENIX} Association},
 month = feb,
 }
 
@@ -1432,40 +1135,22 @@ month = feb,
 author = {Graefe, G.},
 title = {Volcano— An Extensible and Parallel Query Evaluation System},
 year = {1994},
-issue_date = {February 1994},
-publisher = {IEEE Educational Activities Department},
-address = {USA},
 volume = {6},
 number = {1},
-issn = {1041--4347},
-url = {https://doi.org/10.1109/69.273032},
-doi = {10.1109/69.273032},
-abstract = {To investigate the interactions of extensibility and parallelism in database query processing, we have developed a new dataflow query execution system called Volcano. The Volcano effort provides a rich environment for research and education in database systems design, heuristics for query optimization, parallel query execution, and resource allocation. Volcano uses a standard interface between algebra operators, allowing easy addition of new operators and operator implementations. Operations on individual items, e.g., predicates, are imported into the query processing operators using support functions. The semantics of support functions is not prescribed; any data type including complex objects and any operation can be realized. Thus, Volcano is extensible with new operators, algorithms, data types, and type-specific methods. Volcano includes two novel meta-operators. The choose-plan meta-operator supports dynamic query evaluation plans that allow delaying selected optimization decisions until run-time, e.g., for embedded queries with free variables. The exchange meta-operator supports intra-operator parallelism on partitioned datasets and both vertical and horizontal inter-operator parallelism, translating between demand-driven dataflow within processes and data-driven dataflow between processes. All operators, with the exception of the exchange operator, have been designed and implemented in a single-process environment, and parallelized using the exchange operator. Even operators not yet designed can be parallelized using this new operator if they use and provide the interator interface. Thus, the issues of data manipulation and parallelism have become orthogonal, making Volcano the first implemented query execution engine that effectively combines extensibility and parallelism.},
 journal = {IEEE Trans. on Knowl. and Data Eng.},
-month = feb,
 pages = {120-–135},
-numpages = {16},
-keywords = {intra-operator parallelism, choose-plan meta-operator, semantics, data structures, algebra operators, resource allocation, parallel query evaluation system, parallel programming, data type, dynamic query evaluation plans, data-driven dataflow, demand-driven dataflow, support functions, query optimization, predicates, partitioned datasets, database query processing, horizontal inter-operator parallelism, dataflow query execution system, extensibility, query processing operators, query processing, Volcano, type-specific methods., novel meta-operators}
+month = feb,
 }
 
 @article{lakshmanan:placementstrategies,
 author = {Lakshmanan, Geetika T. and Li, Ying and Strom, Rob},
 title = {Placement Strategies for Internet-Scale Data Stream Systems},
 year = {2008},
-issue_date = {November 2008},
-publisher = {IEEE Educational Activities Department},
-address = {USA},
 volume = {12},
 number = {6},
-issn = {1089-7801},
-url = {https://doi.org/10.1109/MIC.2008.129},
-doi = {10.1109/MIC.2008.129},
-abstract = {Optimally assigning streaming tasks to network machines is a key factor that influences a large data-stream-processing system's performance. Although researchers have prototyped and investigated various algorithms for task placement in data stream management systems, taxonomies and surveys of such algorithms are currently unavailable. To tackle this knowledge gap, the authors identify a set of core placement design characteristics and use them compare eight placement algorithms. They also present a heuristic decision tree that can help designers judge how suitable a given placement solutions might be to specific problems.},
 journal = {IEEE Internet Computing},
+pages = {50-–60},
 month = nov,
-pages = {50–60},
-numpages = {11},
-keywords = {data-management systems, data stream management, task-placement algorithms, system performance, stream processing}
 }
 
 @inproceedings{pietzuch:networkawareopplacement,
@@ -1473,47 +1158,25 @@ author = {P. Pietzuch and J. Shneidman and M. Roussopoulos and J. Ledlie and M. 
 booktitle = {22nd International Conference on Data Engineering},
 title = {Network-Aware Operator Placement for Stream-Processing Systems},
 year = {2006},
-volume = {},
-issn = {},
-pages = {49},
-keywords = {null},
-doi = {10.1109/ICDE.2006.105},
-url = {https://doi.ieeecomputersociety.org/10.1109/ICDE.2006.105},
-publisher = {IEEE Computer Society},
-address = {Los Alamitos, CA, USA},
-month = {apr}
+month = {apr},
 }
 
 @article{stonebraker:streamprocessingrequirements,
 author = {Stonebraker, Michael and \c{C}etintemel, Uundefinedur and Zdonik, Stan},
 title = {The 8 Requirements of Real-Time Stream Processing},
 year = {2005},
-issue_date = {December 2005},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
 volume = {34},
 number = {4},
-issn = {0163-5808},
-url = {https://doi.org/10.1145/1107499.1107504},
-doi = {10.1145/1107499.1107504},
-abstract = {Applications that require real-time processing of high-volume data steams are pushing the limits of traditional data processing infrastructures. These stream-based applications include market feed processing and electronic trading on Wall Street, network and infrastructure monitoring, fraud detection, and command and control in military environments. Furthermore, as the "sea change" caused by cheap micro-sensor technology takes hold, we expect to see everything of material significance on the planet get "sensor-tagged" and report its state or location in real time. This sensorization of the real world will lead to a "green field" of novel monitoring and control applications with high-volume and low-latency processing requirements.Recently, several technologies have emerged---including off-the-shelf stream processing engines---specifically to address the challenges of processing high-volume, real-time data without requiring the use of custom code. At the same time, some existing software technologies, such as main memory DBMSs and rule engines, are also being "repurposed" by marketing departments to address these applications.In this paper, we outline eight requirements that a system software should meet to excel at a variety of real-time stream processing applications. Our goal is to provide high-level guidance to information technologists so that they will know what to look for when evaluation alternative stream processing solutions. As such, this paper serves a purpose comparable to the requirements papers in relational DBMSs and on-line analytical processing. We also briefly review alternative system software technologies in the context of our requirements.The paper attempts to be vendor neutral, so no specific commercial products are mentioned.},
 journal = {SIGMOD Rec.},
+pages = {42--47},
 month = dec,
-pages = {42–47},
-numpages = {6}
 }
 
 @inproceedings{agarwal:volley,
 author = {Agarwal, Sharad and Dunagan, John and Jain, Navendu and Saroiu, Stefan and Wolman, Alec and Bhogan, Harbinder},
 title = {Volley: Automated Data Placement for Geo-Distributed Cloud Services},
-year = {2010},
 publisher = {USENIX Association},
-address = {USA},
-abstract = {As cloud services grow to span more and more globally distributed datacenters, there is an increasingly urgent need for automated mechanisms to place application data across these datacenters. This placement must deal with business constraints such as WAN bandwidth costs and datacenter capacity limits, while also minimizing user-perceived latency. The task of placement is further complicated by the issues of shared data, data inter-dependencies, application changes and user mobility. We document these challenges by analyzing month-long traces from Microsoft's Live Messenger and Live Mesh, two large-scale commercial cloud services.We present Volley, a system that addresses these challenges. Cloud services make use of Volley by submitting logs of datacenter requests. Volley analyzes the logs using an iterative optimization algorithm based on data access patterns and client locations, and outputs migration recommendations back to the cloud service.To scale to the data volumes of cloud service logs, Volley is designed to work in SCOPE [5], a scalable MapReduce-style platform; this allows Volley to perform over 400 machine-hours worth of computation in less than a day. We evaluate Volley on the month-long Live Mesh trace, and we find that, compared to a state-of-the-art heuristic that places data closest to the primary IP address that accesses it, Volley simultaneously reduces datacenter capacity skew by over 2\texttimes{}, reduces inter-datacenter traffic by over 1.8\texttimes{} and reduces 75th percentile user-latency by over 30%.},
 booktitle = {Proceedings of the 7th USENIX Conference on Networked Systems Design and Implementation},
-pages = {2},
-numpages = {1},
-location = {San Jose, California},
 series = {NSDI'10}
 }
 
@@ -1523,27 +1186,18 @@ author	= {Jeffrey Dean and Sanjay Ghemawat},
 year	= {2004},
 booktitle	= {OSDI'04: Sixth Symposium on Operating System Design and Implementation},
 pages	= {137--150},
-address	= {San Francisco, CA}
+address	= {San Francisco, CA},
+month = sep,
 }
 
 @article{mccreadie:mapreduceindexing,
 author = {Mccreadie, Richard and Macdonald, Craig and Ounis, Iadh},
 title = {MapReduce Indexing Strategies: Studying Scalability and Efficiency},
 year = {2012},
-issue_date = {September, 2012},
-publisher = {Pergamon Press, Inc.},
-address = {USA},
 volume = {48},
 number = {5},
-issn = {0306-4573},
-url = {https://doi.org/10.1016/j.ipm.2010.12.003},
-doi = {10.1016/j.ipm.2010.12.003},
-abstract = {In Information Retrieval (IR), the efficient indexing of terabyte-scale and larger corpora is still a difficult problem. MapReduce has been proposed as a framework for distributing data-intensive operations across multiple processing machines. In this work, we provide a detailed analysis of four MapReduce indexing strategies of varying complexity. Moreover, we evaluate these indexing strategies by implementing them in an existing IR framework, and performing experiments using the Hadoop MapReduce implementation, in combination with several large standard TREC test corpora. In particular, we examine the efficiency of the indexing strategies, and for the most efficient strategy, we examine how it scales with respect to corpus size, and processing power. Our results attest to both the importance of minimising data transfer between machines for IO intensive tasks like indexing, and the suitability of the per-posting list MapReduce indexing strategy, in particular for indexing at a terabyte-scale. Hence, we conclude that MapReduce is a suitable framework for the deployment of large-scale indexing.},
 journal = {Inf. Process. Manage.},
-month = sep,
 pages = {873-–888},
-numpages = {16},
-keywords = {Efficiency, Hadoop, Indexing, MapReduce, Scalability}
 }
 
 @inproceedings{amiri:dbproxy,
@@ -1551,10 +1205,7 @@ author = {Amiri, Khalil and Park, Sanghyun and Tewari, Renu and Padmanabhan, Sri
 booktitle={Proceedings 19th International Conference on Data Engineering (Cat. No.03CH37405)},
 title={DBProxy: a dynamic data cache for web applications},
 year={2003},
-volume={},
-number={},
 pages={821--831},
-doi={10.1109/ICDE.2003.1260881}
 }
 
 @online{mysql:mvs,
@@ -1576,10 +1227,7 @@ doi={10.1109/ICDE.2003.1260881}
   booktitle={2007 IEEE 23rd International Conference on Data Engineering},
   title={Dynamic Materialized Views},
   year={2007},
-  volume={},
-  number={},
   pages={526--535},
-  doi={10.1109/ICDE.2007.367898},
 }
 
 @inproceedings{bouget:pleiades,
@@ -1587,43 +1235,26 @@ doi={10.1109/ICDE.2003.1260881}
   booktitle={2018 48th Annual IEEE/IFIP International Conference on Dependable Systems and Networks (DSN)},
   title={Pleiades: Distributed Structural Invariants at Scale},
   year={2018},
-  volume={},
-  number={},
   pages={542--553},
-  doi={10.1109/DSN.2018.00062}}
+}
 
 @article{potharaju:helios,
 author = {Potharaju, Rahul and Kim, Terry and Wu, Wentao and Acharya, Vidip and Suh, Steve and Fogarty, Andrew and Dave, Apoorve and Ramanujam, Sinduja and Talius, Tomas and Novik, Lev and Ramakrishnan, Raghu},
 title = {Helios: Hyperscale Indexing for the Cloud \& Edge},
 year = {2020},
-issue_date = {August 2020},
-publisher = {VLDB Endowment},
 volume = {13},
 number = {12},
-issn = {2150-8097},
-url = {https://doi.org/10.14778/3415478.3415547},
-doi = {10.14778/3415478.3415547},
-abstract = {Helios is a distributed, highly-scalable system used at Microsoft for flexible ingestion, indexing, and aggregation of large streams of real-time data that is designed to plug into relational engines. The system collects close to a quadrillion events indexing approximately 16 trillion search keys per day from hundreds of thousands of machines across tens of data centers around the world. Helios use cases within Microsoft include debugging/diagnostics in both public and government clouds, workload characterization, cluster health monitoring, deriving business insights and performing impact analysis of incidents in other large-scale systems such as Azure Data Lake and Cosmos. Helios also serves as a reference blueprint for other large-scale systems within Microsoft. We present the simple data model behind Helios, which offers great flexibility and control over costs, and enables the system to asynchronously index massive streams of data. We also present our experiences in building and operating Helios over the last five years at Microsoft.},
 journal = {Proc. VLDB Endow.},
+pages = {3231–-3244},
 month = aug,
-pages = {3231–3244},
-numpages = {14}
 }
 
 @inproceedings{murray:naiad,
 author = {Murray, Derek G. and McSherry, Frank and Isaacs, Rebecca and Isard, Michael and Barham, Paul and Abadi, Mart\'{\i}n},
 title = {Naiad: A Timely Dataflow System},
 year = {2013},
-isbn = {9781450323888},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/2517349.2522738},
-doi = {10.1145/2517349.2522738},
-abstract = {Naiad is a distributed system for executing data parallel, cyclic dataflow programs. It offers the high throughput of batch processors, the low latency of stream processors, and the ability to perform iterative and incremental computations. Although existing systems offer some of these features, applications that require all three have relied on multiple platforms, at the expense of efficiency, maintainability, and simplicity. Naiad resolves the complexities of combining these features in one framework.A new computational model, timely dataflow, underlies Naiad and captures opportunities for parallelism across a wide class of algorithms. This model enriches dataflow computation with timestamps that represent logical points in the computation and provide the basis for an efficient, lightweight coordination mechanism.We show that many powerful high-level programming models can be built on Naiad's low-level primitives, enabling such diverse tasks as streaming data analysis, iterative machine learning, and interactive graph mining. Naiad outperforms specialized systems in their target application domains, and its unique features enable the development of new high-performance applications.},
 booktitle = {Proceedings of the Twenty-Fourth ACM Symposium on Operating Systems Principles},
-pages = {439–455},
-numpages = {17},
-location = {Farminton, Pennsylvania},
+pages = {439–-455},
 series = {SOSP '13}
 }
 
@@ -1631,37 +1262,19 @@ series = {SOSP '13}
 author = {Isard, Michael and Budiu, Mihai and Yu, Yuan and Birrell, Andrew and Fetterly, Dennis},
 title = {Dryad: Distributed Data-Parallel Programs from Sequential Building Blocks},
 year = {2007},
-issue_date = {June 2007},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
 volume = {41},
 number = {3},
-issn = {0163-5980},
-url = {https://doi.org/10.1145/1272998.1273005},
-doi = {10.1145/1272998.1273005},
-abstract = {Dryad is a general-purpose distributed execution engine for coarse-grain data-parallel applications. A Dryad application combines computational "vertices" with communication "channels" to form a dataflow graph. Dryad runs the application by executing the vertices of this graph on a set of available computers, communicating as appropriate through flies, TCP pipes, and shared-memory FIFOs.The vertices provided by the application developer are quite simple and are usually written as sequential programs with no thread creation or locking. Concurrency arises from Dryad scheduling vertices to run simultaneously on multiple computers, or on multiple CPU cores within a computer. The application can discover the size and placement of data at run time, and modify the graph as the computation progresses to make efficient use of the available resources.Dryad is designed to scale from powerful multi-core single computers, through small clusters of computers, to data centers with thousands of computers. The Dryad execution engine handles all the difficult problems of creating a large distributed, concurrent application: scheduling the use of computers and their CPUs, recovering from communication or computer failures, and transporting data between vertices.},
 journal = {SIGOPS Oper. Syst. Rev.},
+pages = {59-–72},
 month = mar,
-pages = {59–72},
-numpages = {14},
-keywords = {concurrency, dataflow, cluster computing, distributed programming}
 }
 
 @inproceedings{isard:dryad,
 author = {Isard, Michael and Budiu, Mihai and Yu, Yuan and Birrell, Andrew and Fetterly, Dennis},
 title = {Dryad: Distributed Data-Parallel Programs from Sequential Building Blocks},
 year = {2007},
-isbn = {9781595936363},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-url = {https://doi.org/10.1145/1272996.1273005},
-doi = {10.1145/1272996.1273005},
-abstract = {Dryad is a general-purpose distributed execution engine for coarse-grain data-parallel applications. A Dryad application combines computational "vertices" with communication "channels" to form a dataflow graph. Dryad runs the application by executing the vertices of this graph on a set of available computers, communicating as appropriate through flies, TCP pipes, and shared-memory FIFOs.The vertices provided by the application developer are quite simple and are usually written as sequential programs with no thread creation or locking. Concurrency arises from Dryad scheduling vertices to run simultaneously on multiple computers, or on multiple CPU cores within a computer. The application can discover the size and placement of data at run time, and modify the graph as the computation progresses to make efficient use of the available resources.Dryad is designed to scale from powerful multi-core single computers, through small clusters of computers, to data centers with thousands of computers. The Dryad execution engine handles all the difficult problems of creating a large distributed, concurrent application: scheduling the use of computers and their CPUs, recovering from communication or computer failures, and transporting data between vertices.},
 booktitle = {Proceedings of the 2nd ACM SIGOPS/EuroSys European Conference on Computer Systems 2007},
-pages = {59–72},
-numpages = {14},
-keywords = {cluster computing, concurrency, dataflow, distributed programming},
-location = {Lisbon, Portugal},
+pages = {59-–72},
 series = {EuroSys '07}
 }
 
@@ -1670,20 +1283,13 @@ author = {Matei Zaharia and Mosharaf Chowdhury and Tathagata Das and Ankur Dave 
 title = {Resilient Distributed Datasets: A Fault-Tolerant Abstraction for In-Memory Cluster Computing},
 booktitle = {9th {USENIX} Symposium on Networked Systems Design and Implementation ({NSDI} 12)},
 year = {2012},
-isbn = {978-931971-92-8},
-address = {San Jose, CA},
 pages = {15--28},
-url = {https://www.usenix.org/conference/nsdi12/technical-sessions/presentation/zaharia},
-publisher = {{USENIX} Association},
 month = apr,
 }
 
 @article{carbone:flink,
 title={Apache flink : Stream and batch processing in a single engine},
 volume={36},
-url={http://urn.kb.se/resolve?urn=urn:nbn:se:kth:diva-198940},
-note={QC 20161222},
-number={4},
 journal={Bulletin of the IEEE Computer Society Technical Committee on Data Engineering},
 author={Carbone, Paris and Katsifodimos, Asterios and Ewen, Stephan and Markl, Volker and Haridi, Seif and Tzoumas, Kostas},
 year={2015},
@@ -1745,13 +1351,7 @@ https://mariadb.com/kb/en/triggers/
 author = {Schroeder, Bianca and Wierman, Adam and Harchol-Balter, Mor},
 title = {Open versus Closed: A Cautionary Tale},
 year = {2006},
-publisher = {USENIX Association},
-address = {USA},
-abstract = {Workload generators may be classified as based on a closed system model, where new job arrivals are only triggered by job completions (followed by think time), or an open system model, where new jobs arrive independently of job completions. In general, system designers pay little attention to whether a workload generator is closed or open.Using a combination of implementation and simulation experiments, we illustrate that there is a vast difference in behavior between open and closed models in real-world settings. We synthesize these differences into eight simple guiding principles, which serve three purposes. First, the principles specify how scheduling policies are impacted by closed and open models, and explain the differences in user level performance. Second, the principles motivate the use of partly open system models, whose behavior we show to lie between that of closed and open models. Finally, the principles provide guidelines to system designers for determining which system model is most appropriate for a given workload.},
 booktitle = {Proceedings of the 3rd Conference on Networked Systems Design \& Implementation - Volume 3},
-pages = {18},
-numpages = {1},
-location = {San Jose, CA},
 series = {NSDI'06}
 }
 
@@ -1767,10 +1367,7 @@ series = {NSDI'06}
   booktitle = {13th International Conference on Stabilization, Safety, and Security of Distributed Systems},
   series = {SSS 2011},
   year = {2011},
-  month = oct,
   pages = {386--400},
-  doi = {10.1007/978-3-642-24550-3_29},
-  pdf = {https://pages.lip6.fr/Marek.Zawirski/papers/RR-7687.pdf},
   publisher = {Springer LNCS volume 6976},
-  keywords = {introduction}
+  month = oct,
 }
