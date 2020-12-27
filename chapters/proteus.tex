@@ -33,7 +33,7 @@ Essentially, a QPU of this type de-composes queries into simpler tasks, and dele
 Therefore, the set of queries that it can process depends on the types of tasks that its downstream connections can perform.
 
 Because of that, a query processing unit requires the domain tree of each of its downstream connections for its operation.
-More specifically, as we described in Section~\ref{sec:qpc_tree}, a QPU uses the downstream domain trees in order to:
+More specifically, as presented in Section~\ref{sec:qpc_tree}, a QPU uses the downstream domain trees in order to:
 (1) compute its own domain tree, and (2) generate downstream queries during query processing.
 In this section, we describe the mechanism through which a query processing unit acquires the domain trees
 of its downstream connections.
@@ -76,7 +76,7 @@ and is responsible for updating the QPU's local view accordingly.
 \subsection{Query processing domain discovery mechanism}
 
 The first task of the constructor of each query processing unit class is to initialize the QPU's domain tree.
-For the Corpus Driver class this is performed using the input configuration (Section~\ref{sec:qpc_tree}).
+For the Corpus Driver class this is performed using the input configuration (\S\ref{sec:qpc_tree}).
 Every other QPU class, as discussed above, requires the domain trees of its downstream connections in order to compute its own domain tree.
 Because of that, the constructor method of every QPU class except of the Corpus Driver starts by sending a $GetDomain$ request to each
 of its downstream connections.

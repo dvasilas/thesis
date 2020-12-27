@@ -54,20 +54,31 @@
   basicstyle=\normalfont\ttfamily,
   language=SQL,
   % frame=tb,
-  keywordstyle=\color{NavyBlue},
+  keywordstyle=[1]\color{NavyBlue},
+  keywordstyle=[2]\color{PineGreen},
+  keywords=[2]{attributeName, tableName, stringValue, floatValue, intValue, dateTimeValue, timestampValue},
   captionpos=b,
   mathescape=true,
   % tabsize=2,
   % xleftmargin=\parindent,
   escapeinside={(*@}{@*)},
   breaklines=true,
-  morekeywords={SNAPSHOT},
+  morekeywords=[1]{SYNC, ASYNC, TO, SYSTEM, START, LATEST},
+  deletekeywords={VALUE},
   literate=
     *{=}{{{\color{gray}=}}}{1}
     {<}{{{\color{gray}<}}}{1}
     {>}{{{\color{gray}>}}}{1}
     {!}{{{\color{gray}!}}}{1}
   }
+
+\lstdefinelanguage{pseudo}{
+  basicstyle=\normalfont\ttfamily,
+  keywordstyle=\color{NavyBlue},
+  captionpos=b,
+  breaklines=true,
+  keywords={type, class, function},
+}
 
 \pagestyle{fancy}
 \lhead{}
@@ -86,7 +97,7 @@
 \maketitle
 
 \abstract{
-Query processing is an essential component of today’s data storage systems.
+Query processing is an essential component of today’s data serving systems.
 Query processing involves a variety of metrics that are in tension and create trade-offs.
 Because of these trade-offs, application developers need to tune query engines to the characteristics and needs of each application.
 Today’s query engines must handle requests from users around the world, by accessing data spread across geographically distributed sites.

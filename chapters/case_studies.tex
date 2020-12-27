@@ -172,7 +172,7 @@ The index partition is responsible for index entries that correspond to attribut
 In the partitioning by document approach,
 each index partition is configured to be responsible for the entire attribute value space,
 which in the photo album example is $[\#000000$, $\#FFFFFF$].
-As a result, upon initialization, each index partition sends the query: \todo{update query according to changes to QPU chapter}
+As a result, upon initialization, each index partition sends the query:
 
 \begin{lstlisting}[caption={Query sent during initialization from each index partition to the corresponding Corpus Driver QPU,
   in the QPU graph shown in Figure~\ref{fig:index_partitioned_by_document}.}]
@@ -230,7 +230,7 @@ A simplified version of the configuration of the index partitions of the term-pa
 
 \medskip
 \noindent
-As a result, upon initialization, $index$ $partition_1$ sends the query: \todo{update according to QPU chapter}
+As a result, upon initialization, $index$ $partition_1$ sends the query:
 
 \begin{lstlisting}[
   caption={Query sent during initialization from $index$ $partition_1$ to to each Selection QPU
@@ -239,12 +239,11 @@ As a result, upon initialization, $index$ $partition_1$ sends the query: \todo{u
 SELECT primaryKey, predominantColor
 FROM photoAlbum
 WHERE predominantColor >= #000000 AND predominantColor < #7FFFFF
-SNAPSHOT LATEST
 INTERVAL FROM LATEST
 \end{lstlisting}
 
 \noindent
-to each downstream Selection QPU, and $index$ $partition_2$ sends the query: \todo{update according to QPU chapter}
+to each downstream Selection QPU, and $index$ $partition_2$ sends the query:
 
 \begin{lstlisting}[
   caption={Query sent during initialization from $index$ $partition_2$ to to each Selection QPU
@@ -253,7 +252,6 @@ to each downstream Selection QPU, and $index$ $partition_2$ sends the query: \to
 SELECT primaryKey, predominantColor
 FROM photoAlbum
 WHERE predominantColor >= #7FFFFF AND predominantColor <= #FFFFFF
-SNAPSHOT LATEST
 INTERVAL FROM LATEST
 \end{lstlisting}
 
@@ -270,7 +268,6 @@ each Selection QPU sends to each downstream Corpus Driver QPU the query:
 ]
 SELECT primaryKey, predominantColor
 FROM photoAlbum
-SNAPSHOT LATEST
 INTERVAL FROM LATEST
 \end{lstlisting}
 
@@ -292,7 +289,6 @@ This input record matches the query:
 SELECT primaryKey, predominantColor
 FROM photoAlbum
 WHERE predominantColor >= #000000 AND predominantColor < #7FFFFF
-SNAPSHOT LATEST
 INTERVAL FROM LATEST
 \end{lstlisting}
 
@@ -304,12 +300,11 @@ and thus the $Selection_2$  forwards the record only to $index$ $partition_1$.
 In both QPU architectures, the Partition Manager QPU is connected to all Index QPUs.
 As described in section~\ref{sec:qpc_tree}, given a query,
 the Partition Manager's query processing method determines which downstream connections need to be contacted.
-It generates the corresponding downstream queries using the query processing capabilities trees of its downstream connections.
-\todo{update the term ``query processing capabilities tree'' according to updates in the QPU chapter}
+It generates the corresponding downstream queries using the domain trees of its downstream connections.
 
 More specifically, given a query,
 the query processing method, generates a query parse tree,
-and performs an intersection between the query parse tree and the QPC tree of each of its downstream connections.
+and performs an intersection between the query parse tree and the domain tree of each of its downstream connections.
 The result of each intersection operation is a query parse tree of the downstream query to be sent to the corresponding
 connection.
 If the intersection result is empty, then the QPU does not send a downstream query to that connection.
@@ -317,20 +312,20 @@ If the intersection result is empty, then the QPU does not send a downstream que
 \begin{figure}
   \centering
     \includegraphics[width=\textwidth]{./figures/case_studies/qpt_index_partitioning_docs.pdf}
-  \caption{Query processing capabilities tree of an index partition in the document-partitioned index QPU architecture.}
+  \caption{Domain tree of an index partition in the document-partitioned index QPU architecture.}
   \label{fig:qpt_index_partitioning_docs}
 \end{figure}
 
 \medskip
 \noindent
 \textbf{Partitioning by document.}
-The QPC tree for an index partition in the document-partitioned index QPU architecture is shown in Figure~\ref{fig:qpt_index_partitioning_docs}.
+The domain tree for an index partition in the document-partitioned index QPU architecture is shown in Figure~\ref{fig:qpt_index_partitioning_docs}.
 As describe above, in the document-partitioned index, each index partition is responsible for the entire attribute value space of
 the data items of one corpus partition.
-The QPC tree of every index partition is thus are the same as the one depicted in Figure~\ref{fig:qpt_index_partitioning_docs}.
+The domain tree of every index partition is thus are the same as the one depicted in Figure~\ref{fig:qpt_index_partitioning_docs}.
 Moreover, because this tree corresponds to the entire attribute value domain,
 the intersection with any query parse tree is an identity function:
-Performing an intersection between that QPC tree a query parse tree leaves the parse tree unchanged.
+Performing an intersection between that domain tree a query parse tree leaves the parse tree unchanged.
 
 Therefore,
 given a query,
@@ -350,7 +345,7 @@ This implements the required read path behavior.
     \caption{}
     \label{fig:qpt_index_partitioning_terms_2}
   \end{subfigure}%
-\caption{The query processing capabilities tree for $index$ $partition_1$ (\ref{fig:qpt_index_partitioning_terms_1}) and $index$ $partition_2$ (\ref{fig:qpt_index_partitioning_terms_2}) of the term-partitioned
+\caption{The domain tree for $index$ $partition_1$ (\ref{fig:qpt_index_partitioning_terms_1}) and $index$ $partition_2$ (\ref{fig:qpt_index_partitioning_terms_2}) of the term-partitioned
 index in Figure~\ref{fig:index_partitioned_by_term}}
 \label{fig:qpt_index_partitioning_terms}
 \end{figure}
@@ -365,7 +360,7 @@ index in Figure~\ref{fig:index_partitioned_by_term}}
 %   \centering
 %   \includegraphics[width=0.6\textwidth]{./figures/case_studies/qpt_index_partitioning_terms_2.pdf}%
 % }
-% \caption{The query processing capabilities tree for $index$ $partition_1$ (a) and $index$ $partition_2$ (b) of the term-partitioned
+% \caption{Domain tree for $index$ $partition_1$ (a) and $index$ $partition_2$ (b) of the term-partitioned
 % index in Figure~\ref{fig:index_partitioned_by_term}}
 % \label{fig:qpt_index_partitioning_terms}
 % \end{figure}
@@ -373,10 +368,10 @@ index in Figure~\ref{fig:index_partitioned_by_term}}
 \medskip
 \noindent
 \textbf{Partitioning by term}
-Figure~\ref{fig:qpt_index_partitioning_terms} shows the $<predicateExpression>$ subtrees of the QPC trees
+Figure~\ref{fig:qpt_index_partitioning_terms} shows the $<predicateExpression>$ subtrees of the domain trees
 for $index$ $partition_1$ and $index$ $partition_2$ in the term-partitioned index architecture.
-The QPC tree of $index$ $partition_1$ represents the set of queries in the interval $[\#000000$, $\#7FFFFF)$,
-while the QPC tree of $index$ $partition_2$ represents the interval $[\#7FFFFF$, $\#FFFFFF]$.
+The domain tree of $index$ $partition_1$ represents the set of queries in the interval $[\#000000$, $\#7FFFFF)$,
+while the domain tree of $index$ $partition_2$ represents the interval $[\#7FFFFF$, $\#FFFFFF]$.
 
 We describe how the term-partitioned index architecture processes queries by running through an example query.
 Given the query:
@@ -389,11 +384,11 @@ Q = SELECT primaryKey, predominantColor
     FROM photoAlbum
     WHERE predominantColor >= #21B1FF
     AND predominantColor < #ff7b75
-    SNAPSHOT LATEST
+    INTERVAL FROM LATEST
 \end{lstlisting}
 
 \noindent
-the Partition Manager QPU calculates the intersection between the parse tree of $Q$ the QPC tree of $index$ $partition_1$.
+the Partition Manager QPU calculates the intersection between the parse tree of $Q$ the domain tree of $index$ $partition_1$.
 This results to the downstream query:
 
 \begin{lstlisting}[
@@ -403,7 +398,7 @@ Q1 = SELECT primaryKey, predominantColor
      FROM photoAlbum
      WHERE predominantColor >= #21B1FF
      AND predominantColor < #7FFFFF
-     SNAPSHOT LATEST
+     INTERVAL FROM LATEST
 \end{lstlisting}
 
 \noindent
@@ -417,7 +412,7 @@ Q2 = SELECT primaryKey, predominantColor
      FROM photoAlbum
      WHERE predominantColor >= #800000
      AND predominantColor < #ff7b75
-     SNAPSHOT FROM LATEST
+     INTERVAL FROM LATEST
 \end{lstlisting}
 
 \noindent
@@ -426,7 +421,7 @@ It then merges resulting input streams, and emits the merged stream as its outpu
 
 In summary, in the term-partitioned architecture,
 the Partition Manager generates and sends downstream queries to index partitions according their corresponding
-value intervals, using the QPC tree mechanism.
+value intervals, using the domain tree mechanism.
 
 \bigskip
 \noindent
@@ -625,7 +620,7 @@ replicating recently accessed index entries.
 
 We use the Partial Index QPU to propose an improvement to the QPU architecture of Figure~\ref{fig:federated_index} (a).
 We deploy Partial Index QPU on each storage location, and connected to the index sub-graph of the Partial index.
-Each of these Partial Index QPUs functions as follows.
+Each Partial Index QPU works as follows.
 When initially deployed, it none of its entries materialized.
 When it receives a query, its query processing method forwards the query to its downstream connection,
 which in this QPU graph is an index location, as a persistent query.
@@ -644,9 +639,13 @@ If the update rate for a certain entry crosses a threshold specified by the QPUs
 then the QPU stops receiving updates for this entry and discards it.
 
 The Partial Index QPU provides fine-grained placement of index entries.
-Index entries that are queried more heavily are replicated, and thus placed closer to the clients,
-while index entries that are update more heavily are placed closer to the corpus.
-\todo{TODO: add paragraph discussing data transfer cost}
+Index entries that are queried more heavily are replicated, and thus placed closer to clients,
+while index entries that are updated more heavily are placed closer to the corpus.
+
+This technique has two benefits.
+First it reduces the memory and storage resources required for query processing by partially replicating index entries.
+Second, it reduces network resource consumption for data transfer between storage locations,
+as each index entry is placed at the storage location it communicates more with.
 
 \medskip
 \noindent
@@ -785,7 +784,6 @@ JOIN (
   GROUP BY story_id
 ) view
 ON stories.id = view.story_id
-SNAPSHOT LATEST
 INTERVAL FROM LATEST
 \end{lstlisting}
 
@@ -804,7 +802,6 @@ The Join QPU in turn generates two downstream queries:
 ]
 Q1 = SELECT id, author_id, title, url
      FROM stories
-     SNAPSHOT LATEST
      INTERVAL FROM LATEST
 \end{lstlisting}
 
@@ -815,7 +812,6 @@ Q1 = SELECT id, author_id, title, url
 Q2 = SELECT story_id, SUM(vote)
      FROM votes
      GROUP BY story_id
-     SNAPSHOT LATEST
      INTERVAL FROM LATEST
 \end{lstlisting}
 

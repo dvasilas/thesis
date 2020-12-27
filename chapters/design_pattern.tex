@@ -233,13 +233,19 @@ We can model the join operator as a component that provides its join operation f
 Each view partition invokes the join operator's interface using the view definition.
 
 Next, we examine the service interface's response for the three types of query processing functionalities.
-In chapter~\ref{ch:models} \todo{MUST HAVE: consistency with model chapter}, we have modeled a data item of a corpus table as tuple of attributes.
-In the stories table, a data item is a story, with $story\_id$, $title$ and $url$ being its attributes:
-\begin{itemize}
-  \item \textit{Relational operators} \textit{transform} an input set of attribute tuples, to an output set of tuples:
+% In chapter~\ref{ch:models} \todo{MUST HAVE: consistency with model chapter}, we have defined the corpus as a collection of a data items
+% organized in tables;
+% a data item is composed of a primary key, a set of attributes, and, optionally, a content value.
+% In the stories table, a story record is data item is a story, with $story\_id$, $title$ and $url$ being its attributes:
+% \begin{itemize}
+  % \item
+
+  \medskip
+  \noindent
+  \textbf{Relational operators} \textit{transform} an input set of attribute tuples, to an output set of tuples:
     \begin{itemize}
     \item A projection operator discards one more attributes.
-    \item A join operator extends receives two sets of input tuples.
+    \item A join operator receives two sets of input tuples.
     Its output is a set of tuples containing a combination of the attributes in the input tuples.
     In the example, the join operator extends the story's attributes by adding the $vote\_count$ attribute.
     \item An aggregation operator (such as count or sum) generates output tuples that represent groups of input tuples.
@@ -251,22 +257,29 @@ In the stories table, a data item is a story, with $story\_id$, $title$ and $url
     \end{itemize}
   We can unify these transformations by modeling the output of a relational operator component as a tuple of attributes.
 
-  \item \textit{Derived state structures} accelerate read access to a set of tuple attributes,
+  % \item
+  \medskip
+  \noindent
+  \textbf{Derived state structures} accelerate read access to a set of tuple attributes,
   but not perform any transformations.
   In the news aggregator example, the view partitions pre-compute the results of the join and count operation.
   Therefore, the response to an invocation a view partition's interface is the same as the response of the join operator.
 
-  \item Similarly, \textit{routing operators} either forward the responses of other components, or combine them by merging
+  \medskip
+  \noindent
+  \textbf{Routing operators} either forward the responses of other components, or combine them by merging
   multiple input sets of tuples to a single output set.
 
-  \end{itemize}
+  % \end{itemize}
 
+\bigskip
+\noindent
 Our third observation is that we can use a common model for the responses of all three types of query processing functionalities.
 The response to the invocation of a components service interface is a set of tuples of attributes.
 These attributes might be combinations of the attributes present in the data items of the corpus,
 or the results of functions applied on those attributes.
 
-\medskip
+\bigskip
 \noindent
 Combining the above observations,
 we conclude that that query processing functionalities belonging in the three categories described above
@@ -577,7 +590,7 @@ we described an overview of the semantics of this component, called the query pr
 In this section, we formalize the query processing unit specification.
 To achieve that, we introduce the query processing unit \textit{component model} (QPU Model for short).
 The QPU Model defines the set of common properties that every query processing unit conforms to.
-This includes the QPU's query interface, and the query request --- response stream semantics.
+This includes the QPU's query interface, and the query request -- response stream semantics.
 Using object-oriented programming terminology, the QPU Model can be viewed as an \textit{abstract class}
 that defines a set of method signatures, but not their implementation.
 
@@ -601,62 +614,88 @@ In the rest of this thesis, we use the terms query processing unit, QPU, and uni
 \noindent
 The query processing unit component model defines a \textit{system component} with the following properties:
 
-\begin{figure}[t]
+\begin{figure}[H]
   \centering
-    \includegraphics[width=0.5\textwidth]{./figures/design_pattern/qpu_abstraction.pdf}
-  \caption{A conceptual depiction the QPU model.}
-  \label{fig:qpu_abstraction}
+    \includegraphics[width=0.5\textwidth]{./figures/design_pattern/qpu_interfaces.pdf}
+  \caption{A conceptual depiction of the QPU model interfaces.}
+  \label{fig:qpu_interfaces}
 \end{figure}
 
-\medskip
+\subsubsection{Query, input stream, and domain interfaces.}
+The principal characteristic of the QPU component is that is exposes three interfaces for communicating with other QPU
+instances.
+Figure~\ref{fig:qpu_interfaces} shows conceptual depiction of the query processing unit model's interfaces.
+
+\bigskip
 \noindent
 \textbf{Query interface.}
 Query processing units expose an interface for receiving query requests.
-This interface is common among all QPU classes.
-As a result, a QPU can send query requests to other QPUs, regardless of their class.
+This interface is common among all QPU classes so that a QPU can send query requests to other QPUs, regardless of their class.
 This is the mechanism with which QPUs interoperate to perform query processing tasks,
-and forms the basis of the query processing system's computation model (section~\ref{sec:computation_model}).
+and forms the basis of the query processing system's computation model (\S\ref{sec:computation_model}).
 
-However each QPU instance specializes in only a subset of the queries that can be expressed by the interface's query
+Each QPU instance specializes in a subset of the queries that can be expressed by the interface's query
 language.
-For example, a QPU may only serve queries about a specific database table.
+This set of queries depends on its class, its configuration (\S\ref{sec:qpu_config}), and the topology of the parts of the QPU graph is is connected to.
+For example, a QPU may only serve queries about a specific database table,
+while a Join class QPU will specifically serve join queries using partial results.
 The set of queries that a QPU instance can process is the query interface's \textit{domain}.
 
 The QPU's query interface has \textit{streaming semantics}.
 An invocation of the query interface initiates a stream between the QPU that sent the query request and the one that
 received it;
-the results of the query are sent as records through that stream.
+query results are returned through that stream; each stream record is a result of the query.
+This allows the QPU model to bridge one-off and long-running queries.
+We present the query interface in more detail in Section~\ref{ref:query_interface}.
 
-We present the query interface in more detail in section \ref{ref:query_interface}.
-
-\medskip
+\bigskip
 \noindent
-\textbf{Configuration}
+\textbf{Input stream interface.}
+Issuing a query request initiates a stream of query results.
+The input stream interface is the interface through which the query processing unit receives this input stream.
+This interface is not open:
+a QPU cannot receive an input stream not associated with a query that it has issued.
 
-\medskip
+\bigskip
 \noindent
-\textbf{Local view}
-We call this part of the state \textit{local graph view}.
-Finally, query processing units that implement derived state structures and QPUs that store intermediate query processing
-results, for example in streaming join computations, maintain \textit{query processing state}.
+\textbf{Domain interface.}
+As presented above, each QPU instance specializes in a specific set of queries,
+which is called it's query interface domain.
+In order for QPUs to collaborate during query processing by issuing queries to one another,
+a unit must have information about the domains of its downstream connections.
+The domain interface allows domain information to be disseminated through the QPU graph:
+a unit can use the domain interface of one of its downstream connections to retrieve its domain.
+We present the domain interface in more detail in Section~\ref{sec:domain_dissemination}.
 
-\medskip
-\noindent
-\textbf{Query Processing State.}
+\subsubsection{Configuration}
+\label{sec:qpu_config}
+
+Upon initialization, each QPU is given a set of configuration parameters.
+Configuration parameters can be categorized in:
+\begin{itemize}
+  \item Class-specific configuration, which includes parameters such as cache size or the definition of a materialized view.
+
+  \item Topology configuration, which consists of endpoints of a QPU's downstream connections in the QPU graph.
+\end{itemize}
+
+\subsubsection{Local graph view}
+A QPU maintains information about the query interface domain of each of its downstream connections.
+It uses this information to:
+(1) validate if it can process a given query, and
+(2) generate downstream sub-queries in order to retrieve partial results required for processing a given query.
+The QPU implements its local graph view as a data structure, called the domain tree (\S\ref{sec:qpc_tree}).
+
+\subsubsection{Query Processing State.}
 Each QPU maintains \textit{internal} state, that is accessible only by that QPU.
 
 We distinguish the QPU state in three parts according to its functionality.
-Each query processing unit maintains \textit{configuration state} that represents the query processing unit's
-configuration parameters.
 Moreover, QPUs that have downstream connections maintain information about these connections, which is
 used for generating downstream query requests.
 We call this part of the state \textit{local graph view}.
 Finally, query processing units that implement derived state structures and QPUs that store intermediate query processing
 results, for example in streaming join computations, maintain \textit{query processing state}.
 
-\medskip
-\noindent
-\textbf{Initialization, query processing, and input stream processor method.}
+\subsubsection{Initialization, query processing, and input stream processor methods.}
 The functionality of a query processing unit can be modeled using three methods:
 \begin{itemize}
   \item The \textit{initialization method} (section~\ref{sec:initialization_func}), which is executed when the QPU is
@@ -673,9 +712,14 @@ The functionality of a query processing unit can be modeled using three methods:
 The QPU model defines the signatures of these methods, and each QPU class provides implementations for them.
 The functionality of a QPU class is defined by the implementations that the class provides for the three QPU methods.
 
-\bigskip
+\begin{figure}[H]
+  \centering
+    \includegraphics[width=0.5\textwidth]{./figures/design_pattern/qpu_abstraction.pdf}
+  \caption{QPU composition.}
+  \label{fig:qpu_abstraction}
+\end{figure}
 
-A conceptual depiction of the query processing unit model is shown in Figure~\ref{fig:qpu_abstraction}.
+Figure~\ref{fig:qpu_abstraction} shows conceptual depiction of the query processing unit model.
 When the QPU's query API is called, an output stream ($R_A$) is established between the unit and the sender,
 and the unit's query processing method is invoked for the given query.
 The query processing method can read the QPU's state, and can perform downstream queries to other units.
@@ -844,82 +888,123 @@ block for constructing fully-functional query processing systems.
 \noindent
 The QPU model's query language has following syntax:
 
-{\obeylines\obeyspaces
-\texttt{
+\begin{lstlisting}[
+  caption={Query language of the QPU's query interface},
+  label={lst:query_language},
+]
 QueryRequest          ::=  SELECT SelectExpression
-~~~~~~~~~~~~~~~~~~~~~~~~~~~FROM TableExpression
-~~~~~~~~~~~~~~~~~~~~~~~~~~~WHERE PredicateExpression
-~~~~~~~~~~~~~~~~~~~~~~~~~~~INTERVAL IntervalExpression
-~~~~~~~~~~~~~~~~~~~~~~~~~~~[ GROUP BY attributeName ]
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~[ ORDER BY OrderByExpression \{ ASC | DESC \} ]
-~~~~~~~~~~~~~~~~~~~~~~~~~~~\{ SYNC | ASYNC \}
-}}
+                           FROM TableExpression
+                           WHERE PredicateExpression
+                           INTERVAL IntervalExpression
+                           [ GROUP BY attributeName ]
+                           [ ORDER BY OrderByExpression { ASC | DESC } ]
+                           { SYNC | ASYNC }
 
-{\obeylines\obeyspaces
-\texttt{
-SelectExpression      ::=  ALL
-~~~~~~~~~~~~~~~~~~~~~~~~~~~SelectExpressionItem , SelectExpression |
-~~~~~~~~~~~~~~~~~~~~~~~~~~~SelectExpressionItem
-}}
+SelectExpression      ::=  ALL |
+                           SelectExprItem , SelectExpression |
+                           SelectExprItem
 
-{\obeylines\obeyspaces
-\texttt{
-SelectExpressionItem  ::=  SUM(attributeName) | AVG(attributeName) |
-~~~~~~~~~~~~~~~~~~~~~~~~~~~MAX(attributeName) | MIN(attributeName) |
-~~~~~~~~~~~~~~~~~~~~~~~~~~~attributeName
-}}
+SelectExprItem        ::=  SUM(attributeName) |
+                           AVG(attributeName) |
+                           MAX(attributeName) |
+                           MIN(attributeName) |
+                           attributeName
 
-{\obeylines\obeyspaces
-\texttt{
-TableExpression       ::=  tableName JoinType tableName On tableName.attributeName = tableName.attributeName |
-~~~~~~~~~~~~~~~~~~~~~~~~~~~tableName
-}}
+TableExpression       ::=  tableName JOIN tableName On
+                           tableName.attributeName = tableName.attributeName |
+                           tableName
 
-{\obeylines\obeyspaces
-\texttt{
-JoinType              ::=  \{ INNER | \{ LEFT | RIGHT \} OUTER \} JOIN
-}}
+PredicateExpression  ::=  PredicateExpression OR
+                              PredicateExpression |
+                           PredicateExpression AND PredicateExpression |
+                           NOT PredicateExpression |
+                           Term Op Term
 
-{\obeylines\obeyspaces
-\texttt{
-PredicateExpression   ::=  PredicateExpression OR PredicateExpression |
-~~~~~~~~~~~~~~~~~~~~~~~~~~~PredicateExpression AND PredicateExpression |
-~~~~~~~~~~~~~~~~~~~~~~~~~~~NOT PredicateExpression |
-~~~~~~~~~~~~~~~~~~~~~~~~~~~Term Op Term
-}}
-
-{\obeylines\obeyspaces
-\texttt{
 Term                  ::=  attributeName | Value
-}}
 
-{\obeylines\obeyspaces
-\texttt{
-Op                    ::= > | >= | < | <= | = | !=
-}}
+Op                    ::=  > | >= | < | <= | = | !=
 
-{\obeylines\obeyspaces
-\texttt{
-Value                 ::= stringValue | floatValue | intValue |
-~~~~~~~~~~~~~~~~~~~~~~~~~~dateTimeValue | timestampValue
-}}
+Value                 ::=  stringValue | floatValue | intValue |
+                           dateTimeValue | timestampValue
+
+IntervalExpression    ::=  FROM TimestampTerm [ TO TimestampTerm ]
+
+TimestampTerm         ::=  SYSTEM START | LATEST | timestampValue
+
+\end{lstlisting}
+
+% {\obeylines\obeyspaces
+% \texttt{
+% QueryRequest          ::=  SELECT SelectExpression
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~FROM TableExpression
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~WHERE PredicateExpression
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~INTERVAL IntervalExpression
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~[ GROUP BY attributeName ]
+% % ~~~~~~~~~~~~~~~~~~~~~~~~~~~[ ORDER BY OrderByExpression \{ ASC | DESC \} ]
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~\{ SYNC | ASYNC \}
+% }}
+
+% {\obeylines\obeyspaces
+% \texttt{
+% SelectExpression      ::=  ALL
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~SelectExpressionItem , SelectExpression |
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~SelectExpressionItem
+% }}
+
+% {\obeylines\obeyspaces
+% \texttt{
+% SelectExpressionItem  ::=  SUM(attributeName) | AVG(attributeName) |
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~MAX(attributeName) | MIN(attributeName) |
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~attributeName
+% }}
+
+% {\obeylines\obeyspaces
+% \texttt{
+% TableExpression       ::=  tableName JOIN tableName On
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~tableName.attributeName = tableName.attributeName |
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~tableName
+% }}
+
+% {\obeylines\obeyspaces
+% \texttt{
+% PredicateExpression   ::=  PredicateExpression OR PredicateExpression |
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~PredicateExpression AND PredicateExpression |
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~NOT PredicateExpression |
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~Term Op Term
+% }}
+
+% {\obeylines\obeyspaces
+% \texttt{
+% Term                  ::=  attributeName | Value
+% }}
+
+% {\obeylines\obeyspaces
+% \texttt{
+% Op                    ::=  > | >= | < | <= | = | !=
+% }}
+
+% {\obeylines\obeyspaces
+% \texttt{
+% Value                 ::=  stringValue | floatValue | intValue |
+% ~~~~~~~~~~~~~~~~~~~~~~~~~~~dateTimeValue | timestampValue
+% }}
 
 % {\obeylines\obeyspaces
 % \texttt{
 % OrderByExpression     ::= attributeName , OrderByExpression |
 % ~~~~~~~~~~~~~~~~~~~~~~~~~~attributeName
 % }}
-{\obeylines\obeyspaces
-\texttt{
-IntervalExpression   ::= FROM TimestampTerm [ TO TimestampTerm ]
-}}
+% {\obeylines\obeyspaces
+% \texttt{
+% IntervalExpression    ::=  FROM TimestampTerm [ TO TimestampTerm ]
+% }}
 
-{\obeylines\obeyspaces
-\texttt{
-TimestampTerm         ::= SYSTEM START | LATEST | timestampValue
-}}
+% {\obeylines\obeyspaces
+% \texttt{
+% TimestampTerm         ::=  SYSTEM START | LATEST | timestampValue
+% }}
 
-~ \bigskip
+% ~ \bigskip
 
 \noindent
 In practice, each QPU instance can only process a subset of the queries that can be expressed by this query language,
@@ -934,48 +1019,8 @@ Moreover, instances of a certain class may support different parts of the query 
 configuration.
 For example, two instances of a filter operator QPU class may support predicate queries for different tables.
 
-\subsubsection{QPU State}
+\subsubsection{Query processing state}
 
-The query processing unit's state is divided into the following parts:
-
-\medskip
-\noindent
-\textbf{Configuration state.}
-Upon initialization, each QPU is given a set of configuration parameters.
-These parameters are represented as key-value pairs.
-The configuration state represents these parameters.
-
-Configuration parameters can be divided to the following parts:
-\begin{itemize}
-  \item Topology configuration.
-  This part of the configuration consists of the endpoints of the QPU's downstream connections in the QPU graph.
-
-  \item Class-specific configuration.
-  The part of the configuration specifies parameters such as cache size or the definition of a materialized view.
-\end{itemize}
-
-% \begin{lstlisting}[caption={Pseudocode for the QPU's configuration state},captionpos=b,label={lst:qpuconfigstate}]
-% class ConfigurationState
-%   function GetConfigParameter(Key) ConfigParameterValue
-% \end{lstlisting}
-
-\medskip
-\noindent
-\textbf{Local graph view.}
-For each of its downstream connections, a query processing unit maintains a data structure that represents
-its query interface domain, i.e. the set of queries that the connection can process.
-A unit uses the query interface domains of its neighbors to:
-(1) validate if it can process a given query, and
-(2) generate downstream queries for a given query.
-
-The data structures for the query processing capabilities of a QPU's downstream connections compose it local graph view
-state.
-
-In section~\ref{sec:qpc_tree} we present query processing capabilities data structure as well as its use in detail.
-
-\medskip
-\noindent
-\textbf{Query processing state.}
 Query processing units that encapsulate derived state structures such as indexes, materialized views and
 caches, store these data structures in the part of their state that we call \textit{query processing state}.
 Additionally, streaming operator QPUs such as joins use this part of the state to store intermediate state.
@@ -996,16 +1041,12 @@ where
 % The timestamp $Timestamp_S$ of an entry of the query processing state is the latest of the timestamps $Timestamp_U$
 % contained in the entry's value.
 
-Using pseudocode, we can represent the query processing state's API as follows:
+Listing~\ref{lst:qpu_query_proc_state} defines the QPU's query processing states using pseudocode:
 
 \begin{lstlisting}[
-  language=Java,
-  basicstyle=\normalfont\ttfamily,
-  keywordstyle=\color{black},
-  basicstyle=\normalfont\ttfamily,
-  breaklines=true,
-  captionpos=b,
-  caption={Pseudocode for the QPU's query processing state}
+  language=pseudo,
+  caption={Pseudocode for the QPU's query processing state},
+  label={lst:qpu_query_proc_state}
 ]
 type AttributeName string
 
@@ -1024,9 +1065,8 @@ type State {
 }
 
 class QueryProcessingState
+  function Get(Key_low, Key_high, Timestamp_low, Timestamp_high) [(Key, [State])]
   function Put(Key, State)
-  function Get(Key_low, Key_high, Timestamp_low, Timestamp_high)
-      [(Key, [State])]
 \end{lstlisting}
 
 \begin{itemize}
@@ -1047,14 +1087,13 @@ In that way, QPU's can process queries about any timestamp that they have receiv
 Each QPU invokes an initialization method when it starts its execution.
 
 \begin{lstlisting}[
-  basicstyle=\normalfont\ttfamily,
+  language=pseudo,
   caption={Initialization method signature},
-  captionpos=b,
   label={lst:init_func}
   ]
 type DownstreamConnection {
   endpoint string
-  capabilities QPCapabilities
+  domain DomainTree
 }
 
 function Init(QPState, [DownstreamConn])
@@ -1067,7 +1106,7 @@ $ProcessQuery$ receives as arguments:
   \item $QPState$, which is a handler that enables $Init$ to read from and write to QPU's query processing state.
 
   \item A list of $DownstreamConn$, each consisting of the endpoint of a downstream connection and a data structure
-  representing the connection's query processing capabilities (section~\ref{sec:qpc_tree}).
+  representing the connection's query interface domain (section~\ref{sec:qpc_tree}).
   $Init$ can therefore send downstream query requests.
 \end{itemize}
 
@@ -1085,11 +1124,9 @@ Moreover, if $QPF_q$ initiates input streams $I_{q-1}$, $I_{q-2}$, ..., then $QP
 values of stream processor methods for records received through $I_{q-i}$.
 
 \begin{lstlisting}[
-  basicstyle=\normalfont\ttfamily,
+  language=pseudo,
   caption={Query processing method signature},
-  captionpos=b,
   label={lst:query_processing_func},
-  breaklines=true
 ]
 function ProcessQuery(QueryRequest, QPState, [DownstreamConn], ResponseStream)
 \end{lstlisting}
@@ -1117,9 +1154,8 @@ It can read from and write to the query processing unit state,
 and a (potentially empty) list of $StreamRecord$ to the query processing method.
 
 \begin{lstlisting}[
-  basicstyle=\normalfont\ttfamily,
+  language=pseudo,
   caption={Stream processor method signature},
-  captionpos=b,
   label={lst:callback_func}
 ]
 function ProcessInputRecord(StreamRecord, QueryRequest, QPState)
@@ -1157,7 +1193,7 @@ are implemented by query processing units on top of potentially unreliable conne
 
 \subsection{Query processing unit consistency semantics}
 
-//// Outline ////
+\todo{//// Outline ////}
 
 \noindent
 Internal consistency
@@ -1460,45 +1496,46 @@ TABLE Orders(OrderID, CustomerID, OrderStatus, OrderDate)
 
 \begin{itemize}
   \item $DB$ $driver_1$ can process queries with the form:
-  {\obeylines\obeyspaces
-  \texttt{SELECT SelectExpression from Customers TIMESTAMP TimestampExpression
-  }}
+  \begin{lstlisting}
+  SELECT SelectExpression from Customers INTERVAL IntervalExpression
+  \end{lstlisting}
   where $SelectExpression$ can contains one or more attributes of the $Customers$ table.
 
 \item $DB$ $driver_2$ can process queries with the form:
-{\obeylines\obeyspaces
-\texttt{SELECT SelectExpression FROM Orders TIMESTAMP TimestampExpression
-}}
+\begin{lstlisting}
+SELECT SelectExpression FROM Orders INTERVAL IntervalExpression
+\end{lstlisting}
 where $SelectExpression$ contains one or more attributes of the $Orders$ table.
 
 \item $Filter_1$ can send downstream queries to $DB$ $driver_1$ and filter the resulting input stream based on a given
 attribute predicate.
 Therefore, $Filter_1$ can process queries of the form:
-{\obeylines\obeyspaces
-\texttt{SELECT SelectExpression FROM Customers
-        WHERE PredicateExpression
-        TIMESTAMP TimestampExpression
-        }}
+\todo{}
+\begin{lstlisting}
+SELECT SelectExpression FROM Customers
+WHERE PredicateExpression
+INTERVAL IntervalExpression
+\end{lstlisting}
 where $SelectExpression$ and $PredicateExpression$ contain attributes of the $Customers$ table.
 
 \item Similarly, $Filter_2$ supports queries of the form:
-{\obeylines\obeyspaces
-\texttt{SELECT SelectExpression FROM Orders
-        WHERE PredicateExpression
-        TIMESTAMP TimestampExpression
-        }}
+\begin{lstlisting}
+SELECT SelectExpression FROM Orders
+WHERE PredicateExpression
+INTERVAL IntervalExpression
+\end{lstlisting}
 where $SelectExpression$ and $PredicateExpression$ contain attributes of the $Orders$ table.
 
 \item $Join$ can send downstream queries to $Filter_1$ and $Filter_2$,
 and join the two input streams based on a given attribute.
 Since the only attribute the two table in the example can be joined on is $CustomerID$,
 $Join$ can process queries of the form:
-{\obeylines\obeyspaces
-\texttt{SELECT SelectExpression
-        FROM Customers JOIN Orders ON Customers.CustomerID = KnowledgeBase.CustomerID
-        WHERE PredicateExpression
-        TIMESTAMP TimestampExpression
-        }}
+\begin{lstlisting}
+SELECT SelectExpression
+FROM Customers JOIN Orders ON Customers.CustomerID = KnowledgeBase.CustomerID
+WHERE PredicateExpression
+INTERVAL IntervalExpression
+\end{lstlisting}
 where $SelectExpression$ and $PredicateExpression$ contain attributes of both tables.
 
 \end{itemize}
@@ -1513,7 +1550,7 @@ represented and used by other QPUs.
 Although the QPU model than guarantees that a query processing unit can communicate with any other QPU,
 a QPU DAG cannot have any arbitrary topology.
 This is because the functionality of facilitating of each QPU class entails some requirements about:
-(1) number of the QPU's downstream connections, and (2) the query processing capabilities of these downstream connection.
+(1) number of the QPU's downstream connections, and (2) the query interface domain of these downstream connection.
 From these \textit{class-specific topology requirements}, certain higher-level graph topology rules emerge:
 \begin{itemize}
   \item Any QPU graph mush have corpus driver QPUs as its leaf nodes.
@@ -1549,8 +1586,8 @@ From these \textit{class-specific topology requirements}, certain higher-level g
 
   \item A load balancer QPU can have one or more downstream connections;
   The QPU is responsible for performing load balancing on the queries that belong in the \textit{intersection} of the
-  query processing capabilities of its downstream connection.
-  Because of that, the intersection of the query processing capabilities of downstream connection of the load balancer
+  query interface domains of its downstream connection.
+  Because of that, the intersection of the query interface domains of the downstream connection of the load balancer
   QPU must be non empty.
 \end{itemize}
 
@@ -1564,60 +1601,62 @@ The query execution computations of QPU-based query processing systems are \text
 The distributed computations directly emerge from the initialization, query processing and stream processor methods of the QPUs
 the query processing system consists of.
 In order to describe the characteristics of query execution in QPU graphs, we first describe the execution of the query
-{\obeylines\obeyspaces
-\texttt{Q = SELECT OrderID, OrderStatus, Email
-        ~~~~FROM Customers JOIN Orders ON Customers.CustomerID = Orders.CustomerID
-        ~~~~WHERE OrderStatus != "shipped" AND OrderDate < 2020-09-14
-        ~~~~TIMESTAMP FROM LATEST TO LATEST
-        }}
+\begin{lstlisting}
+Q = SELECT OrderID, OrderStatus, Email
+FROM Customers JOIN Orders ON Customers.CustomerID = Orders.CustomerID
+WHERE OrderStatus != "shipped" AND OrderDate < 2020-09-14
+INTERVAL FROM LATEST TO LATEST
+\end{lstlisting}
 
 by the QPU graph of Figure~\ref{fig:qpu_graph_emergent_properties}.
 
 When a $Join$ receives a query request for $Q$, its query processing method generates two downstream queries:
-{\obeylines\obeyspaces
-\texttt{Q1 = SELECT CustomerID, Email
-        ~~~~~FROM Customers
-        ~~~~~TIMESTAMP FROM LATEST TO LATEST
-        }}
+\begin{lstlisting}
+Q1 = SELECT CustomerID, Email
+FROM Customers
+INTERVAL FROM LATEST TO LATEST
+\end{lstlisting}
 
-{\obeylines\obeyspaces
-\texttt{
-        Q2 = SELECT CustomerID, OrderStatus
-        ~~~~~FROM Orders
-        ~~~~~WHERE OrderStatus != "shipped" AND OrderDate < 2020-09-14
-        ~~~~~TIMESTAMP FROM LATEST TO LATEST
-        }}
+\begin{lstlisting}
+Q2 = SELECT CustomerID, OrderStatus
+FROM Orders
+WHERE OrderStatus != "shipped" AND OrderDate < 2020-09-14
+INTERVAL FROM LATEST TO LATEST
+\end{lstlisting}
 
 $Join$ sends a query request for $Q1$ to $Filter_1$, and a query request for $Q2$ to $Filter_2$.
 
 When a $Filter_1$ receives $Q1$, its query processing method generates the query and sends it as downstream query request
 to $Corpus$ $driver_1$:
 
-{\obeylines\obeyspaces
-\texttt{Q3 = SELECT CustomerID, Email
-        ~~~~~FROM Customers
-        ~~~~~TIMESTAMP FROM LATEST TO LATEST
-        }}
+\begin{lstlisting}
+Q3 = SELECT CustomerID, Email
+FROM Customers
+INTERVAL FROM LATEST TO LATEST
+\end{lstlisting}
 
 Similarly, $Filter_2$ generates and sends to $Corpus$ $driver_2$ the following query:
 
-{\obeylines\obeyspaces
-\texttt{Q4 = SELECT CustomerID, OrderStatus
-        ~~~~~FROM Orders
-        ~~~~~TIMESTAMP FROM LATEST TO LATEST
-        }}
+\begin{lstlisting}
+Q4 = SELECT CustomerID, OrderStatus
+FROM Orders
+INTERVAL FROM LATEST TO LATEST
+\end{lstlisting}
 
 $Corpus$ $driver_1$ reads from $Customers$ and generates an output stream that for each data item $d$ $\in$ $Customers$
 contains the most recent update. Similarly, $Corpus$ $driver_2$ generates an output stream for $Orders$.
 $Filter_2$ emits at its output stream only the input stream updates for which
-{\obeylines\obeyspaces
-\texttt{OrderStatus != "shipped" AND OrderDate < 2020-09-14}}
+\begin{lstlisting}
+OrderStatus != "shipped" AND OrderDate < 2020-09-14
+\end{lstlisting}
 is true.
 Because $Q1$'s $PredicateExpression$ is empty, $Filter_1$'s output stream is identical to its input stream.
 Finally, $Join$ receives the results of $Q1$ and $Q2$ as input streams; its query processing method join updates from
 the two streams where
-{\obeylines\obeyspaces
-\texttt{Customers.CustomerID = Orders.CustomerID}}
+
+\begin{lstlisting}
+Customers.CustomerID = Orders.CustomerID
+\end{lstlisting}
 and emits the results at its output stream.
 
 \medskip
@@ -1682,7 +1721,7 @@ Therefore, multiple different query execution and state maintenance sub-graph ca
 So far in this chapter we have presented a high level description for certain parts of the query processing unit's
 functionality.
 In this section we present this parts in details.
-More specifically, we present the data structure that represent QPUs' query processing capabilities,
+More specifically, we present the data structure that encodes the QPUs' query interface domain,
 and describe how this structure is used by the query processing method to generate downstream queries for a given query.
 
 \subsubsection{Query parse tree}
@@ -1714,35 +1753,38 @@ More specifically, a parse tree is composed to two types of nodes:
 
 \noindent
 For example, the parse tree for the query:
-{\obeylines\obeyspaces
-\texttt{
-        SELECT OrderID, OrderStatus, Email
-        FROM Customers JOIN Orders ON Customers.CustomerID = Orders.CustomerID
-        WHERE OrderStatus != "shipped" AND OrderDate < 2020-09-14
-        TIMESTAMP FROM LATEST TO LATEST
-        }}
-~ \\
+\begin{lstlisting}
+SELECT OrderID, OrderStatus, Email
+FROM Customers JOIN Orders ON Customers.CustomerID = Orders.CustomerID
+WHERE OrderStatus != "shipped" AND OrderDate < 2020-09-14
+INTERVAL FROM LATEST TO LATEST
+\end{lstlisting}
+
 \noindent
 is depicted in Figure~\ref{fig:parse_tree}.
 
-\subsubsection{Query processing capabilities tree}
+\subsubsection{Domain tree}
 \label{sec:qpc_tree}
 
 \todo{change merge to rule based approach: go over corpus driver, index, partition, ... to explain how a QPU computes its domain tree based on those of its connections}
 
-In this section we present the \textit{query processing capabilities tree} (QPC tree).
-The QPC tree represents the \textbf{set of all query parse trees that a QPU can process}.
-Each QPU with downstream connections maintains a QPC tree for each of its downstream connections
-(this consists the QPU's local graph view state).
+In this section, we present the domain tree data structure.
+The domain tree represents a query processing unit's query interface domain,
+i.e. the set of queries it can process.
+Because each query can be represented as a query parse tree,
+a domain tree is constructed by merging the query parse trees of the queries that in the QPU's query interface domain.
+Each QPU maintains a domain tree for each of its downstream connections.
+The QPU's local graph view consists of this collection of domains trees.
 
-The goal of the QPC tree is to represent the parse tree of all queries that a QPU can process.
-The QPC tree is an extension of the query parse tree described in the previous section;
-it uses an additional type of tree node, called \textbf{conjunction}.
-Conjunction nodes represent the \textit{different potential sub-trees} of a syntactic category node.
-Conjunction nodes essentially express the different branches of a syntax rule.
+% The goal of the domain tree is to represent the parse tree of all queries that a QPU can process.
+The domain tree is an extension of the query parse tree, which we presented in the previous section.
+It uses an additional type of tree node, called \textbf{conjunction}.
+A conjunction node represents the \textit{different potential sub-trees} that a syntactic category node
+can be evaluated to.
+Essentially, a conjunction node expresses the different branches of a syntax rule.
 
 Figures~\ref{fig:qpt_corpus_driver_customers},~\ref{fig:qpt_corpus_driver_orders},~\ref{fig:qpt_filter_customers},~\ref{fig:qpt_filter_orders}, and~\ref{fig:qpt_join}
-show the query processing capabilities trees for the QPUs in the ``customers - orders'' example.
+show the domain trees for the QPUs in the ``customers - orders'' example.
 
 \begin{figure}[t]
   \centering
@@ -1781,15 +1823,15 @@ show the query processing capabilities trees for the QPUs in the ``customers - o
 
 QPU trees have two functionalities:
 \begin{itemize}
-  \item A query processing unit uses its own QPC tree in order to determine it can process a given query.
-  More specifically, it checks if the query's parse is a \textbf{subtree} of the QPU's QPC tree,
+  \item A query processing unit uses its own domain tree in order to determine whether it can process a given query.
+  More specifically, it checks if the query's parse is a subtree of the QPU's domain tree,
   and, therefore, if the query's parse tree belongs in the set of queries represented by the QPU tree
   (algorithm~\ref{algo:can_process_query}).
 
-  \item A query processing unit uses the QPC trees of its downstream connections in order to generate downstream queries.
+  \item A query processing unit uses the domain trees of its downstream connections in order to generate downstream queries.
   Given a query $q$ with parse tree $PT_q$, received a query processing unit $Q$ that has a downstream connections $Q_d$
-  with QPC tree $QPCT_{Qd}$, the parse tree of the downstream query to be sent from $Q$ to $Q_d$ for $q$ is the
-  \textbf{intersection} of $QPCT_{Qd}$ and $PT_q$
+  with domain tree $DCT_{Qd}$, the parse tree of the downstream query to be sent from $Q$ to $Q_d$ for $q$ is the
+  \textbf{intersection} of $DT_{Qd}$ and $PT_q$
   (algorithm~\ref{algo:generate_downsrream}).
 \end{itemize}
 
@@ -1797,9 +1839,9 @@ QPU trees have two functionalities:
 \caption{Algorithm for check if a query can be processed}
 \label{algo:can_process_query}
 \begin{algorithmic}
-\Function{CanProcessQuery}{queryReq, QPCTree}
+\Function{CanProcessQuery}{queryReq, DomainTree}
 \State queryParseTree = parse queryReq
-\State \Return {isSubTree(QPCTree, queryReq)gs}
+\State \Return {isSubTree(DomainTree, queryReq)}
 \EndFunction
 \end{algorithmic}
 \end{algorithm}
@@ -1810,8 +1852,8 @@ QPU trees have two functionalities:
 \begin{algorithmic}
 \Function{GenerateDownstreamQuery}{queryReq, downstreamConn}
 \State queryParseTree = parse queryReq
-\State qpcTree = get QPC tree of downstreamConn
-\State downStreamQueryParseTree = intersection(qpcTree, queryParseTree)
+\State domainTree = get domain tree of downstreamConn
+\State downStreamQueryParseTree = intersection(domainTree, queryParseTree)
 \State downStreamQueryReq = generate query from parse tree
 \State \Return downStreamQueryReq
 \EndFunction
@@ -1864,17 +1906,20 @@ QPU trees have two functionalities:
 
 \section{Discussion}
 
-\textbf{On QPU-based query processing systems and ad-hoc queries}.
+\textbf{QPU-based query processing systems and ad-hoc queries}.
 
 \noindent
 The goal of the QPU-based design pattern is to enable \textit{workload-driven design}.
 A QPU graph is designed based a predefined set of query patterns.
 As a result, a QPU graph does not support any ad-hoc query,
 but rather \textit{the set of queries it has been designed for}.
-More specifically, as described in section~\ref{sec:qpc_tree}, a QPU graph supports the set of queries represent by the QPC trees of its root nodes.
+More specifically, as described in section~\ref{sec:qpc_tree}, a QPU graph supports the set of queries represent by the domain trees of its root nodes.
 Supporting additional query patterns, not supported by a certain QPU graph requires designing and deploying a
 new QPU graph.
 
+
+\section{Conclusion}
+\todo{}
 % Given $q$, the query processing function of a QPU $Q$ at the root of the QPU graph sends query request to some its
 % downstream connection, in order to initialize input stream required for processing the query.
 % Upon receiving a query request from $Q$, each of its downstream connection performs the same process.
