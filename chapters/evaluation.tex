@@ -12,7 +12,7 @@ The aim of this evaluation is to answer the following questions:
   \item What improvements in query processing performance can be achieved by placing materialized state close to clients?
   (Section~\ref{sec:eval_query_processing_perf})
 
-  \item What are the penalties in freshness resulting from placing materialized state away from the data storage tier
+  \item What are the penalties in freshness incurred when placing materialized state away from the data storage tier
   (Section~\ref{sec:eval_freshness})?
   How is freshness affected by load (\S\ref{sec:eval_freshness_throughput}) and round-trip time between
   sites (\S\ref{sec:eval_freshness_rtt})?
@@ -54,7 +54,7 @@ Various operations, such as voting or commenting on a story, modify the hotness 
 Computing the hotness value when it is queried would impose a prohibitive delay on queries
 % It is prohibitively expensive \cite{gjengset:noria} to compute the hotness value of stories during queries.
 In particular, serving the Lobsters' front page requires computing the hotness of every story in order to rank them.
-That is why the Lobsters application instead adds an additional column to the $stories$ table which stores a pre-computed
+That is why the Lobsters application adds an additional column to the $stories$ table which stores a pre-computed
 hotness value for each story.
 The application updates the value of the hotness column when operations are performed,
 such as upvoting or downvoting a story, or adding a comment to a story.
@@ -154,7 +154,7 @@ and clients are located in Europe \cite{pbailis:hats}, or vice versa.
 
 Our experiments  make use of the ability to place QPUs strategically in the system topology.
 We use two placement schemes:
-One in which the Materialized view QPU is placed at the application, and one in which it is placed at
+One in which the Materialized view QPU is placed at the server site, and one in which it is placed at
 the client site.
 We evaluate the effects and trade-offs of materialized view placement by comparing these two placement schemes.
 
@@ -162,7 +162,7 @@ We evaluate the effects and trade-offs of materialized view placement by compari
 \section{Experimental Setup}
 \label{sec:eval_setup}
 
-While the Lobsters Ruby-on-Rails application is open-source,
+While the actual Lobsters Ruby-on-Rails application is open-source,
 we use a simplified version of it in order to isolate its interaction with the database.
 We implement an adapter that translates front page and vote requests to the queries that the real
 Lobsters application would issue, and issues those queries either to the Lobsters database (MariaDB),
@@ -221,7 +221,7 @@ Placing the Materialized view QPU at the client side entails a minimum 40 ms com
 (80 ms round-trip time between sites).
 Throughout the rest of this chapter, we consider the terms freshness and staleness equivalent and use them interchangeably.
 
-One of the aims of this evaluation is to quantify how stale query results are.
+One of the aims of this evaluation is to quantify how stale query results become.
 To achieve that, we measure the staleness of the results returned by the front page operation,
 using the following metrics:
 \begin{itemize}
@@ -249,7 +249,7 @@ we deploy all system components (Lobsters database, QPU graph, workload generato
 on a singly physical machine.
 Because they share a single OS kernel, all timestamps used for computing freshness metrics are based
 on the host operating system's clock, and thus can be meaningfully compared.
-As mentioned below, we use the Linux tc utility \cite{tc} to simulate the 80 ms round-trip time between sites,
+We use the Linux tc utility \cite{tc} to simulate the 80 ms round-trip time between sites,
 despite all containers being deployed on a single server.
 
 \bigskip
@@ -261,7 +261,7 @@ Each server consists of 2 Intel Xeon E5645 CPUs, each with 6 cores, 64 GB RAM, a
 \bigskip
 \noindent
 \textbf{Configuration.}
-The average ping latency between servers in the cluster is less than 1ms.
+The average ping latency between machines in the cluster is less than 1ms.
 We simulate the two geographically distant sites by using the Linux tc utility \cite{tc} to add delay to outgoing packets.
 
 For response time measurements, the Lobsters MariaDB instance and the QPUs, except the Materialized view QPU are deployed
@@ -379,6 +379,7 @@ again increasing the end-to-end response time experienced by the client.
 \noindent
 \textbf{Conclusion.} Our experiments confirm that placing materialized views closer to the client benefits read-heavy applications
 by removing costly round-trip communication across sites, and achieves scalability improvements.
+This results is expected, and shows the benefits that can be achieved by enabling this placement.
 
 
 \section{Freshness}
@@ -445,7 +446,7 @@ It depicts the delay at each step that vote records follow through the QPU graph
 
 A vote record's path consists of the following steps:
 \begin{enumerate}
-  \item When the transaction that inserts a vote record in the Lobsters database commits,
+  \item When the transaction that inserts a vote record into the Lobsters database commits,
   a trigger sends a message to the notification server (Section~\ref{sec:implementation}).
   The notification server then constructs an update record and sends it to the Corpus Driver QPU through a gRPC stream.
   The duration of this step is shown as \textbf{notification server} in Figure~\ref{fig:fr_latency_throughput_breakdown}.
@@ -540,9 +541,10 @@ Results show that:
 Placing the materialized view close to the client, and thus away from the underlying datastore incurs a freshness penalty:
 queries return stale results relative to the results that would have been obtained by querying the database.
 However, for the workload characteristics in these experiments,
-query results rarely more stale than the second most recent version.
+query results are rarely more stale than the second most recent version.
 Moreover, update latency and versions freshness scale well as the system's load increases.
-
+We can argue that the level of freshness shown in these experiments to be achievable when placing materialized views close
+to the client is sufficient for many query-heavy applications that tolerate eventual consistency.
 
 \subsection{Freshness vs round-trip latency}
 \label{sec:eval_freshness_rtt}
@@ -592,14 +594,13 @@ between the two sites, while under 4000 requests/second it is at most 11ms (2.2X
 Figures~\ref{fig:readV_freshness_netLatency_200} and~\ref{fig:readV_freshness_netLatency_400}.
 We observe that under both loads freshness decreases as round-trip time increases;
 Increasing the load of the system increases the gradient of this decrease.
-However, in both cases, queries, most of the time, observe at most the forth most recent version:
+However, in both cases, queries, generally, observe at most the forth most recent version:
 Only 0.06\% and 0.8\% of query results are more stale than the forth most recent version.
 
 \medskip
 \noindent
 \textbf{Conclusion.}
-Update latency, and the freshness of query results are primarily affected by
-by round-trip time between sites,
+Update latency, and the freshness of query results are primarily affected by round-trip time between sites,
 and to a lesser degree by the system's load.
 
 \section{Data transfer between sites}
@@ -621,7 +622,7 @@ Data transfer out to internet (MB) & $\approx$7700 & $\approx$7700 & $\approx$77
 \end{table}
 
 Distributing a query engine across multiple sites entails data transfer between sites.
-If the system is deployed on a public cloud platform, this incurs an additional cost,
+If the system is deployed on a public cloud platform this incurs an additional cost
 because data transfer between data centers is part of public clouds' pricing models.
 For example, on AWS EC2, data transfer costs \$0.02 per GB \cite{aws:pricing}.
 
