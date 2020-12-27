@@ -490,22 +490,20 @@ The output of these map operations can be then collected and merged into the des
 
 McCreadie et al. \cite{mccreadie:mapreduceindexing} have examined the benefits that can be obtained by performing document
 indexing using MapReduce.
-In particular, this work presents and evaluates four different strategies for applying the MapReduce paradigm
-to the task of indexing very large document collections.
+In particular, this work presents and evaluates four strategies for applying the MapReduce paradigm
+to the task of indexing large document collections.
 
 The query processing unit computation model could be compared with the MapReduce paradigm.
-In MapReduce, each map task is independent and not aware of its context in the overall job.
-Because of this property, the map task can be performed by a large number of map workers in parallel,
-each operating on a different subset of the input dataset.
-Additionally, map and reduce tasks form a two-tiered hierarchical structure,
-with the output of the map task being used as input to the reduce task.
-Similarly, each individual QPU is independent and not aware of the overall graph.
-It operates in response to receiving query requests by one or more ``parent'' QPUs,
-and optionally sending itself query requests to ``child'' QPUs.
-This parent-child relationship can be used to express the connection between map and reduce tasks.
-In addition, input to both the map and reduce tasks can be expressed as QPU input streams.
-As a result, while not originally designed with that goal in mind,
-the QPU-based architecture model can be used to express MapReduce-style distributed computations.
+Two central characteristics of MapReduce are that:
+1) each map task is independent and not aware of its context in the overall job
+(because of this that map tasks can be performed by a large number of workers in parallel, each operating on a different
+subset of the input dataset)
+and, 2) map and reduce tasks form a two-tiered hierarchical structure,
+with the output of the map tasks being used as input to the reduce tasks.
+The QPU model has similar characteristics:
+Each individual QPU is independent, and communicates with its connection in the graph graph through well-defined interfaces;
+Connections between QPUs from from tiered architectures in which the output of one tier is used as input to the next.
+Because of these similarities, a QPU graph can be configured to perform MapReduce-style distributed computations.
 For example, the task of indexing a large document collection, can be implemented with a QPU-based architecture
 as follows:
 ``Indexing'' QPUs, responsible for receiving documents as input, can be used as map tasks.
@@ -513,6 +511,10 @@ For each document, an indexing QPU computed and emits a (term, docID) records.
 ``Reduce'' QPUs be connected a parents of multiple indexing QPUs,
 so that each reduce QPU receives the output of multiple indexing QPUs.
 Reduce QPU then merge (term, docID) records into posting lists for each docID.
+
+On the other hand, the MapReduce paradigm and the QPU model have important differences in their design goals.
+MapReduced has been developed with the aim of parallelizing and distributing one-time computational tasks,
+while the QPU model is mainly intended for building and incrementally maintaining derived state.
 
 \subsection{Dataflow engines}
 An evolution of the MapReduce model is the model used in dataflow execution engines.
