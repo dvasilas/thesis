@@ -805,7 +805,7 @@ The attributes contained in $StreamRecord$ are specified by $Proj_Q$.
 This represents the state of the data item $DataItemID$ at timestamp $Timestamp$.
 Each element of $[(AttributeName$, $AttributeValue_{old}$, $AttributeValue_{new})]$ indicates that
 the data item is associated with an attribute $AttributeName$ with the value $AttributeValue_{new}$
-\end{sloppypar}
+% \end{sloppypar}
 
 \medskip
 \noindent
@@ -849,7 +849,7 @@ In this case of interval queries, $StreamRecord$ has the form:
 This represents an update to the the data item $DataItemID$, with timestamp $Timestamp$;
 Each elements of $[(AttributeName$, $AttributeValue_{old}$, $AttributeValue_{new})]$ indicates that
 the update modified the value of attribute $AttributeName$ from $AttributeValue_{old}$ to $AttributeValue_{new}$.
-\end{sloppypar}
+% \end{sloppypar}
 
 \medskip
 \noindent
@@ -1122,10 +1122,9 @@ function ProcessQuery(QueryRequest, QPState, [DownstreamConn], ResponseStream)
 \end{lstlisting}
 
 \noindent
-\begin{sloppypar}
 Listing~\ref{lst:query_processing_func} shows the query processing method's signature.
 In addition to $QPState$ and $[DownstreamConn]$, $ProcessQuery$ receives:
-\end{sloppypar}
+
 \begin{itemize}
   \item $QueryRequest$, which represents the received query request.
 
