@@ -6,8 +6,6 @@ In Section~\ref{sec:distributed_qp}, we describe state-of-the-art approaches of 
 Then, in Section~\ref{sec:qp_non_relational} we present an overview of research on query processing in non-relational database systems,
 focusing on concepts related to secondary indexing.
 
-\bigskip
-\noindent
 Query processing refers to the range of activities involved in extracting data from a database.
 These activities include the translation of queries from high-level languages into formats that can be processed
 by the database, query-optimizing transformations, and actual evaluation of queries.
@@ -126,9 +124,6 @@ Tree's nodes are operators and edges represent consumer-producer relationships b
 More generally, for queries with common sub-expressions,
 the query execution plan is a directed acyclic graph \cite{graefe:queryevaluation}.
 
-
-\bigskip
-\noindent
 The concept of implementing a query execution engine as a directed acyclic graph of relational algebra operators,
 each executing a basic operation, forms the basis of our query engine architectural model.
 In Chapter~\ref{ch:design_pattern}, we describe how this concept can be generalized to include
@@ -298,8 +293,6 @@ When implemented efficiently, it enables horizontal scaling:
 doubling the number of nodes in the system should make the system able to handle double the volume of data, and
 should double the system's read and write throughput.
 
-\medskip
-\noindent
 Partitioning has implications for query processing.
 Database records are assigned to partitions based on a \textit{partitioning key},
 and are typically sorted based on that key.
@@ -308,8 +301,6 @@ requires every partition to perform a full scan of its records, and retrieve the
 A technique employed to more efficiently identify the requested records is secondary indexing.
 We describe secondary indexing in detail in Section~\ref{sec:secondary_indexes}.
 
-\medskip
-\noindent
 The partitioning techniques commonly used in non-relational databases are range and hash partitioning.
 
 \bigskip
@@ -394,8 +385,6 @@ and (2) anti-entropy, having a background process that replicates missing data b
 This approach was popularized by Amazon's Dynamo.
 Riak, Cassandra, and Voldemort are datastores with leader replication models inspired by Dynamo.
 
-\bigskip
-\noindent
 There are two approaches for the design decision ``when the leader propagates data changes to followers''.
 In \textit{synchronous} (or \textit{eager}) replication the leader propagates changes synchronously
 and waits for acknowledgements from followers before reporting success to the user.
@@ -407,8 +396,6 @@ up-to-date with the leader.
 Its disadvantage is that if followers do not respond (due to a crash, network fault or other reasons)
 writes cannot be processed.
 
-\bigskip
-\noindent
 Geo-replication (replication across geographically distributed data centers) can protect the system against data center
 failures and network problems,
 and improve read latency for clients distributed across multiple geographic locations.

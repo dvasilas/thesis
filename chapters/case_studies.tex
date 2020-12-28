@@ -68,8 +68,6 @@ For example, MongoDB \cite{coubase:mongoindexes}, Cassandra \cite{cassandra:seco
 only use the partitioning by document approach,
 while HBase \cite{hbase:secondaryindexes} uses the partitioning by term approach.
 
-\bigskip
-\noindent
 In this section, we demonstrate the flexibility of the QPU-based query processing architecture by showing how it can be used to
 be used to express both index partitioning schemes.
 More specifically,
@@ -166,8 +164,6 @@ More specifically, each index QPU is configured with an attribute ($predominantC
 and an \textit{interval of values} of that attribute.
 The index partition is responsible for index entries that correspond to attribute values in the specified interval.
 
-\medskip
-\noindent
 In the partitioning by document approach,
 each index partition is configured to be responsible for the entire attribute value space,
 which in the photo album example is $[\#000000$, $\#FFFFFF$].
@@ -270,6 +266,7 @@ FROM photoAlbum
 INTERVAL FROM LATEST
 \end{lstlisting}
 
+\noindent
 As a result, each Selection QPU receives an input stream from the corresponding Corpus Driver QPU,
 for each of the two above queries,
 and filters the received streams according to the predicate specified by each query.
@@ -291,6 +288,7 @@ WHERE predominantColor >= #000000 AND predominantColor < #7FFFFF
 INTERVAL FROM LATEST
 \end{lstlisting}
 
+\noindent
 and thus the $Selection_2$  forwards the record only to $index$ $partition_1$.
 
 \subsection{Read path}
@@ -422,8 +420,6 @@ In summary, in the term-partitioned architecture,
 the Partition Manager generates and sends downstream queries to index partitions according their corresponding
 value intervals, using the domain tree mechanism.
 
-\bigskip
-\noindent
 In conclusion, we have described how the QPU-based composable query processing architecture can be used to construct both
 document and term partitioned indexes.
 Using this flexibility, a database system can support both partitioning schemes and provide applications the ability to
@@ -442,8 +438,6 @@ support both index partitioning schemes.
 However, we believe that the proposed approach provides a more structured approach to the design of query processing systems,
 and enables additional flexibility.
 
-\medskip
-\noindent
 For example, using the QPU-based architecture we can construct a hybrid, two-tiered partitioned secondary index,
 consisting of a document-partitioned tier and a term-partitioned tier, as shown in Figure~\ref{fig:index_partitioned_two_level}.
 We configure the document-partitioned tier to be strongly consistent with the corpus,
@@ -485,6 +479,7 @@ WHERE predominantColor = #ff7b75
 AND tier = async
 \end{lstlisting}
 
+\noindent
 will be forwarded to the term-partitioned index.
 
 This architecture trades this functionality with the resources required for maintaining
@@ -533,8 +528,6 @@ In addition,
 applications can write directly to some of the storage systems.
 Zenko ingests updates performed directly to an underlying storage system through a mechanism called out-of-band updates \cite{zenko:outofband}.
 
-\medskip
-\noindent
 In this case study,
 we present an alternative approach for supporting federated metadata search on object storage platforms.
 More specifically, we demonstrate how the QPU-based query processing architecture can be used to construct
@@ -560,8 +553,6 @@ The first is that storage platforms used in this case study have a common, objec
 Second, a Corpus Driver QPU is available for each storage platform.
 This assumptions ensure that a QPU graph can be connected with multiple underlying storage systems.
 
-\medskip
-\noindent
 The QPU architecture for the multi-cloud index is shown in Figure~\ref{fig:federated_index} (a).
 We built on the partitioned index QPU architectures presented in Section~\ref{sec:cs_index_partitioning}.
 We construct a partitioned index QPU graph for each storage system, and co-locate it in the same data center as that
@@ -591,8 +582,6 @@ This approach is equivalent to the document-partitioned index approach.
   \label{fig:federated_index}
 \end{figure}
 
-\medskip
-\noindent
 The downside of this approach is that the index query processing system needs to forward each query to every
 storage location.
 
@@ -627,8 +616,6 @@ It stores the received entries, incrementally updates them using the input strea
 A difference with the Index QPU is therefore that the Partial Index establishes an input stream for each materialized
 index entry, while the Index requires a single input stream.
 
-\medskip
-\noindent
 While the partial index replication can potentially reduce the write path cross data center communication of an index replica,
 it might still incur significant between storage locations,
 in cases in which materialized index entries are updated frequently.
@@ -646,8 +633,6 @@ First it reduces the memory and storage resources required for query processing 
 Second, it reduces network resource consumption for data transfer between storage locations,
 as each index entry is placed at the storage location it communicates more with.
 
-\medskip
-\noindent
 The QPU architectures described in this case demonstrate an important property of QPU-based query processing architectures:
 A QPU graph can have a hierarchical structure,
 in which lower layers are composed composed of multiple independent sub-graphs,
@@ -681,8 +666,6 @@ a subset of the corpus $location_B$ that the application accesses frequently and
   \label{fig:predicate_based_index}
 \end{figure}
 
-\medskip
-\noindent
 While the state-of-the-art warehousing approach of constructing a central index with metadata tags from all objects
 on both locations can be applied to achieve these requirements,
 that would potentially use significantly more resources that required,
@@ -793,6 +776,7 @@ INTERVAL FROM LATEST
   \label{fig:lobsters_architecture_basic}
 \end{figure}
 
+\noindent
 The Join QPU in turn generates two downstream queries:
 
 \begin{lstlisting}[
@@ -819,14 +803,10 @@ It sends $Q1$ to the stories Corpus Driver QPU and $Q2$ to the Sum QPU.
 We note that it may send the two downstream queries to the corresponding Selection QPUs;
 The two query plans are equivalent.
 
-\smallskip
-\noindent
 When Join receives $Q1$, it initiates an output stream,
 first sending a snapshot of all stories in the stories table,
 and then sending an update for each write to the table.
 
-\smallskip
-\noindent
 When Sum receives $Q2$, its query processing method sends a downstream query to the votes Corpus Driver QPU
 in order to receive the most recent snapshot of the votes table and subscribe to subsequent writes to the table.
 As a result, tt receives an input stream consisting of each record in the votes table snapshot,
@@ -841,8 +821,6 @@ For each update received after the votes table snapshot has been processed,
 the Sum QPU updates the $vote\_count$ for the corresponding $story\_id$,
 and emits the updated $(story\_id$, $vote\_count)$ at its output stream.
 
-\smallskip
-\noindent
 Join stores intermediate state for each of input stream.
 When it receives an input record from one of the streams,
 it matches it with the corresponding stored record for the other stream,
@@ -852,8 +830,6 @@ In our implementation of this use case,
 the Join QPU is merged with the Materialized View QPU so that the system does not need to maintain state
 in order to perform the join operation, in addition to the materialized view state (Section~\ref{sec:eval_scenario}).
 
-\medskip
-\noindent
 In summary,
 this QPU architecture provides the functionality of pre-computing story votes counts in order to avoid re-computation
 when serving user read requests.
@@ -949,8 +925,6 @@ edge nodes are largely used for caching static data, such as images and video co
   \label{fig:lobsters_architecture_edge}
 \end{figure}
 
-\medskip
-\noindent
 Because of its modularity, the proposed query processing architecture can be used to place derived state, such as materialized views,
 closer to client.
 More specifically,

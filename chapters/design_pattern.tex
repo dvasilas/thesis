@@ -11,11 +11,9 @@ design decisions about \textit{placement} of derived state (indexes, caches, mat
 trade-offs and magnifies the effects of existing trade-offs.
 Existing query processing systems do not provide mechanisms for controlling the placement of derived state.
 
-\medskip
-\noindent
 The design of a geo-distributed query processing system presents several unique design issues:
 
-\smallskip
+\bigskip
 \noindent
 \textbf{Tunability.}
 
@@ -67,6 +65,7 @@ An efficient geo-distributed query processing system should provide tunning mech
     % index/view basis.
 \end{itemize}
 
+\medskip
 \noindent
 \textbf{Independence from corpus distribution schemes.}
 
@@ -154,11 +153,13 @@ of a composable, modular query processing architecture.
 In order to describe these observations, we introduce the example of a news aggregator application.
 In that application, users post and vote on news stories.
 The application stores individual votes for stories in a votes table.
-It uses a materialized view to integrate the vote count to each story:
+It uses a materialized view to compute the vote count of each story and join it with the rest of the story's records,
+as shown in Listing~\ref{lst:observations_example_1}.
 
 \begin{lstlisting}[
     caption={Definition of a materialized view that computes the vote count of each story and joins it with
-    the rest of the story's attributes.}
+    the rest of the story's attributes.},
+    label={lst:observations_example_1}
 ]
 TABLE stories (id int, title text, url text)
 TABLE votes (story_id int)
@@ -175,14 +176,15 @@ VIEW stories_with_voteCount
   WHERE stories.id = ?
 \end{lstlisting}
 
-\begin{figure}[t]
+Moreover, this materialized view is partitioned with the partition by document approach, using the $story_id$ as partitioning key.
+
+\begin{figure}[H]
   \centering
     \includegraphics[width=\textwidth]{./figures/design_pattern/running_example.pdf}
     \caption{Conceptual depiction of the news aggregator application query processing architecture.}
     \label{fig:running_example}
 \end{figure}
 
-Moreover, this materialized view is partitioned with the partition by document approach, using the $story_id$ as partitioning key.
 
 Figure~\ref{fig:running_example} depicts a simplified version of the application's query processing architecture.
 An aggregation and a join operator incrementally compute the $stories_with_voteCount$ view as new stories and votes are added.
@@ -421,7 +423,7 @@ Expanding on this, we distinguish two mechanisms that query processing component
 % Through each of these streams, the corresponding partition sends index lookup results to the partition manager.
 % The partition manager receives index lookup results from the index partition as input streams through its input port.
 
-\begin{figure}[t]
+\begin{figure}[H]
   \centering
     \includegraphics[width=0.4\textwidth]{./figures/design_pattern/observations_composition.pdf}
     \caption{Example of achieving higher-order functionality through composition of basic functionalities.}
@@ -610,9 +612,7 @@ with the view's definition as a configuration parameter.
 
 In the rest of this thesis, we use the terms query processing unit, QPU, and unit interchangeably to refer to QPU instances.
 
-\bigskip
-\noindent
-The query processing unit component model defines a \textit{system component} with the following properties:
+The query processing unit component model defines a \textit{system component} with the following properties.
 
 \begin{figure}[H]
   \centering
@@ -719,7 +719,7 @@ The functionality of a QPU class is defined by the implementations that the clas
   \label{fig:qpu_abstraction}
 \end{figure}
 
-Figure~\ref{fig:qpu_abstraction} shows conceptual depiction of the query processing unit model.
+Figure~\ref{fig:qpu_abstraction} shows a conceptual depiction of how the QPU model enables composition.
 When the QPU's query API is called, an output stream ($R_A$) is established between the unit and the sender,
 and the unit's query processing method is invoked for the given query.
 The query processing method can read the QPU's state, and can perform downstream queries to other units.
@@ -747,12 +747,13 @@ Query processing units expose an interface for receiving query requests:
 \end{displaymath}
 
 \begin{itemize}
-  \item $QueryRequest$ specifies a predicate on the data items' \textit{attributes}, and a \textit{time interval}.
-  % \todo{interval is simply a predicate}
+  \item $QueryRequest$ specifies a projection, a predicate on the data items' \textit{attributes},
+  and a \textit{timestamp} or \textit{time interval}.
 
   \item $QueryResponse$ is a stream containing the query's results.
 \end{itemize}
 
+\bigskip
 \noindent
 \textbf{Query response}.
 
@@ -769,88 +770,143 @@ where
   (DataItemID,~[(AttributeName,~AttributeValue_{old},~AttributeValue_{new})],~Timestamp)
 \]
 
-\noindent
-A $StreamRecord$ can be of the two following types of information:
-\begin{itemize}
-  \begin{sloppypar}
-  \item The \textbf{state of a data item}.
-  In this case, $StreamRecord$:
-  \[
-  (DataItemID,~[(AttributeName,~AttributeValue_{old},~AttributeValue_{new})],~Timestamp)
-  \]
-  encodes that the state of the data item $DataItemID$ at timestamp $Timestamp$.
-  Each element of $[(AttributeName$, $AttributeValue_{old}$, $AttributeValue_{new})]$ indicates that
-  the data item is associated with an attribute $AttributeName$ with the value $AttributeValue_{new}$
-  ($AttributeValue_{old}$ is ignored).
-  \end{sloppypar}
 
-  \begin{sloppypar}
-  \item An \textbf{update event} for a modification of a data item (a creation, modification, or deletion
-  of a data item).
-  In this case, the $StreamRecord$:
-  \[
-  (DataItemID,~[(AttributeName,~AttributeValue_{old},~AttributeValue_{new})],~Timestamp)
-  \]
-  represents an update to the the data item $DataItemID$, with timestamp $Timestamp$;
-  Each elements of $[(AttributeName$, $AttributeValue_{old}$, $AttributeValue_{new})]$ indicates that
-  the update modified the value of attribute $AttributeName$ from $AttributeValue_{old}$ to $AttributeValue_{new}$.
-  \end{sloppypar}
-\end{itemize}
+\bigskip
+\noindent
+\textbf{Query types.}
+
+\noindent
+We categorize queries in three types: snapshot, interval or hybrid queries.
+A snapshot query is an one-time query that is evaluated on a snapshot of the corpus data,
+and returns the data items that items that match the query predicate.
+
+An interval query is a \textit{persistent} query.
+It is akin to subscribing to the given query predicate;
+Each time an update to the corpus causes a result to be added or removed from the query's results,
+the query notifies the subscriber.
+
+Finally, a hybrid query is a combination of the two other types.
+It is used in order to avoid missing updates in the common case in which a snapshot query is
+directly followed by an interval query.
 
 \medskip
 \noindent
-\textbf{The query request's time interval.}
+\textbf{Snapshot queries.}
+Given a query $Q$,
+specifying a projection $Proj_Q$, a predicate $Pred_Q$, and a timestamp $t_Q$,
+a snapshot query is evaluated on a snapshot of the corpus that contains the effects of all updates with
+$timestamp$ $<$ $t$.
+For each data item $d$ that satisfies $Pred$, $QueryResponse$ contains a $StreamRecord$ of the form:
+\[
+(DataItemID,~[(AttributeName,~null,~AttributeValue_{new})],~Timestamp)
+\]
+The attributes contained in $StreamRecord$ are specified by $Proj_Q$.
+
+This represents the state of the data item $DataItemID$ at timestamp $Timestamp$.
+Each element of $[(AttributeName$, $AttributeValue_{old}$, $AttributeValue_{new})]$ indicates that
+the data item is associated with an attribute $AttributeName$ with the value $AttributeValue_{new}$
+\end{sloppypar}
+
+\medskip
+\noindent
+\textbf{Interval queries.}
+Given a query $Q$,
+specifying a projection $Proj_Q$, a predicate $Pred_Q$, and an interval $[t_1, t_2)$,
+a $StreamRecord$ is added to $QueryResponse$ each time one of the following is true:
+\begin{itemize}
+\item An update creates a data item $d$, and $d$ satisfies $Q$
+
+\item An update deletes a data item $d$ satisfied $Q$ before deletion.
+
+\item An update modifies an existing data item $d$,
+causing to either start satisfying $Q$, stop satisfying $Q$,
+or continue satisfying $Q$ but with some of the attributes in $Proj_Q$ having been modified.
+\end{itemize}
 
 \noindent
-Given a $QueryRequest$ that specifies a projection $Proj$,
-an attribute predicate $Pred$
-and a time interval $T$ $=$ $[t_1, t_2)$:
+This specification represents the following cases:
 \begin{itemize}
 
-  \item if \textbf{$t_1$ $<$ $t_2$},
-  then $QueryResponse$ contains an update event for each update $u$ with $t_1$ $\leq$ $timestamp$ $<$ $t_2$,
-  for which one of the following is true:
-  \begin{itemize}
-    \item $u$ creates a data item $d$, and $d$'s attributes satisfy $Pred$.
+\item An update modifies a data item so that its state before the update is applied does not satisfy $Pred$,
+but its state after the update is applied satisfies $Pred$.
+In that case, the data item needs to be added to the posting list of an index entry, or to the results of a
+materialized view.
 
-    \item $u$ deletes a data item $d$, and $d$'s attributes satisfy $Pred$ before deletion.
+\item An update modifies a data item so that its state before the update is applied satisfies $Pred$,
+but its state after the update is applied does not satisfy $Pred$.
+In that case, the data item needs to be removed from the posting list of an index entry, or to the results of a
+materialized view.
 
-    \item $u$ modifies a data item $d$, and:
-    \begin{itemize}
-      \item The state of $d$ before $u$ is applied, after, or both satisfies $Pred$, and
-      \item $Proj$ contains one of the modified attributes.
-    \end{itemize}
-
-    This covers the following cases:
-    \begin{itemize}
-      \item An update modifies a data item so that its state before the update is applied does not satisfy $Pred$,
-      but its state after the update is applied satisfies $Pred$.
-      In that case, the data item needs to be added to the posting list of an index entry, or to the results of a
-      materialized view.
-
-      \item An update modifies a data item so that its state before the update is applied satisfies $Pred$,
-      but its state after the update is applied does not satisfy $Pred$.
-      In that case, the data item needs to be removed from the posting list of an index entry, or to the results of a
-      materialized view.
-
-      \item An update modifies a data item, both its state before the update is applied and after satisfies $Pred$,
-      and the data item's state stored as part of the index entry of the materialized view (because of $Proj$) is modified.
-    \end{itemize}
-  \end{itemize}
-  We term this type of query \textit{an interval query}.
-
-  By using a upper bound ($t_2$) in the future (a timestamp that the system has not yet reached),
-  an interval query can continue receiving future updates that satisfy $Pred$.
-  This provides a mechanism for \textit{subscribing to notification for updates}.
-
-  \item If \textbf{$t_1$ $=$ $t_2$ = $t$},
-  then the query is performed on a \textit{snapshot} of the corpus that contains the effects of all updates with
-  $timestamp$ $<$ $t$.
-  For each data item $d$ that satisfies $Pred$, $QueryResponse$ contains a $StreamRecord$ that encodes the state of $d$
-  at timestamp $t$.
-  We term this type of query a \textit{snapshot query}.
+\item An update modifies a data item, both its state before the update is applied and after satisfies $Pred$,
+and the data item's state stored as part of the index entry of the materialized view (because of $Proj$) is modified.
 
 \end{itemize}
+
+In this case of interval queries, $StreamRecord$ has the form:
+\[
+(DataItemID,~[(AttributeName,~AttributeValue_{old},~AttributeValue_{new})],~Timestamp)
+\]
+This represents an update to the the data item $DataItemID$, with timestamp $Timestamp$;
+Each elements of $[(AttributeName$, $AttributeValue_{old}$, $AttributeValue_{new})]$ indicates that
+the update modified the value of attribute $AttributeName$ from $AttributeValue_{old}$ to $AttributeValue_{new}$.
+\end{sloppypar}
+
+\medskip
+\noindent
+\textbf{Hybrid queries.}
+Given a query $Q$,
+specifying a projection $Proj_Q$, a predicate $Pred_Q$, and an interval $[t_1, t_2)$,
+a hybrid query is equivalent to executing two queries in parallel:
+A snapshot query with timestamp $t_1$, and an interval query with interval $[t_1, t_2)$.
+In this $QueryResponse$ contains a mix of both types of $StreamRecord$.
+
+% \noident
+% Given a $QueryRequest$ that specifies a projection $Proj$,
+% an attribute predicate $Pred$
+% and a time interval $T$ $=$ $[t_1, t_2)$:
+% \begin{itemize}
+
+%   \item if \textbf{$t_1$ $<$ $t_2$},
+%   then $QueryResponse$ contains an update event for each update $u$ with $t_1$ $\leq$ $timestamp$ $<$ $t_2$,
+%   for which one of the following is true:
+  
+%   \end{itemize}
+%   We term this type of query \textit{an interval query}.
+
+%   By using a upper bound ($t_2$) in the future (a timestamp that the system has not yet reached),
+%   an interval query can continue receiving future updates that satisfy $Pred$.
+%   This provides a mechanism for \textit{subscribing to notification for updates}.
+
+
+  % then the query is performed on a \textit{snapshot} of the corpus that contains the effects of all updates with
+  % $timestamp$ $<$ $t$.
+  
+  % We term this type of query a \textit{snapshot query}.
+
+
+% \noindent
+% A $StreamRecord$ can be of the two following types of information:
+% \begin{itemize}
+%   \begin{sloppypar}
+%   \item The \textbf{state of a data item}.
+
+%   \begin{sloppypar}
+%   \item An \textbf{update event} for a modification of a data item (a creation, modification, or deletion
+%   of a data item).
+%   In this case, $StreamRecord$ has the form:
+%   \[
+%   (DataItemID,~[(AttributeName,~AttributeValue_{old},~AttributeValue_{new})],~Timestamp)
+%   \]
+%   This represents an update to the the data item $DataItemID$, with timestamp $Timestamp$;
+%   Each elements of $[(AttributeName$, $AttributeValue_{old}$, $AttributeValue_{new})]$ indicates that
+%   the update modified the value of attribute $AttributeName$ from $AttributeValue_{old}$ to $AttributeValue_{new}$.
+%   \end{sloppypar}
+% \end{itemize}
+
+
+
+
+% \end{itemize}
 
 % By returning the latest update before a given timestamp $t$,
 % a snapshot query effectively returns the \textit{state} of each data item that satisfies $Pred$ at $t$.
@@ -861,7 +917,7 @@ and a time interval $T$ $=$ $[t_1, t_2)$:
 % data item so that either its old state value before applying the update or the new value after  is starts or it stops
 % satisfying $Pred$.
 
-\medskip
+\bigskip
 \noindent
 \textbf{Response stream mode.}
 
@@ -869,7 +925,7 @@ and a time interval $T$ $=$ $[t_1, t_2)$:
 The query response stream can be either synchronous or asynchronous.
 In a synchronous stream, the sender blocks until the stream records has been received and processed by the receiver.
 
-\medskip
+\bigskip
 \noindent
 \textbf{Query Language.}
 
@@ -884,8 +940,6 @@ However, we consider additional functionalities to be out of the scope of this w
 We believe this query language can effectively demonstrate that the QPU model can be used as building
 block for constructing fully-functional query processing systems.
 
-\medskip
-\noindent
 The QPU model's query language has following syntax:
 
 \begin{lstlisting}[
@@ -933,81 +987,17 @@ TimestampTerm         ::=  SYSTEM START | LATEST | timestampValue
 
 \end{lstlisting}
 
-% {\obeylines\obeyspaces
-% \texttt{
-% QueryRequest          ::=  SELECT SelectExpression
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~FROM TableExpression
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~WHERE PredicateExpression
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~INTERVAL IntervalExpression
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~[ GROUP BY attributeName ]
-% % ~~~~~~~~~~~~~~~~~~~~~~~~~~~[ ORDER BY OrderByExpression \{ ASC | DESC \} ]
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~\{ SYNC | ASYNC \}
-% }}
+The \texttt{INTERVAL} syntax is used to specify the query type.
+Queries without a \texttt{TO} part are snapshot queries;
+queries with a \texttt{TO} are interval or hybrid queries.
+Queries with \texttt{LATEST} keyword in the \texttt{FROM} part are interval queries,
+while queries with with a specific timestamp (or the \texttt{SYSTEM START} keyword) are
+hybrid queries.
+The \texttt{SYSTEM START} keyword is used to indicate the earliest available timestamp.
 
-% {\obeylines\obeyspaces
-% \texttt{
-% SelectExpression      ::=  ALL
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~SelectExpressionItem , SelectExpression |
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~SelectExpressionItem
-% }}
+The \texttt{SYNC} or \texttt{ASYNC} is used to specify the response stream mode.
 
-% {\obeylines\obeyspaces
-% \texttt{
-% SelectExpressionItem  ::=  SUM(attributeName) | AVG(attributeName) |
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~MAX(attributeName) | MIN(attributeName) |
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~attributeName
-% }}
-
-% {\obeylines\obeyspaces
-% \texttt{
-% TableExpression       ::=  tableName JOIN tableName On
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~tableName.attributeName = tableName.attributeName |
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~tableName
-% }}
-
-% {\obeylines\obeyspaces
-% \texttt{
-% PredicateExpression   ::=  PredicateExpression OR PredicateExpression |
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~PredicateExpression AND PredicateExpression |
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~NOT PredicateExpression |
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~Term Op Term
-% }}
-
-% {\obeylines\obeyspaces
-% \texttt{
-% Term                  ::=  attributeName | Value
-% }}
-
-% {\obeylines\obeyspaces
-% \texttt{
-% Op                    ::=  > | >= | < | <= | = | !=
-% }}
-
-% {\obeylines\obeyspaces
-% \texttt{
-% Value                 ::=  stringValue | floatValue | intValue |
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~~dateTimeValue | timestampValue
-% }}
-
-% {\obeylines\obeyspaces
-% \texttt{
-% OrderByExpression     ::= attributeName , OrderByExpression |
-% ~~~~~~~~~~~~~~~~~~~~~~~~~~attributeName
-% }}
-% {\obeylines\obeyspaces
-% \texttt{
-% IntervalExpression    ::=  FROM TimestampTerm [ TO TimestampTerm ]
-% }}
-
-% {\obeylines\obeyspaces
-% \texttt{
-% TimestampTerm         ::=  SYSTEM START | LATEST | timestampValue
-% }}
-
-% ~ \bigskip
-
-\noindent
-In practice, each QPU instance can only process a subset of the queries that can be expressed by this query language,
+In practice, each QPU instance specialized in a subset of the queries that can be expressed by this query language,
 according to the functionality supported by its class.
 For example, a QPU class that implements a join operator can perform a join over two input streams,
 but cannot evaluate a $PredicateExpression$, or perform an $SUM$ on an attribute of the join result.
@@ -1611,8 +1601,6 @@ Customers.CustomerID = Orders.CustomerID
 \end{lstlisting}
 and emits the results at its output stream.
 
-\medskip
-\noindent
 More generally, given a query $q$, the query processing method of a QPU $Q_0$ may either process $q$ by reading from its
 query processing state --- for example in the case of a materialized view QPU --- or generate and send query requests to
 some of its downstream connections, $Q_1$, $Q_2$ .., in order to initialize input streams required for processing the query.
@@ -1630,7 +1618,6 @@ and produces itself an output stream.
 The output stream of $Q_0$ contains the results of the initial query, $q$.
 We call this type computation in a QPU DAG, \textit{query execution mode}.
 
-\medskip
 QPU-based query query processing systems execute a similar type of computations for incrementally updating
 secondary indexes and materialized views.
 We call this type computation in a QPU DAG, \textit{state maintenance mode}.
@@ -1647,26 +1634,19 @@ There are the following differences between query execution and state maintenanc
   graph.
 \end{itemize}
 
-\medskip
-\noindent
 State maintenance can be configured to be performed either synchronously or asynchronously, depending on the type of send
 operation used for sending update records.
 Synchronous state maintenance is achieved by configuring all QPUs.
 
-\medskip
-\noindent
 Based on the above description, the computations run by a QPU-based processing system can be characterized as
 \textit{bi-directional dataflow}.
 For a given query or state maintenance execution,
 query requests flow downwards through the QPU graph, defining an execution sub-graph.
 Response streams flow upwards through that sub-graph, each stream corresponding to an edge defined by a query request.
 
-\medskip
-\noindent
 Finally, as described in section~\ref{ref:specification}, a QPU can process multiple queries in parallel,
 executing an instance of its query processing method and having an output stream for each query request being processed.
 Therefore, multiple different query execution and state maintenance sub-graph can co-exist in parallel in the same QPU DAG.
-
 
 \subsection{Query execution data structures}
 
@@ -1703,7 +1683,6 @@ More specifically, a parse tree is composed to two types of nodes:
   \label{fig:parse_tree}
 \end{figure}
 
-\noindent
 For example, the parse tree for the following query is depicted in Figure~\ref{fig:parse_tree}:
 \begin{lstlisting}[
   caption={Query used to demonstrate the query parse tree data structure.},
@@ -1734,8 +1713,6 @@ A conjunction node represents the \textit{different potential sub-trees} that a 
 can be evaluated to.
 Essentially, a conjunction node expresses the different branches of a syntax rule.
 
-\medskip
-\noindent
 Query processing units use a straightforward algorithm based on transformation and merge rules construct their domain trees.
 This algorithm is specific to each QPU class:
 \begin{itemize}

@@ -15,7 +15,8 @@ Proteus consists of:
   \item A mechanism for translating architecture descriptions to deployment plans (Section~\ref{sec:proteus_deployment}).
 \end{itemize}
 
-Finally, in Section~\ref{sec:implementation} we present the implementation details of Proteus.
+\noindent
+In Section~\ref{sec:implementation}, we present the implementation details of Proteus.
 
 
 \section{Query processing domain dissemination}
@@ -55,8 +56,6 @@ representing the updated domain tree.
 Similarly to the query interface, $GetDomain$ requests follow the QPU graph topology:
 An edge in the QPU graph from $QPU_A$ to $QPU_B$ indicates that $QPU_A$ can invoke the domain interface of $QPU_B$.
 
-\medskip
-\noindent
 We define the domain interface response as a stream rather than an one-time response in order to enable propagation of
 configuration, domain and topology changes through the QPU graph.
 This is a first step towards enabling \textit{dynamic reconfiguration} of QPU architectures.
@@ -64,8 +63,6 @@ Examples of dynamic reconfiguration might include the creation new indexes or ma
 We consider dynamic reconfiguration of QPU architecture out of the scope of this work.
 It is, however, a direction for future work.
 
-\medskip
-\noindent
 In order to support the domain interface, we extend the query processing unit specification with two additional methods:
 a domain processor and a domain response processor.
 These methods are analogous to the query interface methods.
@@ -95,8 +92,6 @@ Once each $Corpus$ $Driver$ QPU computes its domain tree, it responds to the cor
 When each $Selection$ QPU receives the $GetDomain$ response, it calculates its domain tree, and then it responds to the request from $Join$.
 Finally, $Join$ receives the responses from $Selection_1$, $Selection_2$, and computes its domain tree.
 
-\medskip
-\noindent
 The goal of the domain dissemination mechanism is to reduce the input configuration required by QPU instances,
 in order to simplify the process of configuring and deploying a QPU architecture.
 Thanks to this mechanism, the configuration of a query processing unit consists of ``local'' configuration
@@ -128,8 +123,6 @@ Proteus provides an implementation of the query processing architecture presente
 We have implemented the query processing unit component as a service, i.e. a daemon process.
 In this section we describe the system design and architecture of this service.
 
-\medskip
-\noindent
 The design of the QPU service is guided by the principles of the query processing unit model.
 Instead of implementing a separate QPU service for each QPU class,
 we design the query processing unit service as a \textit{polymorphic} service:
@@ -157,8 +150,6 @@ for the additional class.
 \noindent
 Figure \ref{fig:qpu_arch} depicts the components of the query processing unit service in Proteus.
 
-\medskip
-\noindent
 A configuration file is passed to the QPU service during initialization.
 The \textbf{Configuration} component is responsible for parsing the configuration file into a set of configuration parameters.
 It exposes an API that other components can use to retrieve these configuration parameters.
@@ -188,7 +179,7 @@ The Query Processing Domain component provides two interfaces:
   \item An interface for computing downstream queries based on a given query parse tree.
 \end{itemize}
 
-\medskip
+\bigskip
 \noindent
 The \textbf{State} component is responsible for the QPU service's internal state.
 It provides a key-value interface which other components use for storing and retrieving state entries.
@@ -202,7 +193,7 @@ an implementation that uses MariaDB \cite{mariadb:docs} as backend store,
 and one that use AntidoteDB \cite{antidotedb:docs}.
 The State component to be used by a QPU service instance is controlled by a configuration parameter.
 
-\medskip
+\bigskip
 \noindent
 The \textbf{API Processor} is responsible for receiving and processing incoming requests for the two open interfaces of
 the query processing unit:
@@ -225,7 +216,7 @@ The API Processor can process multiple requests concurrently.
 For each received request, it creates an output stream,
 and spawns an instance of the corresponding Processor method in a new thread.
 
-\medskip
+\bigskip
 \noindent
 The \textbf{QPU Class} component is responsible for providing the methods defined by the query processing
 unit specification (Sections~\ref{sec:QPU_model} and~\ref{sec:domain_dissemination}).
@@ -286,7 +277,7 @@ In our prototype, we have implemented the following QPU classes:
 The QPU class library is extensible;
 Additional classes can be implemented by providing the corresponding method definitions.
 
-\medskip
+\bigskip
 \noindent
 The \textbf{Downstream client} component is responsible for sending downstream requests to other QPU services.
 It exposes an interface other components can use to submit query and domain requests.

@@ -1,7 +1,7 @@
 In this Chapter we introduce the models and assumptions this work is based on.
 % we  introduce  some  of  the  notation  that  we will  use  throughout  the  paper
-We define the system and data model that we consider in this work (Section~\ref{sec:models}),
-and discuss the requirements guiding the design of query processing systems (Section~\ref{sec:requirements}).
+We define the system and data model that we consider in this work (\S\ref{sec:models}),
+and discuss the requirements guiding the design of query processing systems (\S\ref{sec:requirements}).
 
 \section{System Model}
 \label{sec:models}
@@ -12,7 +12,7 @@ We consider a data serving system with a two-tiered architecture: a data storage
   We use the terms \textit{storage system} or \textit{data store} to refer to the system that implements this tier.
 
   \item The query processing tier is responsible for providing the functionality to identify and retrieve data using
-  queries on secondary attributes (Section~\ref{subsec:query_prcessing_tier}).
+  queries on secondary attributes (\S\ref{subsec:query_prcessing_tier}).
   We refer to the system that implements this tier using the terms \textit{query engine} or \textit{query (processing) system}.
 \end{itemize}
 
@@ -35,12 +35,10 @@ Figure~\ref{fig:high_level_dataflow} shows a high level overview of the system m
   As a result, control messages linked to the query execution flow through the query processing tier, and potentially
   for the query processing to the data storage tier (a query processed using cached data does not require control flow
   between tiers, while a query that requires reading from base tables does).
-  Data --- in the form of intermediate or final query results flow from the storage tier to the query processing tier to
+  Data, in the form of intermediate or final query results, flow from the storage tier to the query processing tier to
   the user.
 \end{itemize}
 
-\medskip
-\noindent
 Disaggregating query processing from the storage engine is an approach used by various systems and cloud
 services such as Amazon Athena \cite{aws:athena}, Aurora \cite{aws:aurora}, and Google BigQuery
 \cite{google:bigquery}.
@@ -61,8 +59,6 @@ This model provides several benefits:
   \item It enables cloud providers to implement fine-grained pricing for querying services.
 \end{itemize}
 
-\medskip
-\noindent
 In this work, we focus on the design of the query processing tier and consider the data storage tier as ``imposed'';
 We consider the data storage tier's functionalities, guarantees, and data distribution schemes as input parameters in
 our design.
@@ -100,8 +96,6 @@ and partial replication, in which a replica might be a copy of a subset of the d
 
 Finally, we consider federated systems that provide a unified namespace over multiple independent datasets stored in different storage systems.
 
-\medskip
-\noindent
 We model the infrastructure on which the data storage tier runs as a collection of \textit{sites}.
 A site is a group of nodes (servers, user devices) with the following characteristics:
 \begin{itemize}
@@ -138,8 +132,7 @@ modifying the attributes of a specified data item, and retrieving the attributes
 
 % should we differentiate the value? having the content as a normal attribute creates the assumption that it can be part of query processing as any other attribute.
 % We haven't considered in our design consideration of image / video / ... search
-\medskip
-\noindent
+
 This data model can express the data models of multiple different types of storage systems:
 \begin{itemize}
   \item Object stores, such as AWS S3: \\
@@ -254,7 +247,7 @@ we make the assumption that the data storage tier provides the List and Subscrib
 
 \bigskip
 \noindent
-\textbf{API 1: List}
+\textbf{List}
 
 \noindent
 The List API provides a mechanism for retrieving a set of versions of every object in a given table:
@@ -288,7 +281,7 @@ Finally, we do not assume any ordering in $ListResponse$.
 
 \bigskip
 \noindent
-\textbf{API 2: Subscribe}
+\textbf{Subscribe}
 
 \noindent
 The Subscribe API provides a mechanism for subscribing to notification for updates to data items in a given table:
@@ -364,8 +357,6 @@ In the following chapters we review the known approaches and techniques for buil
 examine the design decisions and associated trade-offs involved in the design (Chapter~\ref{ch:design_space}),
 and finally present our query processing tier design (Chapters~\ref{ch:design_pattern} and~\ref{ch:proteus}).
 
-\medskip
-\noindent
 The query processing tier is responsible for providing attribute-based data retrieval.
 It provides a $Query$ operations which client can user to retrieving data items using queries on their attributes.
 
@@ -389,15 +380,7 @@ and simple enough to allow this work to focus on the architecture design of the 
   and for which $Operator$ holds between the value of attribute $AttributeName$ and the constant $Value$.
 
   Moreover, queries can combine multiple $Selection$ operators with logical operators.
-  For example, the query:
-
-\begin{lstlisting}[
-  caption={Query that retrieves order records based on their status and order date attributes.}]
-SELECT order_id
-FROM Orders
-WHERE status != "shipped" AND order_date <= 10-10-2020
-\end{lstlisting}
-
+  For example, the query shown in Listing~\ref{lst:query_language_selection}
   specifies an \textit{attribute predicate} using the conjunction of two $Selection$ operators.
 
   \item The projection operator is defined as :
@@ -419,15 +402,7 @@ WHERE status != "shipped" AND order_date <= 10-10-2020
   and, for each group, applies $Function$ to the values of $AggregationAttribute$.
   The result of an aggregation function is a new table that contains a data item for each aggregation group.
   Each data item contains the result of the aggregation function as an attribute, and has the value of the grouping attribute as primary key.
-
-\begin{lstlisting}[
-  caption={Query that computes the sum of the total amount for the orders of each customer.}
-]
-SELECT customer_id, SUM(amount)
-FROM Orders
-GROUP BY customer_id
-\end{lstlisting}
-
+  The query in Listing~\ref{lst:query_language_sum}
   groups the data items in Orders based on the value of the $customer\_id$ attribute,
   and applies the SUM function to the $amount$ attribute of every data item in each group.
 
@@ -445,6 +420,24 @@ GROUP BY customer_id
   We consider this type of join operation in our query model because it has been shown to be useful to application that
   model their data using semi-structured data \cite{mongodb:joins}.
 \end{itemize}
+
+\begin{lstlisting}[
+  caption={Query that retrieves order records based on their status and order date attributes.},
+  label={lst:query_language_selection}
+]
+SELECT order_id
+FROM Orders
+WHERE status != "shipped" AND order_date <= 10-10-2020
+\end{lstlisting}
+
+\begin{lstlisting}[
+  caption={Query that computes the sum of the total amount for the orders of each customer.},
+  label={lst:query_language_sum}
+]
+SELECT customer_id, SUM(amount)
+FROM Orders
+GROUP BY customer_id
+\end{lstlisting}
 
 
 % The interface supports a query language with an SQL-like syntax.
@@ -486,21 +479,18 @@ GROUP BY customer_id
 % If no $Timestamp$ -related predication is given, then only the latest version of each data item is considered for the
 % query.
 
-\noindent
-We define the set of data items that satisfy a query $Q$ as $Q_r$.
-In the ideal case, $Q$'s response is $Q_r$, however, as we explain in the following section a query response may
-differ from $Q_r$.
-
-\subsection{Derived data}
+\subsection{Derived state}
 Query systems often maintain data such as indexes, materialized views, and caches.
-We refer to this data as \textit{derived} data.
-Derived data, in the general case, is obtained by performing a computation over the base data.
-When base data changes, the query system need to update derived data to reflect theses changes.
-After a base data updates, indexes and materialized views need to be update so that the reflect the new state of the corpus,
+We refer to this data as \textit{derived} state.
+Derived state, in the general case, is obtained by performing a computation over the base data.
+When base data changes, the query system need to update derived state to reflect theses changes.
+After a base data updates, indexes and materialized views need to be updated to reflect the new state of the corpus,
 and obsolete cache entries need to be invalidated.
-As we describe in the following section, inconsistencies between base and derived data may result to divergence between
-query responses and $Q_r$, as $Q_r$ is defined using the most up-to-date state of the corpus at the time of a query, but
-query processing may be based on an outdated view of the corpus data.
+
+We define the set of data items that satisfy a query $Q$ as $Q_r$.
+In the ideal case, $Q$'s response is $Q_r$.
+In practice, however, in cases in which queries are evaluated on derived state that is stale relative to the corpus data,
+there may be divergence between the query response and $Q_r$.
 
 \section{Query processing system performance evaluation}
 \label{sec:requirements}
@@ -534,7 +524,7 @@ The relation between response time and throughput, as well as between the offere
 characterize the query processing system's \textit{scalability}.
 
 \subsubsection{Response time}
-Response time --- the amount of time between making a request and receiving the corresponding response ---
+Response time, the delay between making a request and receiving the corresponding response,
 is among the most important metrics for the quality of a user-facing service.
 
 A number of studies and experiments have studied the effects of response time to user experience.
@@ -591,43 +581,43 @@ Therefore, we argue that the recall and precision are meaningful metrics for eva
 
 \subsubsection{Freshness}
 
-As mentioned in Section \ref{subsec:query_prcessing_tier}, inconsistencies between base and derived data can lower query
+As mentioned in Section \ref{subsec:query_prcessing_tier}, inconsistencies between base data and derived state can lower query
 processing effectiveness by introduction false-positives and false-negatives.
 
-Traditional database systems often keep derived data consistent with base data by updating both in a single transaction.
-For example, when executing an $UPDATE$ statement, MariaDB updates a table's secondary indexes in the same transaction
+Traditional database systems often keep derived state consistent with base data by updating both in a single transaction.
+For example, when executing an \texttt{UPDATE} statement, MariaDB updates a table's secondary indexes in the same transaction
 as the table rows \cite{innodb:writepaths}.
-However, in systems that implement asynchronous (lazy) derived data maintenance policies \cite{tan:diffindex,
-qi:secondaryindexconsistency, shukla:schemaagnostic} derived data can become stale with respect to base data.
+However, in systems that implement asynchronous (lazy) derived state maintenance policies \cite{tan:diffindex,
+qi:secondaryindexconsistency, shukla:schemaagnostic} derived state can become stale with respect to base data.
 
-Stale derived data may introduce false-positives and false-negatives to query results:
+Stale derived state may introduce false-positives and false-negatives to query results:
 \begin{itemize}
   \item \textbf{False-positives}: A data item $d$ has been deleted (or updated so that it matches the given query),
-  but the corresponding derived data has not yet been updated to reflect this change.
-  A query execution that uses the stale derived data will include $d$ in the query response, introducing a false-positive.
+  but the corresponding derived state has not yet been updated to reflect this change.
+  A query execution that uses the stale derived state will include $d$ in the query response, introducing a false-positive.
 
   \item \textbf{False-negatives}: A data item $d$ has been created (or updated so that it does not match the given query),
-  but the corresponding derived data has not yet been updated to reflect this change.
-  A query execution that uses the stale derived data will not include $d$ in the query response,
+  but the corresponding derived state has not yet been updated to reflect this change.
+  A query execution that uses the stale derived state will not include $d$ in the query response,
   introducing a false-negative.
 \end{itemize}
 This can result in false-positives and false-negatives, affecting the recall and precision of these systems.
 
-We use the notion of \textit{freshness} to refer to the measure of consistency between base and derived data due to
-asynchronous derived data updates.
+We use the notion of \textit{freshness} to refer to the measure of consistency between base data and derived state due to
+asynchronous derived state updates.
 
 A number of metrics for measuring data freshness have been proposed in the literature \cite{bouzeghoub:datafreshness}:
 \begin{itemize}
   \item \textbf{Currency} measures the time between a change in the source data, and that change between reflected in
-  the derived data.
+  the derived state.
   In caching systems, the terms recency \cite{bright:latencyrecency} and age \cite{cho:dbfreshness}
   have been used to describe this metric.
-  \item \textbf{Obsolescence} measures the number of updates to source data since derived data was last updated.
+  \item \textbf{Obsolescence} measures the number of updates to source data since derived state was last updated.
   Work on query systems has defined the \textit{obsolescence cost} \cite{avigdor:obsolescent}, of a query to represent
   the penalty of basing a query result on obsolescent materialized view.
   This cost is computed as a function of the number of insertions, updates, and deletions that cause deviation between
   the materialized view and and the base table.
-  \item \textbf{Freshness-rate} measures the percentage of derived data entries that are up-to-date with the source
+  \item \textbf{Freshness-rate} measures the percentage of derived state entries that are up-to-date with the source
   data.
   This metric has been used to quantify the freshness of web pages \cite{labrinidis:balancingperfomancefreshness} and
   local databases copies \cite{cho:dbfreshness}.

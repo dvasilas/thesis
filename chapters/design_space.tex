@@ -27,20 +27,17 @@ In other words, the write path is the pre-computation that takes place when a ch
 without knowing if the results are going to be consumed;
 the read path is the computation that takes place only when it is needed for query processing.
 
-\medskip
-
 We can illustrate how the notion of the read and write path applies on different derived state techniques using an example.
 Consider a database that stores images.
 A stored image can be associated with user-defined tags, and the database provides the functionality of searching
 images using queries on their tags.
-Consider the query \\
+Consider the query (this query could for example be part of a service that automatically creates slideshows from the image dataset):
 
-\noindent
-$SELECT$ $*$ $FROM$ $photoAlbum$ \\
-$WHERE$ $tags.predominantColor$ $BETWEEN$ $\#0a6fb6$ $AND$ $\#52aca2$ \\
+\begin{lstlisting}[]
+SELECT * FROM photoAlbum
+WHERE tags.predominantColor BETWEEN #0a6fb6 AND #52aca2
+\end{lstlisting}
 
-\noindent
-(this query could for example be part of a service that automatically creates slideshows from the image dataset).
 
 A secondary index on the $predominantColor$ tag can be used to facilitate this type of queries.
 In this case, the write path consists of updating the secondary index when an image is inserted or deleted in the database.
@@ -102,8 +99,6 @@ using the read and write path framework.
 To do so, we first describe the tasks involved in the read and write path.
 % \todo{NICE TO HAVE: here we need a visualization}
 
-\medskip
-
 Given a change to the base data,
 the write path consists of one or two round trip communications between the base data and the derived state
 in order to propagate the changes to the base data (described in more detail in section~\ref{sec:sync_async_maintenance}),
@@ -142,7 +137,6 @@ If the change log contains the information about the value of $d.attributeA$ bef
 required.
 
 The tasks for updating a materialized view for a query on $predominantColor$ are similar.
-\medskip
 
 Given a write operation to the database,
 there are different design choices for \textit{when} these steps described above are performed relative to the critical
@@ -166,9 +160,6 @@ As a result,
 applications need to ``anticipate and handle situations where a query on a secondary index returns results that are
 not up to date''.
 
-
-\bigskip
-
 We can reason about derived state maintenance schemes using the framework for derived state's read and write path.
 The write path can be broken down into synchronous and asynchronous tasks:
 synchronous write path tasks incur overhead in write latency, while asynchronous one relax derived state's consistency
@@ -178,7 +169,7 @@ State maintenance scheme determines the boundary between synchronous and asynchr
 Because asynchronous write path tasks result state derived state, and serving queries using stale derived state
 introduces false-positives and false-negatives, the choice of maintenance scheme poses a trade-off between write latency
 and query processing effectiveness.
-
+The following state maintenance schemes have been proposed in the literature:
 % \begin{figure}
 %   \centering
 
@@ -191,10 +182,10 @@ and query processing effectiveness.
 % \end{figure}
 
 \bigskip
+\noindent
+\textbf{Sync-insert}
 
-The following state maintenance schemes have been proposed in the literature:
-
-\subsection{Sync-insert}
+\noindent
 One asynchronous maintenance scheme consists of inserting new derived state entries synchronously (step 2),
 and removing the old state entries asynchronously in the background (steps 2 and 3).
 The literature often refers to this scheme as \textit{sync-insert}.
@@ -208,7 +199,11 @@ After reading from the derived state, the system removes false-positives by vali
 the base data.
 The read-repair mechanism is a technique for shifting some work from the write to the read path.
 
-\subsection{Async-simple}
+\bigskip
+\noindent
+\textbf{Async-simple}
+
+\noindent
 Another asynchronous scheme, termed \textit{async-simple}, consists of acknowledging the write operation to
 the client as soon as the base data is updated,
 and performing all derived state maintenance steps in the asynchronously.
@@ -259,8 +254,6 @@ The same partitioning schemes can be applied to a materialized view.
 In the rest of this section we refer to secondary indexes.
 The same results apply to Materialized views.
 
-\medskip
-
 In the partitioning-by-document approach, an index lookup requires broadcasting a read request to every index partition
 and then gathering the returned results.
 On the other hand, when reading from a term-partitioned index only the index partitions with index entries that are
@@ -275,8 +268,6 @@ An advantage of the document-partitioned index is that updating the index upon a
 communication between nodes.
 On the other hand, updating a term-partitioned index may involve significant communication overhead, as an update to data
 item may involve updating index entries located on different nodes.
-
-\bigskip
 
 These observations can be grouped under the framework of derived state's read and write path.
 Partitioning-by-document guarantees local-only communication on the write path, but requires a large volume of
@@ -429,8 +420,6 @@ This approach can be suitable for cases in which some data centers are queried m
 Moreover, this approach can be supplemented with the use of caches in data centers without materialized
 views.
 
-\bigskip
-\noindent
 Furthermore, an additional consideration related to derived state maintenance in AP geo-replication
 is the presence of concurrent conflicting updates.
 Highly-available designs use mechanisms for ensuring that replicas eventually converge to the same state despite
@@ -486,8 +475,6 @@ federation across multiple clouds.
 The same observations can be generalized to heterogeneous systems composed of different database system.
 However, federated query processing includes additional challenges linked to the heterogeneous data models of these
 systems.
-
-\bigskip
 
 From the examples above it becomes clear that topology patterns play a major role in the performance of geo-distributed
 query processing based on derived state
