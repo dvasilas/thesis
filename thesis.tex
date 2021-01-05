@@ -17,6 +17,7 @@
 \usepackage{subcaption}
 \usepackage{float}
 \usepackage[]{xcolor}
+\usepackage{array,longtable,calc}
 
 \def\UrlBreaks{\do\/\do-}
 
@@ -24,6 +25,13 @@
 \setcounter{secnumdepth}{4}
 
 \usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+\usepackage{booktabs}% http://ctan.org/pkg/booktabs
+\newcommand{\tabitem}{~~\llap{\textbullet}~~}
+\usepackage{adjustbox}
+\usepackage{multirow}
+\usepackage{tabularx}
+\newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
 
 \colorlet{punct}{red!60!black}
 \definecolor{delim}{RGB}{20,105,176}
@@ -118,6 +126,8 @@ Proteus consists of an extensible library of Query Processing Unit implementatio
 
 The experimental evaluation supports the theoretical analysis of the trade-offs involved in query processing state placement, and suggests that Proteus can effectively occupy multiple different points in the design space of geo-distributed query processing.
 }
+
+\listoftodos
 
 \tableofcontents
 

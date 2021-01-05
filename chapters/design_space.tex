@@ -1,13 +1,12 @@
 Indexes, materialized views, and caches are crucial to query processing.
-Most query processors employ one or more of these technique to speed up queries.
-These technique all have a common characteristic:
-they are based on the idea of maintaining additional \textit{derived state} in order to achieve more efficient read
+Most query engines employ one or more of these technique to improve query processing performance.
+These techniques have in common that they proactively maintain \textit{derived state} in order to achieve more efficient read
 access to data.
 
-The use of derived state in query processing poses a number of design decisions,
+The use of derived state in query processing involves a number of design decisions,
 which are often in tension and create trade-offs.
-In this chapter, we analyze the design space of derived state based query processors.
-In addition, we present a unified framework for reasoning about how these design choices interact
+In this chapter, we analyze the design space:
+We present a unified framework for reasoning about how these design choices interact
 and how they affect the behavior of the query processor.
 
 
@@ -15,79 +14,169 @@ and how they affect the behavior of the query processor.
 \label{sec:read_write_path}
 
 Secondary indexing, caching, and the use of materialized views are all instances of a common technique:
-creating derived state by applying a transformation to the data stored in the database in order to accelerate particular
-read access patterns to the data.
+proactively applying a transformation to the data stored in the database in order to accelerate anticipated queries.
 
 At an abstract level, derived state can be described by a \textit{write path} and a \textit{read path}
 \cite{kleppmann:designing}.
 % \todo{NICE TO HAVE: illustrate with figure}
 The write path is the process of creating the derived state, and keeping it up-to-date with the base data.
 The read path is the process of reading from the derived state in order to perform a query processing task.
-In other words, the write path is the pre-computation that takes place when a change to the base data occurs,
-without knowing if the results are going to be consumed;
-the read path is the computation that takes place only when it is needed for query processing.
+In other words, the write path is the pre-computation that takes place greedily, when a change to the base data occurs,
+without knowing whether the results are going to be consumed;
+the read path is the computation that takes place lazily, when it is needed for query processing.
+Derived state is, therefore, an investment that pays off if the amortized overhead on the write path is less than the amortized gain
+on the read path.
 
-We can illustrate how the notion of the read and write path applies on different derived state techniques using an example.
-Consider a database that stores images.
-A stored image can be associated with user-defined tags, and the database provides the functionality of searching
-images using queries on their tags.
-Consider the query (this query could for example be part of a service that automatically creates slideshows from the image dataset):
+We illustrate the read and write path of different derived state techniques using an example.
+Consider a database that stores images associated with user-defined tags.
+The database supports searching images by their tags.
+Consider the query:
+% (this query could for example be part of a service that automatically creates slideshows from the image dataset):
 
 \begin{lstlisting}[]
 SELECT * FROM photoAlbum
 WHERE tags.predominantColor BETWEEN #0a6fb6 AND #52aca2
 \end{lstlisting}
 
-
-A secondary index on the $predominantColor$ tag can be used to facilitate this type of queries.
-In this case, the write path consists of updating the secondary index when an image is inserted or deleted in the database.
-The read path consists of performing an index lookup for the $predominantColor$ values in a given query,
-and combining the results.
-
-When serving the query without the use of the secondary index, the read path consists of scanning the images in $photoAlbum$,
-while no tasks need to be performed when an image is inserted of deleted in the database.
+The read path evaluates this query by scanning all images in $photoAlbum$.
+If this is a frequent type of query,
+a database administrator can create a secondary index on the $predominantColor$ tag to accelerate them.
+In that case, the read path performs an index lookup for the $predominantColor$ values in the given query,
+while the write path updates the secondary index when an image is inserted or deleted in the database.
 
 Using an index moves an amount of work from the read to the write path:
-less work is required for serving the query (an index lookup rather than scanning the dataset), at the expense of performing
-work at each change in the dataset.
+less work is required for serving the query (a fast index lookup rather than an expensive scan operation),
+at the expense of performing work at each change in the dataset.
 
-Another option for serving this query is to maintain pre-computed search results for the most common queries.
-This can be implemented either as a cache, or as a materialized view.
-In the case of a cache, if the query result is stored in the cache then the read path consists only of retrieving the
-results from the cache;
-otherwise, the read path falls back to serving the query using one of the methods described above,
-and then stores the query results in the cache;
-The write path may invalidate cache entries, depending on the caching policy being used.
-In the case of a materialized view, the read path consists of retrieving the query results from the view,
-and the write path consists of updating the view to reflect changes to the dataset.
+Another option is to pre-compute query results.
+There exist two approaches for implementing this: caching and materialized views.
+In the case of caching, the read attempts to serve the given query by reading from the cache.
+If the system finds the results in cache (cache hit), it reads and returns them to the client.
+If not (cache miss), then the system evaluates the query and stores the results in the cache,
+so that it can serve future occurrences of the same query faster by retrieving the results from the cache.
+The write path depends on the consistency policy being used:
+We consider three policies (\S\ref{sec:models_derived_state}):
+performing no action on the write path, invalidating, or updating the cache.
 
-From this example, it is clear that indexing, caching, and the use of materialized views,
-can be viewed as techniques for shifting the boundaries between the read and the write path.
-They allow the query processor to perform more work on the write path in order to reduce the work needed on the read path.
+In the case of materialized views, the system eagerly pre-computes query results in the write path;
+The read path retrieves the results from the view.
 
+In summary, indexing, caching, and the use of materialized views shift the boundary between the read and write path.
+They allow query engines to perform more work on the write path in order to reduce the work needed on the read path.
+
+Tables~\ref{tab:derived_state_read_path},~\ref{tab:derived_state_write_path}, and~\ref{tab:derived_state_resources} summarize
+the derived state design space and the effect of each point of the space on the read path, write path, and the additional
+memory and storage resources required.
+
+As discussed in Section~\ref{sec:models_derived_state}, a secondary index,
+as defined in this work, can be viewed as a specific case of a materialized view.
+Because of that, throughout this chapter we consider either a secondary index or a materialized view in our analysis interchangeably.
+The results apply to both, unless otherwise specified.
+
+\begin{table}[H]
+\centering
+\resizebox{\columnwidth}{!}{\begin{tabular}{|c||c|}
+\cline{2-2}
+\multicolumn{1}{c||}{} & \textbf{Read path} \\ \hline \hline
+\textbf{No derived state} &
+\begin{tabular}{@{}c@{}}Every query needs to be evaluated. \\
+Every lookup on a secondary attribute requires a full table scan.
+\end{tabular} \\ \hline
+\textbf{Caching} &
+\begin{tabular}{M{0.2\linewidth-\tabcolsep}|M{0.8\linewidth-\tabcolsep}@{}}
+Fast path & Cache hit: Fast retrieval (no evaluation needed) of cached query results. \\ \hline
+Slow path & Cache miss: Fallback to other. \end{tabular} \\ \hline
+\textbf{Secondary indexing} &
+\begin{tabular}{M{0.2\linewidth-\tabcolsep}|M{0.8\linewidth-\tabcolsep}@{}}
+Fast path & Lookup on indexed attribute: Fast lookup (no scan needed). \\ \hline
+Slow path & Lookup on non-indexed attribute: Fallback to other. \end{tabular} \\ \hline
+\textbf{Materialized views} &
+\begin{tabular}{M{0.2\linewidth-\tabcolsep}|M{0.8\linewidth-\tabcolsep}@{}}
+Fast path & Fast retrieval (no evaluation needed) of materialized query results. \\ \hline
+Slow path & Fallback to other for non-materialized queries. \end{tabular} \\ \hline
+\end{tabular}}
+\caption{Derived state design space: read path.}
+\label{tab:derived_state_read_path}
+\end{table}
+
+\begin{table}[H]
+\centering
+\resizebox{\columnwidth}{!}{\begin{tabular}{|c||c|}
+\cline{2-2}
+\multicolumn{1}{c||}{} & \textbf{Write path} \\ \hline \hline
+\textbf{No derived state} &
+No overhead for queries. \\ \hline
+\textbf{Caching} &
+\begin{tabular}{M{0.2\linewidth-\tabcolsep}|M{0.8\linewidth-\tabcolsep}@{}}
+No action on write policy & No overhead. Cache may become stale. \\ \hline
+Invalidate/Update on write policy &
+\begin{tabular}{M{0.2\linewidth-\tabcolsep}|M{0.8\linewidth-\tabcolsep}@{}}
+  Synchronous invalidation/update & Response time overhead on each write operation. \\ \hline
+  Asynchronous invalidation/update & No overhead. Cache may temporarily become stale. \end{tabular} \\ \hline
+\end{tabular} \\ \hline
+\textbf{Secondary indexing} &
+\begin{tabular}{M{0.2\linewidth-\tabcolsep}|M{0.8\linewidth-\tabcolsep}@{}}
+Synchronous maintenance & Response time overhead on each write operation that affects an indexed attribute. \\ \hline
+Asynchronous maintenance &  Index might temporarily become stale relative to the corpus. \end{tabular} \\ \hline
+\textbf{Materialized views} &
+Same as secondary indexing. \\ \hline
+\end{tabular}}
+\caption{Derived state design space: write path.}
+\label{tab:derived_state_write_path}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c||c|}
+\cline{2-2}
+\multicolumn{1}{c||}{} & \textbf{Memory \& storage resources} \\ \hline \hline
+\textbf{No derived state} &
+No resource overhead. \\ \hline
+\textbf{Caching} &
+Additional memory resources required. \\ \hline
+\textbf{Secondary indexing} &
+Additional memory and storage resources required. \\ \hline
+\textbf{Materialized views} &
+Additional memory and storage resources required. \\ \hline
+\end{tabular}
+\caption{Derived state design space: memory and storage resources.}
+\label{tab:derived_state_resources}
+\end{table}
 
 \section{Design decisions and trade-offs in derive state based query processing systems}
 
-Choosing between the derived state techniques described in the previous sections,
-involves a trade-off between work on the read path on the one side,
-and work on the write path on the memory and storage overheads of maintaining derived state on the other.
+Deciding whether using derived state is beneficial and choosing between the different derived state techniques
+involves a trade-off between read path work on the one side,
+versus write path work and the memory and storage overheads of maintaining derived state on the other.
 These trade-offs have been studied extensively \cite{valentin:db2advisor, chaudhuri:decadeselftuning}.
 Database systems provide mechanisms for managing these trade-offs at runtime, by allowing the database administrator
-to select indexes and materialized views to be created, and by providing mechanisms to automate this choice.
+to select which indexes and materialized views to create, and by providing mechanisms to automate this choice.
 
-However, the use of derived state for optimizing query processing involves a number of additional design choices:
+However, the use of derived state for geo-distributed query processing involves a number of additional design choices.
+Large-scale data serving systems, as discussed in Chapter~\ref{ch:background}, employ techniques such as partitioning and
+replication, both to the corpus and the derived state, in order to achieve low response times, scalability and
+fault tolerance.
+In the context of geo-distribution there exist a number of additional considerations in the design of a query engine
+that employs derived state to accelerate query processing:
+% % As a result, the read and write paths may involve communication among base data and derived state partitions.
+% % In Section~\ref{sec:index_partitioning_design_space} we present different approaches to derived state partitioning.
+
+% Finally, in a geo-distributed database in which base data and derived state are distributed across multiple data centers,
+% both the write and read paths may involve inter- data center communication, with latencies, therefore, orders of magnitude
+% higher that intra- data center communication.
+
 \begin{itemize}
 
-  \item Given a change in the base data, when is the derive state updated to reflect this change (synchronously, in the
-  same transaction, or asynchronously)?
+  \item Given a change in the base data, when to update the derived state:
+  synchronously in the same transaction, or asynchronously (\S\ref{sec:sync_async_maintenance})?
 
-  \item How is the derived state distributed across the system's nodes?
+  \item How to distribute the derived state across the system's nodes (\S\ref{sec:index_partitioning_design_space})?
 
-  \item When base data is distributed across multiple data centers, how is the derived state placed across data centers?
+  \item In a multi data center system, how to place derived state across data centers (\S\ref{sec:topology_patterns})?
 
-  \item Given a synchronous maintenance scheme, in presence of network partitions,
-  does the derived state remain available, potentially returning stale results,
-  or it becomes unavailable, ensuring results are always consistent ?
+  % \item Given a synchronous maintenance scheme, in presence of network partitions
+  % does derived state remain available, potentially returning stale results,
+  % or it becomes unavailable, ensuring results are always consistent?
 
 \end{itemize}
 
@@ -96,79 +185,79 @@ including query performance, overhead to write operation, relevance of query res
 
 We can reason about how these design choices interact and how they affect the query processing system's behavior
 using the read and write path framework.
-To do so, we first describe the tasks involved in the read and write path.
+To do so, we first describe a general model for the read and write path,
+independent of a specific derived state data structure.
 % \todo{NICE TO HAVE: here we need a visualization}
 
+\textbf{Read path.}
+Given a query, the read path consists of a message (the query request) from the query source (the client or a query manager component)
+to the derived state, a query processing computation (for example an index lookup) at the derived state,
+and a message (the response) for the derived state.
+The query processing computation may itself involve additional communication, for example contacting other components of
+the query engine in order to request sub-query results.
+% For simplicity, we assume here simple predicate queries that do not involve more complex operations such as joins.
+
+\textbf{Write path}
 Given a change to the base data,
-the write path consists of one or two round trip communications between the base data and the derived state
-in order to propagate the changes to the base data (described in more detail in section~\ref{sec:sync_async_maintenance}),
-and the computation required to apply the change to the derived state.
-Similarly, given a query, the read path consists of a round trip communication between the query source (the client or a
-query manager component) and a query processing computation (for example in index lookup) at the derived state.
-For simplicity, we assume here simple predicate queries that do not involve more complex operations such as joins.
+the write path consists of a message between from the base data to the derived state encoding the changes to the base data,
+and the computation required to modify the derived state accordingly.
 
-In a distributed database, both the base data as well as the derived state are partitioned;
-Both the write and read paths may involve communication among multiple derived state and base data
-partitions (section~\ref{sec:index_partitioning_design_space}).
-
-Finally, in a geo-distributed database in which base data and derived state are distributed across multiple data centers,
-both the write and read paths may involve inter- data center communication, with latencies, therefore, orders of magnitude
-higher that intra- data center communication.
 
 
 \subsection{Derived state maintenance schemes}
 \label{sec:sync_async_maintenance}
 
 % \todo{MUST HAVE: Figure~\ref{fig:maintenance_schemes} (temporary; borrowed) redo}
+In this section,
+we discuss the design decisions involved in updating derived state according to base data updates.
+We focus on updating a secondary index,
+but the results are analogous for materialized views.
 
 Given the following update to a data item $d$:
 \[
-d.predominantColor = \#c78f83
+d.predominantColor := \#c78f83
 \]
-updating a secondary index on the $predominantColor$ attributes consists of the following steps:
+updating a secondary index on the $predominantColor$ attributes includes the following steps:
 \begin{enumerate}
-  \item Insert $d$ to the posting list of the index entry that corresponds to $predominantColor$ $=$ $\#c78f83$.
-  \item Retrieve the previous value $d.predominantColor$, for example $\#424a69$.
-  \item Remove $d$ from the posting list of the index entry that corresponds to $predominantColor$ $=$ $\#424a69$.
+  \item Insert $d$ to the index entry that corresponds to $predominantColor$ $=$ $\#c78f83$.
+  \item Remove $d$ from the index entry that corresponds to the previous value of $d.predominantColor$
+  (Depending on the protocol, it might be needed to retrieve the previous value of $d.predominantColor$ from the data storage
+  tier)
 \end{enumerate}
 
 In practice, the derived state subscribes to the change log of the base data.
 If the change log contains the information about the value of $d.attributeA$ before the change, then step (2) is not
 required.
 
-The tasks for updating a materialized view for a query on $predominantColor$ are similar.
-
 Given a write operation to the database,
-there are different design choices for \textit{when} these steps described above are performed relative to the critical
+there are different design choices for \textit{when} these steps are performed, relative to the critical
 path of the write.
-We term these design choices, the derived state maintenance scheme.
+We call these design choices, the derived state \textit{maintenance scheme}.
 
-In synchronous maintenance, all steps are performed in the critical path of the write operation,
-usually bundled as a transaction.
+In \textit{synchronous maintenance}, all these steps are performed in the critical path of the write operation,
+usually within the same transaction.
 This increases write latency, but ensures that derived state is always up-to-date with the base data.
 
-An alternative approach is to perform some of the maintenance step asynchronously: deferring them for after the write
-operation has been acknowledged to the client.
-This reduces the overhead to write latency, but also has the implication that for each write operation
-there is a time window when a data item has been updated, but the update has not been reflected in the derived state,
-i.e. the derived state is stale.
-Serving queries from derived state that is stale relative to the base data may result in query results with false-positives
-and false-negatives.
+An alternative approach is to perform some of the maintenance step \textit{asynchronously}:
+deferring them for after the write operation has been acknowledged to the client.
+This reduces the overhead to write latency.
+but also has the implication that for each write operation
+However, it also allows derived state to be temporarily \textit{stale}:
+For a given write operations, there is a time window when a data item has been updated,
+but the update has not been reflected in the derived state.
+As described in Section~\ref{sec:models_freshness},
+serving queries from derived state that is stale relative to the base data may result in query results with false positives
+and false negatives.
 
-Amazon's DynamoDB maintains its global secondary indexes asynchronously \cite{dynamodb:async}.
-As a result,
-applications need to ``anticipate and handle situations where a query on a secondary index returns results that are
-not up to date''.
+Amazon's DynamoDB maintains its global secondary indexes asynchronously.
+As a result, applications need to ``anticipate and handle situations where a query on a secondary index returns results that are
+not up to date'' \cite{dynamodb:async}.
 
 We can reason about derived state maintenance schemes using the framework for derived state's read and write path.
-The write path can be broken down into synchronous and asynchronous tasks:
-synchronous write path tasks incur overhead in write latency, while asynchronous one relax derived state's consistency
-relative tho the base data.
-
-State maintenance scheme determines the boundary between synchronous and asynchronous write path tasks.
-Because asynchronous write path tasks result state derived state, and serving queries using stale derived state
-introduces false-positives and false-negatives, the choice of maintenance scheme poses a trade-off between write latency
-and query processing effectiveness.
+The system can perform tasks in the write path synchronously or asynchronously.
+Synchronous write path tasks incur overhead in write latency;
+Asynchronous ones relax the consistency between base data and derived state.
+As a result, the choice of maintenance scheme involves a trade-off between write latency and query processing effectiveness.
 The following state maintenance schemes have been proposed in the literature:
 % \begin{figure}
 %   \centering
@@ -190,39 +279,40 @@ One asynchronous maintenance scheme consists of inserting new derived state entr
 and removing the old state entries asynchronously in the background (steps 2 and 3).
 The literature often refers to this scheme as \textit{sync-insert}.
 
-Sync-insert reduces the work needed to be performed at the critical path of write operations,
-but it removes stale entries from the derived state in an eventually consistent fashion.
-Leaving stale entries in the derived state for a time window means that query results may contain false-positives.
+Sync-insert reduces the amount of work in the critical path of write operations,
+but it removes stale entries from the derived state asynchronously.
+Leaving stale entries in the derived state for a time window means that query results may contain false positives.
 
-The sync-insert scheme is often complemented with a read-repair mechanism.
-After reading from the derived state, the system removes false-positives by validating the retrieved results against
+The sync-insert scheme is often complemented with a mechanism that,
+after reading from the derived state, removes false positives by validating the retrieved results against
 the base data.
-The read-repair mechanism is a technique for shifting some work from the write to the read path.
+This approach trades additional work in the read path, for improved query result effectiveness.
 
 \bigskip
 \noindent
 \textbf{Async-simple}
 
 \noindent
-Another asynchronous scheme, termed \textit{async-simple}, consists of acknowledging the write operation to
-the client as soon as the base data is updated,
-and performing all derived state maintenance steps in the asynchronously.
+In the \textit{async-simple} asynchronous scheme,
+a write operation updates the base data and returns immediately,
+deferring the derived state maintenance steps to later.
 In practice, async-simple is implemented using an asynchronous update queue:
-write operation are acknowledged as soon as they are logged in the queue;
-a background process ingests the queue and performs derived state maintenance.
+a write operation in acknowledged as soon as it is logged in the queue;
+a background process ingests the queue and updates the derived state.
 
-This scheme incurs no overhead to write operations.
-However, it permits more anomalies due to applying base data changes to the derived state in an eventually consistent fashion.
+This scheme incurs minimal overhead to write operations.
+However, this scheme performs all state maintenance tasks asynchronously,
+both false positives and negatives are possible.
 More specifically, considering an update that changes $d.attributeA$ from $x$ to $y$:
 \begin{itemize}
-  \item If none of the state maintenance steps have been performed, $x$ will appears as the value of $d.attributeA$
-  in query results.
+  \item If none of the state maintenance steps have been performed, queries will return as if $x$ is the value of $d.attributeA$
+  (false positive and false negative).
 
   \item If the entry for $d.attributeA$ $==$ $x$ has been removed from the derived state, but the new value has not been
-  inserted, $d$ will appear to have been removed from the dataset
+  inserted, $d$ will not appear in query results (false negative).
 
   \item If the entry for $d.attributeA$ $==$ $y$ has been added to the derived state, but the old value has not been
-  removed, $d.attributeA$ will appear to have two values
+  removed, $d.attributeA$ query results will include both values (false positive).
 \end{itemize}
 
 % Diff-Index \cite{tan:diffindex} has proposed an asynchronous index maintenance scheme that provides sessions guarantees.
@@ -237,25 +327,22 @@ More specifically, considering an update that changes $d.attributeA$ from $x$ to
 % \todo{MUST HAVE: Figures~\ref{fig:prob1_6_2} and~\ref{fig:prob1_6_1} (temporary; borrowed) redo}
 
 Scaling derived state both in terms size and and read access requires partitioning it across multiple system nodes.
+% The same partitioning schemes can be applied to a materialized view.
+% In the rest of this section we refer to secondary indexes.
+% The same results apply to Materialized views.
+\todo{results apply to MVs}
 In Chapter~\ref{ch:background}, we presented the two main index partitioning schemes.
 
-Briefly, the main index partitioning schemes are:
+Briefly:
 \begin{itemize}
-
   \item In \textbf{partitioning by document}, index entries are co-located in the same node as the corresponding
   data items.
-
-  \item In \textbf{partitioning by term}, a global index is partitioned with the same partitioning scheme as the base data,
-  using the indexed value as partitioning key.
-
+  \item In \textbf{partitioning by term}, a global index is distributed independently from the base data.
 \end{itemize}
 
-The same partitioning schemes can be applied to a materialized view.
-In the rest of this section we refer to secondary indexes.
-The same results apply to Materialized views.
 
-In the partitioning-by-document approach, an index lookup requires broadcasting a read request to every index partition
-and then gathering the returned results.
+In the partitioning-by-document approach, an index lookup requires a scatter-gather operation,
+involving all index partitions (each index partition performing a lookup and combining the results).
 On the other hand, when reading from a term-partitioned index only the index partitions with index entries that are
 relevant to the query need to be contacted.
 In term-partitioned index, however, an additional round of messages is required for retrieving the base data items,
@@ -271,7 +358,7 @@ item may involve updating index entries located on different nodes.
 
 These observations can be grouped under the framework of derived state's read and write path.
 Partitioning-by-document guarantees local-only communication on the write path, but requires a large volume of
-communication on the read path (a scatter/gather operation involving all partitions);
+communication on the read path (a scatter-gather operation involving all partitions);
 Partitioning-by-term involves communication across nodes on the write path (a change to data item may need to be sent to
 an index partition on another node),
 but requires less communication on the read path in the general case
@@ -495,8 +582,8 @@ query processing based on derived state
   On the other hand, asynchronous maintenance schemes move some of the work on the write path in the background.
   This reduces the overhead to write operations, but also means that derived state is not always up-to-date with the base
   data.
-  Because serving queries from derived state that is stale relative to the base data may introduce false-positive and
-  false-negatives,
+  Because serving queries from derived state that is stale relative to the base data may introduce false positive and
+  false negatives,
   design decisions on derived state maintenance pose a trade-off between the overhead to write operations
   and the relevance of query results.
 

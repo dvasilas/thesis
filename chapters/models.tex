@@ -83,7 +83,7 @@ The data storage tier is implemented by a storage system (a database, file syste
 \textit{federation} of multiple, potentially heterogeneous storage systems.
 
 Each system is responsible for storing a large dataset $D$, continuously updated by a stream of small changes.
-We use the term \textit{corpus}  --- usually used in the information retrieval literature to refer to a collection of documents ---
+We use the term \textit{corpus}  --- traditionally used in the information retrieval literature to refer to a collection of documents ---
 to refer to the entire collection of data stored by the data storage tier.
 
 We model the storage systems that can be used to implement the storage tier as distributed, replicated partitioned systems \cite{agrawal:taxonomy}.
@@ -351,14 +351,14 @@ mechanisms in cloud storage services \cite{awss3:notifications}.
 
 \subsection{Query processing tier}
 \label{subsec:query_prcessing_tier}
-Τhe main focus of this work are the design decisions and trade-offs involved in the design of the query processing tier.
+The main focus of this work is the design decisions and trade-offs involved in the design of the query processing tier.
 In this section we present an overview of the query processing tier's role and functionality.
 In the following chapters we review the known approaches and techniques for building a query processing tier (Chapter~\ref{ch:background},
 examine the design decisions and associated trade-offs involved in the design (Chapter~\ref{ch:design_space}),
 and finally present our query processing tier design (Chapters~\ref{ch:design_pattern} and~\ref{ch:proteus}).
 
 The query processing tier is responsible for providing attribute-based data retrieval.
-It provides a $Query$ operations which client can user to retrieving data items using queries on their attributes.
+It provides a $Query$ operation for retrieving data items using queries on their attributes.
 
 
 \subsection{Query language}
@@ -396,7 +396,7 @@ and simple enough to allow this work to focus on the architecture design of the 
   \[
   Aggregation(Table,~Function,~AggregationAttribute,~GroupingAttribute)
   \]
-  where $Function$ is a function in the set $\{COUNT,~SUM,~AVERAGE,~MAX,~MIN\}$,
+  where $Function$ is a function in the set \{COUNT, SUM, AVERAGE, MAX, MIN\},
   and $OperandAttribute$ and $GroupingAttribute$ are attribute names.
   $Aggregation$ groups the data items in $Table$ in groupings based on their value of $GroupingAttribute$,
   and, for each group, applies $Function$ to the values of $AggregationAttribute$.
@@ -480,17 +480,60 @@ GROUP BY customer_id
 % query.
 
 \subsection{Derived state}
-Query systems often maintain data such as indexes, materialized views, and caches.
-We refer to this data as \textit{derived} state.
-Derived state, in the general case, is obtained by performing a computation over the base data.
-When base data changes, the query system need to update derived state to reflect theses changes.
-After a base data updates, indexes and materialized views need to be updated to reflect the new state of the corpus,
-and obsolete cache entries need to be invalidated.
+\label{sec:models_derived_state}
+The principal functionality of the query processing tier is to provide the $Query$ operation:
+it is responsible evaluating queries on secondary attributes over the corpus,
+and returning the corresponding results.
+In this work, we focus on the techniques that the query processing tier employs for accelerating query processing
+performance.
+In particular, we consider the following techniques:
+\begin{itemize}
+  \item \textbf{Caching:}
+  In this work, we use the term cache to refer to an in-memory data structure that stores the results
+  of earlier evaluated queries, so that future queries can be served faster.
+  The query result caches that we consider in this work use a \textbf{write-around} writing policy:
+  Write operations write to the data storage tier;
+  for each write operation, the data storage tier sends an \textit{update notification} to the query processing tier.
+  An update notification is a message that encodes the changes in the corpus carried by a write operation.
+  Given an update notification, a query result cache uses on of the following \textit{consistency policies}:
+  \begin{itemize}
+    \item Performs no actions.
+    \item Invalidates the cache entries affected by the changes to the corpus.
+    \item Updates the cache entries so that they reflect the changes to the corpus.
+  \end{itemize}
+  \item \textbf{Secondary indexing:}
+  When no index is used, every lookup on a secondary attribute requires a full table scan (iterating over every data item
+  in a corpus table in order to determine which one satisfy the given secondary attribute predicate).
+  A secondary index is a data structure that accelerate this type of lookup:
+  Creating a secondary index on an attribute,
+  enables the system to read the set of item that have a specific value (or interval of values) from the index,
+  without the need to perform a scan.
+  The query processing tier updates secondary indexes using the mechanism of update notifications:
+  For each write operation, the system updates secondary index entries so that they reflect the changes to the corpus.
+  \item \textbf{Materialized views:}
+  A materialized view is a data structure that \textit{eagerly pre-computes} and stores the results of a specified query
+  at write time.
+  The system can then serve that query by directly reading the results from the materialized view,
+  which is less expensive than evaluating the query over the corpus.
+  Similarly to the case of a secondary index, for each operation, the query processing tier receives an update notification,
+  and updates the materialized view accordingly.
+\end{itemize}
 
-We define the set of data items that satisfy a query $Q$ as $Q_r$.
-In the ideal case, $Q$'s response is $Q_r$.
-In practice, however, in cases in which queries are evaluated on derived state that is stale relative to the corpus data,
-there may be divergence between the query response and $Q_r$.
+Given the above definitions,
+a secondary index can be viewed as a specific case of a materialized view.
+In particular, a secondary index is equivalent to a materialized view for the query $Attribute~=~?$ .
+
+In general, we refer to the data structures maintained with the purpose of accelerating query processing as \textit{derived state}.
+Derived state, in the general case, is obtained by performing a computation over the corpus.
+
+% When base data changes, the query system need to update derived state to reflect theses changes.
+% After a base data updates, indexes and materialized views need to be updated to reflect the new state of the corpus,
+% and obsolete cache entries need to be invalidated.
+
+% We define the set of data items that satisfy a query $Q$ as $Q_r$.
+% In the ideal case, $Q$'s response is $Q_r$.
+% In practice, however, in cases in which queries are evaluated on derived state that is stale relative to the corpus data,
+% there may be divergence between the query response and $Q_r$.
 
 \section{Query processing system performance evaluation}
 \label{sec:requirements}
@@ -519,7 +562,7 @@ in which the most visible aspect of efficiency is the \textit{response time} exp
 a query and receiving the corresponding response.
 Query processing systems that serve such applications need to be able to process large volumes of user requests,
 while keeping the response time of individual requests low.
-Because of that, an important efficiency metric is how response time scales with as the system's throughput increases.
+Because of that, an important efficiency metric is how response time scales as the system's throughput increases.
 The relation between response time and throughput, as well as between the offered load and the throughput achieved by the system,
 characterize the query processing system's \textit{scalability}.
 
@@ -556,15 +599,15 @@ In information retrieval, given a user's information need, represented by a sear
 (the system responsible for query processing) computes a relevance \textit{score} for each document (e-mail message,
 webpage, news article), and returns a ranked list of results.
 
-Recall and precision are metrics often used to quantify the relevance of query results:
+\textit{Recall} and \textit{precision} are metrics often used to quantify the relevance of query results:
 \begin{itemize}
-  \item Recall is the fraction of the relevant that are returned by the query.
+  \item Recall is the fraction of the relevant documents that are returned by the query.
   A recall value equal to 1 indicates that all relevant documents are returned by the query
-  A recall value of less that 1 indicates that some relevant documents are not returned (``false-negatives'').
+  A recall value of less that 1 indicates that some relevant documents are not returned (``false negatives'').
 
   \item Precision is the fraction of relevant documents among the documents contained in the query result.
   A precision value equal to 1 indicates that all documents returned by the query are relevant.
-  A precision value of less than 1 indicates that some of the returned documents are not relevant (``false-positives'').
+  A precision value of less than 1 indicates that some of the returned documents are not relevant (``false positives'').
 \end{itemize}
 
 The difference between the information retrieval query model, and the query model that we consider in this work is in the
@@ -574,15 +617,15 @@ Documents can be more or less relevant to a given query.
 Information retrieval systems assign a \textit{score} to each document for a given query.
 In the scope of this work, we consider relevance as a binary metric:
 A data item is either relevant (satisfies the given query) or it is not.
-However, as described in Section \ref{subsec:query_prcessing_tier}, query results
+However, as described in Section \ref{subsec:query_prcessing_tier} \todo{fix backref}, query results
 can, similarly to information retrieval, include non-relevant results (false positives),
-or not include relevant results (false-negatives).
+or not include relevant results (false negatives).
 Therefore, we argue that the recall and precision are meaningful metrics for evaluating the effectiveness of the query processing tier.
 
 \subsubsection{Freshness}
-
-As mentioned in Section \ref{subsec:query_prcessing_tier}, inconsistencies between base data and derived state can lower query
-processing effectiveness by introduction false-positives and false-negatives.
+\label{sec:models_freshness}
+As mentioned in Section \ref{subsec:query_prcessing_tier} \todo{fix backref}, inconsistencies between base data and derived state can lower query
+processing effectiveness by introduction false positives and false negatives.
 
 Traditional database systems often keep derived state consistent with base data by updating both in a single transaction.
 For example, when executing an \texttt{UPDATE} statement, MariaDB updates a table's secondary indexes in the same transaction
@@ -590,33 +633,33 @@ as the table rows \cite{innodb:writepaths}.
 However, in systems that implement asynchronous (lazy) derived state maintenance policies \cite{tan:diffindex,
 qi:secondaryindexconsistency, shukla:schemaagnostic} derived state can become stale with respect to base data.
 
-Stale derived state may introduce false-positives and false-negatives to query results:
+Stale derived state may introduce false positives and false negatives to query results:
 \begin{itemize}
-  \item \textbf{False-positives}: A data item $d$ has been deleted (or updated so that it matches the given query),
+  \item \textbf{False positives}: A data item $d$ has been deleted (or updated so that it matches the given query \todo{inverted with negatives}),
   but the corresponding derived state has not yet been updated to reflect this change.
-  A query execution that uses the stale derived state will include $d$ in the query response, introducing a false-positive.
+  A query execution that uses the stale derived state will include $d$ in the query response, introducing a false positive.
 
-  \item \textbf{False-negatives}: A data item $d$ has been created (or updated so that it does not match the given query),
+  \item \textbf{False negatives}: A data item $d$ has been created (or updated so that it does not match the given query),
   but the corresponding derived state has not yet been updated to reflect this change.
   A query execution that uses the stale derived state will not include $d$ in the query response,
-  introducing a false-negative.
+  introducing a false negative.
 \end{itemize}
-This can result in false-positives and false-negatives, affecting the recall and precision of these systems.
+This can result in false positives and false negatives, affecting the recall and precision of these systems.
 
 We use the notion of \textit{freshness} to refer to the measure of consistency between base data and derived state due to
 asynchronous derived state updates.
 
 A number of metrics for measuring data freshness have been proposed in the literature \cite{bouzeghoub:datafreshness}:
 \begin{itemize}
-  \item \textbf{Currency} measures the time between a change in the source data, and that change between reflected in
+  \item \textbf{Currency} measures the time between a change in the source data and that change being reflected in
   the derived state.
   In caching systems, the terms recency \cite{bright:latencyrecency} and age \cite{cho:dbfreshness}
   have been used to describe this metric.
   \item \textbf{Obsolescence} measures the number of updates to source data since derived state was last updated.
-  Work on query systems has defined the \textit{obsolescence cost} \cite{avigdor:obsolescent}, of a query to represent
+  Work on query systems has defined the \textit{obsolescence cost} \cite{avigdor:obsolescent} of a query to represent
   the penalty of basing a query result on obsolescent materialized view.
   This cost is computed as a function of the number of insertions, updates, and deletions that cause deviation between
-  the materialized view and and the base table.
+  the materialized view and the base table.
   \item \textbf{Freshness-rate} measures the percentage of derived state entries that are up-to-date with the source
   data.
   This metric has been used to quantify the freshness of web pages \cite{labrinidis:balancingperfomancefreshness} and
@@ -631,7 +674,7 @@ The importance of availability becomes apparent when considering the negative ef
 A study on user behavior in the Web \cite{nah:waitingtime} found that users abandon a non-working hyperlink after
 5-8 seconds.
 
-Operators of global services understand that ``even slightest outage has significant financial
+Operators of global services understand that ``even the slightest outage has significant financial
 consequences and impacts customer trust'' \cite{deCandia:dynamo}.
 A 49-minute service outage in January 2013 cost Amazon an estimated \$4 million or more in lost sales
 \cite{infoworld:cloudoutages}.
@@ -643,8 +686,8 @@ Another important parameter that drives system design parameters is the system's
 Traditionally, the system is deployed on dedicated infrastructure,
 and the operational cost is the cost of owning and operating that infrastructure.
 
-More recently, the infrastructure-as-a-Service cloud computing models providing flexible, fine-grained provisioning of computing resources.
-These services provide fined-grained, ``pay-as-you-go'' pricing schemes, enable more control over the system's operational cost.
+More recently, the Infrastructure-as-a-Service cloud computing models providing flexible, fine-grained provisioning of computing resources.
+These services provide fined-grained, ``pay-as-you-go'' pricing schemes, enabling more control over the system's operational cost.
 
 A typical cloud pricing model \cite{aws:pricing} has distinct pricing for (1) computation and memory resources
 (vCPUs and memory), (2) persistent storage, and (3) data transfer.
