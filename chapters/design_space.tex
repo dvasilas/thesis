@@ -70,8 +70,8 @@ memory and storage resources required.
 
 As discussed in Section~\ref{sec:models_derived_state}, a secondary index,
 as defined in this work, can be viewed as a specific case of a materialized view.
-Because of that, throughout this chapter we consider either a secondary index or a materialized view in our analysis interchangeably.
-The results apply to both, unless otherwise specified.
+Because of that, throughout this chapter we use a secondary index as a running example
+The results also apply to materialized views.
 
 \begin{table}[H]
 \centering
@@ -189,6 +189,17 @@ To do so, we first describe a general model for the read and write path,
 independent of a specific derived state data structure.
 % \todo{NICE TO HAVE: here we need a visualization}
 
+\begin{figure}[H]
+  \centering
+    \includegraphics[width=0.5\textwidth]{./figures/design_space/read_write_path.pdf}
+  \caption{A conceptual depiction of the derived state's read and write path.}
+  \label{fig:design_space_read_write_path}
+\end{figure}
+
+\noindent
+Figure~\ref{fig:design_space_read_write_path} shows a conceptual depiction of a generic derived state structure's read
+and write path:
+
 \textbf{Read path.}
 Given a query, the read path consists of a message (the query request) from the query source (the client or a query manager component)
 to the derived state, a query processing computation (for example an index lookup) at the derived state,
@@ -203,15 +214,14 @@ the write path consists of a message between from the base data to the derived s
 and the computation required to modify the derived state accordingly.
 
 
-
 \subsection{Derived state maintenance schemes}
 \label{sec:sync_async_maintenance}
 
 % \todo{MUST HAVE: Figure~\ref{fig:maintenance_schemes} (temporary; borrowed) redo}
-In this section,
-we discuss the design decisions involved in updating derived state according to base data updates.
-We focus on updating a secondary index,
-but the results are analogous for materialized views.
+% In this section,
+% we discuss the design decisions involved in updating derived state according to base data updates.
+% We focus on updating a secondary index,
+% but the results are analogous for materialized views.
 
 Given the following update to a data item $d$:
 \[
@@ -330,35 +340,30 @@ Scaling derived state both in terms size and and read access requires partitioni
 % The same partitioning schemes can be applied to a materialized view.
 % In the rest of this section we refer to secondary indexes.
 % The same results apply to Materialized views.
-\todo{results apply to MVs}
+% \todo{results apply to MVs}
 In Chapter~\ref{ch:background}, we presented the two main index partitioning schemes.
-
 Briefly:
+
 \begin{itemize}
   \item In \textbf{partitioning by document}, index entries are co-located in the same node as the corresponding
   data items.
   \item In \textbf{partitioning by term}, a global index is distributed independently from the base data.
 \end{itemize}
 
-
 In the partitioning-by-document approach, an index lookup requires a scatter-gather operation,
 involving all index partitions (each index partition performing a lookup and combining the results).
-On the other hand, when reading from a term-partitioned index only the index partitions with index entries that are
-relevant to the query need to be contacted.
-In term-partitioned index, however, an additional round of messages is required for retrieving the base data items,
-as they may be located on different nodes that the corresponding index entries (assuming the index does not contain a
-replica of the base data)
-This is not the case for the document-partitioned index, since data items are by-design co-located with the corresponding
-index entries.
+An advantage of this approach is that updating the index upon a write to the database does not require
+communication between nodes,
+since every data item is, by design, co-located with the index entries it can belong to.
 
-An advantage of the document-partitioned index is that updating the index upon a write to the database does not require
-communication between nodes.
-On the other hand, updating a term-partitioned index may involve significant communication overhead, as an update to data
-item may involve updating index entries located on different nodes.
+In the partitioning-by-term approach, reading from the index requires contacting only index partitions with index entries
+that are relevant to the query.
+Updating a term-partitioned index, however, may require communication across nodes,
+as an update to a data item may involve updating index entries located on different nodes.
 
-These observations can be grouped under the framework of derived state's read and write path.
+In summary, using the read and write path framework:
 Partitioning-by-document guarantees local-only communication on the write path, but requires a large volume of
-communication on the read path (a scatter-gather operation involving all partitions);
+communication between nodes on the read path (a scatter-gather operation involving all partitions);
 Partitioning-by-term involves communication across nodes on the write path (a change to data item may need to be sent to
 an index partition on another node),
 but requires less communication on the read path in the general case
@@ -380,7 +385,7 @@ but requires less communication on the read path in the general case
 %     \end{minipage}
 % \end{figure}
 
-Guided by this analysis we can reason about the performance characteristics of the two approaches.
+Guided by this analysis, we can reason about the performance characteristics of the two approaches.
 
 Partitioning-by-document is more suitable at a small scale (small number of nodes),
 while partitioning-by-term becomes more suitable as the number of nodes increases,
@@ -388,14 +393,14 @@ and has been shown to provide better scalability \cite{kejriwal:slik}.
 
 In addition to the system's architecture scale,
 which approach is more suitable depends on a number of different workload characteristics.
-In \cite{dsilva:tworings}, D`silva et al. perform an extensive experimental comparison of the two approaches,
-implemented in HBase\footnote{https://hbase.apache.org/}, and show how various workload characteristic affect the index partitioning scheme's performance.
+D'silva et al. \cite{dsilva:tworings} perform an extensive experimental comparison of the two approaches,
+implemented in HBase \cite{hbase:doc}, and show how various workload characteristic affect the index partitioning scheme's performance.
 
 Key factors that affect index lookup performance are:
 \begin{itemize}
 
   \item The distribution of the values of the indexed attribute:
-  As the number of data items per index value increase, partitioning-by-document performs better.
+  As the number of data items per index value increases, partitioning-by-document performs better.
   This is because of the additional round trip required to retrieve the base data items:
   as the number of data items per index value increases, a term-partitioned index is likely to have to contact
   more and more remote nodes, while in a document-partitioned index data items are always co-located on the same node as
@@ -414,12 +419,12 @@ Key factors that affect index lookup performance are:
 
 \end{itemize}
 
-In addition, this work assumes synchronous index maintenance, and evaluates the impact of the two approach to write
+Additionally, this work assumes synchronous index maintenance, and evaluates the impact of the two approach to write
 operations.
 The document-partitioned index generally outperforms the term-partitioned for writes,
 incurring less overhead to write latency and providing better scalability.
 
-From the above analysis it is evident that neither of the two approaches is suitable for all needs.
+From the above analysis, it is evident that neither of the two approaches is suitable for all needs.
 The choice of which approach to use should be guided by factors including the scale of the system,
 the properties of the dataset (distribution of indexed values over the data items),
 and the characteristics of the workload (query/write ratio, concurrency, query selectivity).
@@ -442,16 +447,16 @@ More specifically:
 \end{itemize}
 
 Clearly, the decision of which index partitioning approach to be used needs be taken in a case-by-case basis.
-Database systems should to support both index partitioning schemes, and expose the partitioning scheme selection as a
-configuration parameter at the time of creating an index.
+Database systems should support both index partitioning schemes, and expose the partitioning scheme selection as a
+configuration parameter.
 We are not aware of any database system that provides this functionality.
-In existing systems, this design decision is made at design time, and every index uses the same partitioning scheme.
-\cite{kejriwal:slik, tan:diffindex, riakv:secondaryindexes, cassandra:secondaryindexing}
-In Section~\ref{sec:cs_index_partitioning} we demonstrate how a distributed database can provide both index partitioning
-schemes.
+In existing database systems,
+the query processing system supports a single in index partitioning scheme (chosen by the database architects) \cite{kejriwal:slik, tan:diffindex, riakv:secondaryindexes, cassandra:secondaryindexing};
+every index is partitioned using the same scheme.
+In Section~\ref{sec:cs_index_partitioning} we present an approach for making the index partitioning scheme flexible,
+and exposing the choice of partitioning scheme as a configuration parameter to the application developer.
 
-
-\subsection{Derived state topology patterns}
+\subsection{Derived state placement}
 \label{sec:topology_patterns}
 % \todo{MUST HAVE: not a good title: should include the term ``placement''}
 
@@ -462,8 +467,8 @@ we have consider a case in which base data, derived state, and clients are local
 and, therefore, that communication latency among them is not significant.
 However, in modern cloud-scale services this is often not the case:
 Users are typically spread across multiple geographic locations;
-Database systems distribute or replicate data across geographically distributed data centers,
-in order to reduce latencies and improve availability.
+Database systems distribute or replicate data across geographically distributed data centers
+in order to minimize response time and to improve fault-tolerance.
 
 Long-distance inter- data center network links exhibit latencies in the order of tens to hundreds of milliseconds \cite{pbailis:hats}.
 This is an order of magnitude higher than latencies within a data center,
@@ -476,70 +481,91 @@ Performing inter- data center communication in the read or the write path,
 incurs significant overhead.
 Therefore, in a geo-distributed setting,
 these design decisions play a major role in the query processing system's behavior.
-We refer to these design choices as \textit{topology patterns}.
+% We refer to these design choices as \textit{topology patterns}.
 
 Design choices related to inter- data center communication exacerbate the trade-offs presented in the previous sections,
-but also pose additional trade-offs related to derived state replication.
-
-In this section, we discuss a number of scenarios that involve geo-distribution, and the associated derived state
-topology patterns.
-Throughout the following sections we consider as an example the design choices involved in maintaining a secondary index,
-however the analysis can also be applied to materialized views.
+but also pose additional trade-offs related to the replication of derived state.
+In this section, we discuss a number of scenarios that involve geo-distribution and the associated derived state placement approaches.
+We will use a secondary index as our running example; however, the analysis also applies to materialized views.
 
 \subsubsection{Geo-replication}
-Cloud-scale database systems rely on geo-distribution to minimize user-perceived latency and improve fault-tolerance.
+% Cloud-scale database systems rely on geo-distribution to minimize response time and to improve fault-tolerance.
 Given a database that is replicated across multiple data centers, we consider the design choices for a
-query engine architecture that maintains materialized views.
+query engine architecture that maintains a secondary index.
 
-One approach is to maintain a replica of the materialized view on each data center.
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{./figures/design_space/index_full_replication.pdf}
+    \caption{}
+    \label{fig:index_full_replication}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{./figures/design_space/index_partial_replication.pdf}
+    \caption{}
+    \label{fig:index_partial_replication}
+  \end{subfigure}
+  \caption{Index placement schemes over a geo-replicated corpus.}
+  \label{fig:index_placement_geo_replication}
+\end{figure}
+
+
+One approach is to maintain a replica of the index on each data center (Figure~\ref{fig:index_full_replication}).
 With this approach, both the read and write path involve only intra- data center communication:
-Queries can be served from the materialized view at the closest date center, without requiring communication with
-remote data centers;
-View maintenance is also local, since the entire dataset is present on each data center.
-The downside of this approach is the storage overhead associated with maintaining multiple replicas of the materialized
-view.
+Queries can be served from the index at the closest date center, without requiring communication with
+remote data centers.
+Index maintenance is also local, since the entire dataset is present on each data center.
+The downside of this approach is the additional memory and storage resources required for maintaining index replicas.
 
-An alternative approach is to place materialized view replicas on a subset of the data centers.
-This reduces the storage overhead, but means that a query sent to a data center without a materialized view
-either needs to be forwarded to another data center, or be processed without the use of the materialized view,
+An alternative approach is to place index replicas on a subset of the data centers (Figure~\ref{fig:index_partial_replication}).
+This reduces the storage overhead, but means that a query sent to a data center without an index
+either needs to be forwarded to another data center, or be processed without using the index,
 both of which result in slower query processing.
-This approach can be suitable for cases in which some data centers are queried more often than others.
-Moreover, this approach can be supplemented with the use of caches in data centers without materialized
-views.
+This approach is more suitable for cases in which some data centers are receive more queries than others.
+Moreover, this approach can be supplemented with the use of caches in data centers without index replicas.
 
-Furthermore, an additional consideration related to derived state maintenance in AP geo-replication
-is the presence of concurrent conflicting updates.
-Highly-available designs use mechanisms for ensuring that replicas eventually converge to the same state despite
-conflicting updates, such as conflict-free data types \cite{Shapiro2011CRDTs}.
-In some cases, these mechanisms modify the effect of an already processed operation when a concurrent conflicting operation
-is received later by the replica.
-As an example, we can consider the case of an add-wins set.
-A replica of the set receives an operation the removes an element from the set, updates its state,
-and modifies a materialized view accordingly.
-Later, the replica receives an operation that adds the same element in the set, and determines that it was concurrent with the
-remove operation.
-Based on the conflict resolution rule (add-wins) the element must appear in the set.
-The replica's state must be updated, and the result must be reflected in the materialized view.
-Conversely, a remove-wins set in the same scenario needs to update the materialized view with the reverse result.
-Therefore, in AP designs, derived state maintenance algorithms need to take into account concurrent conflicting updates,
-and conflict resolution policies, in order to avoid divergence between base data and derived state.
+% This architecture poses a design choice which
+% from an impossibility property, known as the [60].
+% In addition, strongly-consistent designs are susceptible to downtimes due to network partitions. In a highly-available design, replicas synchronize in the background, out of the critical path of write operations. This ensures low latency and availability under network par- titions, as each replica serves write operations locally. Nevertheless, this allows replicas to accept concurrent conflicting updates and temporary diverge.
 
 \subsubsection{Geo-partitioning}
 A different geo-distribution strategy is geo-partitioning.
 In geo-partitioning, data is partitioned across data centers, and partitions are placed on data centers according to
 their access patterns.
-As a result, latency read and write access to data that belong to a local partition is low.
-CockroachDB allows developers to partition data across data centers with row-level granularity
+As a result, read and write access to data that belong to a local partition is low.
+CockroachDB allows developers to partition data across data centers with row granularity
 \cite{cockroachdb:geopartitioning}.
 
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{./figures/design_space/geo_paritioning_local_index.pdf}
+    \caption{}
+    \label{fig:geo_paritioning_local_index}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{./figures/design_space/geo_paritioning_global_indexes.pdf}
+    \caption{}
+    \label{fig:geo_paritioning_global_indexes}
+  \end{subfigure}
+  \caption{Index placement schemes over a geo-partitioned corpus.}
+  \label{fig:index_placement_geo_partitioning}
+\end{figure}
+
 One approach for maintaining a secondary index over geo-partitioned data is to use the partitioning-by-document scheme:
-each data center maintains a secondary index covering only the data items in local partitions.
+each data center maintains a secondary index covering the local data items (Figure~\ref{fig:geo_paritioning_local_index}).
 This approach has the same implication as document-based partitioning:
 the write path only requires intra- data center communication, since the index is co-located with the base data;
 the read path needs to contact every index partition and gather results, which requires inter- data center
 communication.
 
-A different approach is to maintain a global secondary index on each data center.
+A different approach is to maintain a global secondary index on each data center (Figure~\ref{fig:geo_paritioning_global_indexes}).
 In that case, the index lookups (read path) can always be served on the local data center.
 However, each change to the base data need to be propagated to all data centers (write path).
 The downside of this approach is that it significantly increases the storage cost.

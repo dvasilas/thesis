@@ -617,15 +617,15 @@ Documents can be more or less relevant to a given query.
 Information retrieval systems assign a \textit{score} to each document for a given query.
 In the scope of this work, we consider relevance as a binary metric:
 A data item is either relevant (satisfies the given query) or it is not.
-However, as described in Section \ref{subsec:query_prcessing_tier} \todo{fix backref}, query results
-can, similarly to information retrieval, include non-relevant results (false positives),
+However, as described in Section \ref{sec:models_freshness},
+query results can, similarly to information retrieval, include non-relevant results (false positives),
 or not include relevant results (false negatives).
 Therefore, we argue that the recall and precision are meaningful metrics for evaluating the effectiveness of the query processing tier.
 
 \subsubsection{Freshness}
 \label{sec:models_freshness}
-As mentioned in Section \ref{subsec:query_prcessing_tier} \todo{fix backref}, inconsistencies between base data and derived state can lower query
-processing effectiveness by introduction false positives and false negatives.
+% As mentioned in Section \ref{subsec:query_prcessing_tier} \todo{fix backref}, inconsistencies between base data and derived state can lower query
+% processing effectiveness by introduction false positives and false negatives.
 
 Traditional database systems often keep derived state consistent with base data by updating both in a single transaction.
 For example, when executing an \texttt{UPDATE} statement, MariaDB updates a table's secondary indexes in the same transaction
@@ -635,16 +635,18 @@ qi:secondaryindexconsistency, shukla:schemaagnostic} derived state can become st
 
 Stale derived state may introduce false positives and false negatives to query results:
 \begin{itemize}
-  \item \textbf{False positives}: A data item $d$ has been deleted (or updated so that it matches the given query \todo{inverted with negatives}),
+  \item \textbf{False positives}: A data item $d$ that satisfied a query $q$ has been deleted
+  (or updated so that it does not satisfy $q$),
   but the corresponding derived state has not yet been updated to reflect this change.
-  A query execution that uses the stale derived state will include $d$ in the query response, introducing a false positive.
+  Serving $q$ by reading from the stale derived state, includes $d$ in response of $q$, introducing a false positive.
 
-  \item \textbf{False negatives}: A data item $d$ has been created (or updated so that it does not match the given query),
+  \item \textbf{False negatives}: A data item $d$ that satisfied a query $q$ has been created
+  (or updated so that it satisfies $q$),
   but the corresponding derived state has not yet been updated to reflect this change.
-  A query execution that uses the stale derived state will not include $d$ in the query response,
-  introducing a false negative.
+  Serving $q$ by reading from the stale derived state, does not include $d$ in response of $q$, introducing a false negative.
 \end{itemize}
-This can result in false positives and false negatives, affecting the recall and precision of these systems.
+
+False positives and false negatives affecting the recall and precision of query processing.
 
 We use the notion of \textit{freshness} to refer to the measure of consistency between base data and derived state due to
 asynchronous derived state updates.
