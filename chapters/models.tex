@@ -482,49 +482,49 @@ GROUP BY customer_id
 \subsection{Derived state}
 \label{sec:models_derived_state}
 The principal functionality of the query processing tier is to provide the $Query$ operation:
-it is responsible evaluating queries on secondary attributes over the corpus,
-and returning the corresponding results.
-In this work, we focus on the techniques that the query processing tier employs for accelerating query processing
-performance.
+it is responsible evaluating queries on secondary attributes over the corpus and returning the corresponding results.
+In this work, we focus on the techniques that the query processing tier employs to accelerate query processing:
 In particular, we consider the following techniques:
 \begin{itemize}
   \item \textbf{Caching:}
   In this work, we use the term cache to refer to an in-memory data structure that stores the results
   of earlier evaluated queries, so that future queries can be served faster.
-  The query result caches that we consider in this work use a \textbf{write-around} writing policy:
-  Write operations write to the data storage tier;
+  The query result cache that we consider in this work use a \textbf{write-around} writing policy:
+  Write operations write to the data storage tier, and,
   for each write operation, the data storage tier sends an \textit{update notification} to the query processing tier.
-  An update notification is a message that encodes the changes in the corpus carried by a write operation.
-  Given an update notification, a query result cache uses on of the following \textit{consistency policies}:
+  An update notification is a message that encodes the changes in the corpus carried out by a write operation.
+  Given an update notification, a query result cache performs one of the following,
+  according to its \textit{consistency policy}:
   \begin{itemize}
-    \item Performs no actions.
-    \item Invalidates the cache entries affected by the changes to the corpus.
-    \item Updates the cache entries so that they reflect the changes to the corpus.
+    \item Performs no action.
+    \item Invalidates the cache entries affected by the changes in the corpus.
+    \item Updates the cache entries according to the changes in the corpus.
   \end{itemize}
   \item \textbf{Secondary indexing:}
   When no index is used, every lookup on a secondary attribute requires a full table scan (iterating over every data item
-  in a corpus table in order to determine which one satisfy the given secondary attribute predicate).
-  A secondary index is a data structure that accelerate this type of lookup:
+  in a corpus table in order to determine which ones satisfy the given secondary attribute predicate).
+  A secondary index is a data structure that accelerates this type of lookup:
   Creating a secondary index on an attribute,
-  enables the system to read the set of item that have a specific value (or interval of values) from the index,
+  enables the system to retrieve the set of data items that have a specific value (or interval of values) from the index,
   without the need to perform a scan.
   The query processing tier updates secondary indexes using the mechanism of update notifications:
-  For each write operation, the system updates secondary index entries so that they reflect the changes to the corpus.
+  For each write operation, the system updates secondary index entries so that they reflect the changes in the corpus.
   \item \textbf{Materialized views:}
-  A materialized view is a data structure that \textit{eagerly pre-computes} and stores the results of a specified query
+  A materialized view is a data structure that \textit{eagerly pre-computes} and stores the results of a specified query,
   at write time.
-  The system can then serve that query by directly reading the results from the materialized view,
+  The system can then serve that query by directly retrieving the results from the materialized view,
   which is less expensive than evaluating the query over the corpus.
-  Similarly to the case of a secondary index, for each operation, the query processing tier receives an update notification,
+  Similarly to the secondary index, for each write operation, the query processing tier receives an update notification,
   and updates the materialized view accordingly.
 \end{itemize}
 
-Given the above definitions,
+Given these definitions,
 a secondary index can be viewed as a specific case of a materialized view.
-In particular, a secondary index is equivalent to a materialized view for the query $Attribute~=~?$ .
+In particular, a secondary index is equivalent to a materialized view for the query $Attribute~=~?$.
 
-In general, we refer to the data structures maintained with the purpose of accelerating query processing as \textit{derived state}.
+In general, we refer to these data structures as \textit{derived state}.
 Derived state, in the general case, is obtained by performing a computation over the corpus.
+
 
 % When base data changes, the query system need to update derived state to reflect theses changes.
 % After a base data updates, indexes and materialized views need to be updated to reflect the new state of the corpus,
