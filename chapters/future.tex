@@ -12,7 +12,7 @@ An important direction for future work is to study query processing state placem
 This can be expressed by the following problem statement:
 Given a QPU graph (or more generally, a directed acyclic graph of stateful and stateless query processing operators),
 a collection of processing nodes available for placing operators, organized in clusters, data centers and so on,
-and a description of the placement of base data on processing nodes,
+and a description of the placement of corpus data on processing nodes,
 how can we compute an assignment of operators to processing nodes that optimally satisfies an optimization criterion.
 This is a challenging problem because the inherent tensions between different optimization criteria mean that
 optimizing for a given metrics incurs penalties to other metrics.
@@ -133,7 +133,7 @@ An interface for iterating over the corpus data (list), and one for subscribing 
 corpus data (subscribe).
 The list interface is used for evaluating queries over the corpus by executing query processing operators over data streams
 created by iterating over the corpus;
-the subscribe interface is used for keeping derived state up-to-date with changes to the base data.
+the subscribe interface is used for keeping derived state up-to-date with changes to the corpus.
 
 While it is realistic to assume that most storage systems provide a list interface,
 or interfaces that can be composed to achieve an equivalent functionality,
@@ -174,4 +174,4 @@ The query processing unit design already supports periodic rebuilding of derived
 % The replica's state must be updated, and the result must be reflected in the materialized view.
 % Conversely, a remove-wins set in the same scenario needs to update the materialized view with the reverse result.
 % Therefore, in AP designs, derived state maintenance algorithms need to take into account concurrent conflicting updates,
-% and conflict resolution policies, in order to avoid divergence between base data and derived state.
+% and conflict resolution policies, in order to avoid divergence between corpus and derived state.

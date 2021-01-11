@@ -590,7 +590,7 @@ A global index, however, needs to be partitioned itself, as storing it on one no
 
 To partition a global index, the indexed terms can be used as the partition key (thus the term \textit{term-partitioned}
 index).
-Same as in base data partitioning, the index partitioning scheme can use the terms themselves, which can be useful for
+Same as in corpus partitioning, the index partitioning scheme can use the terms themselves, which can be useful for
 range scans, or a the terms' hashes, which results to a more even load distribution.
 
 The advantage of a term-partitioned index is that it can make reads more efficient:

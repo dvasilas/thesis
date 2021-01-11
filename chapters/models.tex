@@ -88,13 +88,13 @@ to refer to the entire collection of data stored by the data storage tier.
 
 We model the storage systems that can be used to implement the storage tier as distributed, replicated partitioned systems \cite{agrawal:taxonomy}.
 % A Taxonomy of Partitioned Replicated Cloud-based Database Systems
-In order to improve scalability, the dataset is divided into non-overlapping parts (usually call partitions or shards),
+In order to improve scalability, the corpus is divided into non-overlapping parts (usually call partitions or shards),
 so that each partition can be managed by a separate system node.
 Moreover, to improve availability, each partition is replicated.
-We consider both full replication, in which each replica is a complete copy of the dataset,
-and partial replication, in which a replica might be a copy of a subset of the dataset.
+We consider both full replication, in which each replica is a complete copy of the corpus,
+and partial replication, in which a replica might be a copy of a subset of the corpus.
 
-Finally, we consider federated systems that provide a unified namespace over multiple independent datasets stored in different storage systems.
+Finally, we consider federated systems that provide a unified namespace over multiple independent corpora stored in different storage systems.
 
 We model the infrastructure on which the data storage tier runs as a collection of \textit{sites}.
 A site is a group of nodes (servers, user devices) with the following characteristics:
@@ -627,11 +627,11 @@ Therefore, we argue that the recall and precision are meaningful metrics for eva
 % As mentioned in Section \ref{subsec:query_prcessing_tier} \todo{fix backref}, inconsistencies between base data and derived state can lower query
 % processing effectiveness by introduction false positives and false negatives.
 
-Traditional database systems often keep derived state consistent with base data by updating both in a single transaction.
+Traditional database systems often keep derived state consistent with the corpus by updating both in a single transaction.
 For example, when executing an \texttt{UPDATE} statement, MariaDB updates a table's secondary indexes in the same transaction
 as the table rows \cite{innodb:writepaths}.
 However, in systems that implement asynchronous (lazy) derived state maintenance policies \cite{tan:diffindex,
-qi:secondaryindexconsistency, shukla:schemaagnostic} derived state can become stale with respect to base data.
+qi:secondaryindexconsistency, shukla:schemaagnostic} derived state can become stale with respect to corpus.
 
 Stale derived state may introduce false positives and false negatives to query results:
 \begin{itemize}
@@ -648,7 +648,7 @@ Stale derived state may introduce false positives and false negatives to query r
 
 False positives and false negatives affecting the recall and precision of query processing.
 
-We use the notion of \textit{freshness} to refer to the measure of consistency between base data and derived state due to
+We use the notion of \textit{freshness} to refer to the measure of consistency between corpus and derived state due to
 asynchronous derived state updates.
 
 A number of metrics for measuring data freshness have been proposed in the literature \cite{bouzeghoub:datafreshness}:

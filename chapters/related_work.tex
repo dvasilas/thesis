@@ -65,8 +65,8 @@ and old index entries are removed asynchronously, after updates have been applie
 This ensures that the lifespan of an index entry spans that of the corresponding data item,
 and thus guarantees that if a data item contains a secondary attribute value, then an index lookup for that value will
 return the data item.
-Second, the query engine removes false positives by verifying index lookup results with the corresponding base data items.
-In other words, base data is treated as the ground truth and index entries as hints.
+Second, the query engine removes false positives by verifying index lookup results with the corresponding corpus data items.
+In other words, corpus data is treated as the ground truth and index entries as hints.
 
 Moreover, SLIK performs long-running bulk operations such as index creation, deletion and migration in the background,
 in order to avoid blocking blocking normal operations.
@@ -293,7 +293,7 @@ and local documents are more relevant for queries originating from the same regi
 
 This problem is similar to the problem of multi-cloud federated metadata search discussed in Section~\ref{sec:zenko}.
 Similarly to the multi-site web search problem,
-in multi-cloud metadata search a corpus is partitioned into disjoint datasets, each placed on a geographically distant
+in multi-cloud metadata search a corpus is partitioned into disjoint parts, each placed on a geographically distant
 data center.
 Thanks to its flexibility, our architecture design supports all three types of search engine architectures discussed in
 \cite{cambazoglu:multisitequantifying}.
@@ -485,10 +485,10 @@ Volley makes placement decisions based on request logs submitted by applications
 The difference between the placement of application state and derived state used for query processing (indexes, materialized)
 views, is that efficient placement decisions about application state result in reduced latency for both reads and writes
 to the state.
-However, in the system model considered in this work, base data has a static placement,
+However, in the system model considered in this work, corpus data has a static placement,
 while derive state can be flexibly placed across the system.
 This often results to trade-offs between read and write operations,
-as derived state receives read requests from the clients, and update notifications from the base data.
+as derived state receives read requests from the clients, and update notifications from the corpus.
 
 % update propagation across different edges and processing at different vertices can happen in parallel.
 % Therefore, data-flow processing is well-suited to scaling across multiple CPU cores and servers.
@@ -568,6 +568,6 @@ Noria employs partially-stateful dataflow to support partially materialized view
 using updates from a database system.
 
 The QPU computation model also makes use of dataflow computations for maintaining derived state
-over base data.
+over corpus data.
 An important difference from general dataflow engines is that the QPU model is designed for executing
 query processing computations rather than arbitrary distributed computations.

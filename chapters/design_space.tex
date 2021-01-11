@@ -167,7 +167,7 @@ that employs derived state for accelerating query processing:
 
 \begin{itemize}
 
-  \item Given a change to the base data, when to update the derived state:
+  \item Given a change to the corpus, when to update the derived state:
   synchronously in the same transaction, or asynchronously (\S\ref{sec:sync_async_maintenance})?
 
   \item How to distribute the derived state across the system's nodes (\S\ref{sec:index_partitioning_design_space})?
@@ -447,7 +447,7 @@ The evaluation results show that:
 
 From these results, it is evident that neither of the two approaches is suitable for all needs.
 The choice of which approach to use should be guided by factors including the scale of the system,
-the properties of the dataset (distribution of indexed values over the data items),
+the properties of the corpus (distribution of indexed values over the data items),
 and the characteristics of the workload (query/write ratio, concurrency, query selectivity).
 
 Clearly, the decision of which index partitioning approach to be used needs be taken in a case-by-case basis.
@@ -526,7 +526,7 @@ One approach is to maintain a replica of the index on each data center (Figure~\
 With this approach, both the read and write path involve only intra- data center communication:
 Queries can be served from the index at the closest date center, without requiring communication with
 remote data centers.
-Index maintenance is also local, since the entire dataset is present on each data center.
+Index maintenance is also local, since the entire corpus is present on each data center.
 The downside of this approach is the additional memory and storage resources required for maintaining index replicas.
 
 An alternative approach is to place index replicas on a subset of the data centers.
@@ -570,12 +570,12 @@ CockroachDB for example, allows developers to partition data across data centers
 One approach for maintaining a secondary index over geo-partitioned data is to use the partitioning-by-document scheme:
 each data center maintains a secondary index covering the local data items (Figure~\ref{fig:geo_paritioning_local_index}).
 This approach has the same implications as document-based partitioning:
-the write path requires only intra- data center communication, since the index is co-located with the base data;
+the write path requires only intra- data center communication, since the index is co-located with the corresponding data items;
 the read path needs to contact the index partition on every data center, and gather the results.
 
 A different approach is to maintain a global secondary index on each data center (Figure~\ref{fig:geo_paritioning_global_indexes}).
 In that case, the index lookups (read path) can always be served locally.
-However, each change to the base data needs to be propagated to all data centers (write path).
+However, each change to the corpus needs to be propagated to all data centers (write path).
 The downside of this approach is that it significantly increases the memory and storage cost required for maintaining the
 index replicas.
 
@@ -589,7 +589,7 @@ cloud provider, take advantage of diverse storage and computing services, and im
 The advent of data distributed across multiple independent storage systems has created the need for unified access and
 federated search across platforms.
 The problem of federated query processing can be viewed as a generalization of the geo-partitioning case:
-the dataset at each platform can be seen as a partition of the logical global dataset.
+the corpus at each platform can be seen as a partition of the logical global corpus.
 For simplicity, we assume that a multi-cloud platform consists of multiple, independent instances of a common database
 system.
 Under there assumptions, the same design decisions and trade-offs as in the case of geo-partitioning apply to query
@@ -612,17 +612,17 @@ clients play a major role in the performance of geo-distributed query processing
   on the read and write path.
 
   \item The choice of derived state maintenance scheme controls the impact of work on the write path:
-  Synchronous maintenance keeps the derived state up-to-date with the base data,
+  Synchronous maintenance keeps derived state up-to-date with the corpus,
   but incurs overhead to the latency of write operations.
   On the other hand, asynchronous maintenance schemes move some of the work on the write path in the background.
   This reduces the overhead to write operations, but also means that derived state is not always up-to-date with the base
   data.
-  Because serving queries from derived state that is stale relative to the base data may introduce false positive and
+  Because serving queries from derived state that is stale relative to the corpus may introduce false positives and
   false negatives,
   design decisions on derived state maintenance pose a trade-off between the overhead to write operations
   and the relevance of query results.
 
-  \item The derived state partitioning scheme determines the communication pattern between base data and derived state
+  \item The derived state partitioning scheme determines the communication patterns between corpus and derived state
   on the write path, and between derived state and client on the read path.
   More specifically, partitioning-by-document ensures that no cross-node communication is needed on the write path,
   but requires a scatter/gather operation across all state partitions on the read path.
@@ -631,8 +631,9 @@ clients play a major role in the performance of geo-distributed query processing
   Therefore, the choice of partitioning scheme poses a trade-off in the type (intra-node or cross-node) and volume
   of communication on the read versus the write path.
 
-  \item When base data and client are distributed across different geographic locations,
-  the choice of topology pattern affects the communication latency (intra versus inter data center communication).
+  \item When corpus and clients are distributed across different geographic locations,
+  derived state placement affects communication latency (intra versus inter data center communication)
+  between derived state and corpus and between derived state and clients.
   This creates a number of trade-offs, that result from the basic trade-off of requiring intra data center communication
   on the read versus the write path.
   These trade-offs include:

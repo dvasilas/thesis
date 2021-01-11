@@ -394,7 +394,7 @@ Because of the consistency guarantees of MariaDB,
 the vote count of a story, is always up-to-date with the state of the $votes$ table.
 However, maintaining a materialized view placed at a remote site synchronously adds prohibitive overhead to write operations.
 Because of that the QPU graph in this evaluation maintains the materialized view asynchronously, and, as a result,
-its state might be stale relative to the state of the base data.
+its state might be stale relative to the state of the corpus.
 
 In this section, we present, for the experiments describe in the previous section,
 the measurements for the freshness metrics presented in Section~\ref{sec:eval_setup} (update latency and returned version).
@@ -647,13 +647,13 @@ significant data transfer costs.
 The aim of the experimental evaluation presented in this chapter is to validate our analysis of the trade-offs
 involved in the placement of derived state,
 and to evaluate the effectiveness of Proteus in allowing applications to navigate these trade-offs.
-In particular, we focus on the decision of placing materialized views close to the client or close to the base data.
+In particular, we focus on the decision of placing materialized views close to the client or close to the corpus.
 
 The evaluation confirms our analysis.
 It demonstrates that there are benefits and drawbacks to both placement options:
 Placing materialized views close to the client achieves improvements in response time and throughput,
 at the expense of freshness.
-Conversely, placing materialized views close to the base data ensures fresh query results,
+Conversely, placing materialized views close to the corpus ensures fresh query results,
 but brings limitations to response time and throughput.
 This validates the central argument of this thesis:
 No single placement decision is optimal for all needs.

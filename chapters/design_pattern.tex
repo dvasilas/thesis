@@ -1900,7 +1900,7 @@ new QPU graph.
 The query engine architecture presented maintains derived state, including indexes and materialized views,
 in a system that is separate to the data storage tier.
 This creates two considerations about the consistency of query results:
-the consistency between base data and derived state,
+the consistency between corpus and derived state,
 and the consistency between different indexes or materialized views, or shards of an index/view,
 maintained by the query engines.
 We discuss former in this section, and outline the latter as a direction for future work (\S\ref{sec:future_consistent_snapshots}).
