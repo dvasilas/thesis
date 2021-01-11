@@ -149,29 +149,31 @@ derived state QPUs would not support incremental updates.
 Instead, those QPUs would need to periodically rebuild their state by scanning the corpus, using the list interface.
 The query processing unit design already supports periodic rebuilding of derived state.
 
-% \subsection{Data storage tier APIs}
-% An additional consideration stems from the CAP impossibility theorem \cite{brewer:cap}.
-% In the face of network partitions between data centers,
-% geo-replicated databases must choose between strongly consistent (CP) and highly-available (AP) designs.
-% In a strongly-consistent design, corpus replicas are kept up-to-date at all times.
-% This provides the abstraction of a single replica system which simplifies application logic, but exposes users to high
-% write response time due to the need for inter- data center communication between replicas in the critical path of each write operation.
-% In a highly-available design, each corpus replica serves write operations locally, and replicas synchronize in the background, out of the critical path of write operations.
-% This ensures low write response time and availability under network partitions,
-% but causes replicas to accept concurrent conflicting updates and to temporary diverge.
-% Highly-available designs use mechanisms for ensuring that replicas eventually converge to the same state despite
-% conflicting updates, such as conflict-free data types \cite{Shapiro2011CRDTs}.
-% In some cases, these mechanisms modify the effect of an already processed operation when a concurrent conflicting operation
-% is received later by the replica.
+\subsection{Derived state in geo-replicated databases}
+A consideration related to maintaining derived state in geo-replicated databases stems from the CAP impossibility theorem \cite{brewer:cap}.
+In the face of network partitions between data centers,
+geo-replicated databases must choose between strongly consistent and highly-available designs.
+In a strongly-consistent design, corpus replicas are kept up to date at all times.
+This provides the abstraction of a single replica system, which simplifies application logic, but exposes users to high
+write response time due to the need for inter- data center communication between replicas in the critical path of each write operation.
+In a highly-available design, a corpus replica serves write operations locally
+and synchronizes with other replicas in the background, out of the critical path of write operations.
+This ensures low write response time and availability under network partitions,
+but causes replicas to accept concurrent conflicting updates and to temporarily diverge.
+Highly-available designs use mechanisms for ensuring that replicas eventually converge to the same state despite
+conflicting updates, such as conflict-free data types \cite{Shapiro2011CRDTs}.
+In some cases, these mechanisms modify the effect of an already processed operation when a concurrent conflicting operation
+is received later by the replica.
 
-% As an example, we can consider the case of the add-wins set.
-% The
-% A replica of the set receives an operation the removes an element from the set, updates its state,
-% and modifies a secondary index accordingly.
-% Later, the replica receives an operation that adds the same element in the set, and determines that it was concurrent with the
-% remove operation.
-% Based on the conflict resolution rule (add-wins) the element must appear in the set.
-% The replica's state must be updated, and the result must be reflected in the materialized view.
-% Conversely, a remove-wins set in the same scenario needs to update the materialized view with the reverse result.
-% Therefore, in AP designs, derived state maintenance algorithms need to take into account concurrent conflicting updates,
-% and conflict resolution policies, in order to avoid divergence between corpus and derived state.
+As an example, we can consider the case of an add-wins set \cite{rep:syn:sh138}.
+A replica of the set receives an operation $o_r$ that removes an element $e$ from the set, updates its state,
+and modifies a secondary index accordingly.
+Later, the replica receives an operation $o_a$ that adds $e$ to the set,
+and determines that $o_r$ was concurrent with $o_r$.
+Based on the conflict resolution rule (add-wins) after both operations have been applied, the element must appear in the set.
+The same result must be reflected in the index.
+In contrast, in the case of a remove-wins set, given the same operations,
+the system needs to update the index with the reverse result.
+Therefore, in highly-available designs, derived state maintenance algorithms need to take into account concurrent conflicting updates,
+and conflict resolution policies, in order to avoid divergence between corpus and derived state.
+Proteus does not currently provide support for this aspect of derived state maintenance.
