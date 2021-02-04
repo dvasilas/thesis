@@ -2,7 +2,11 @@ In this chapter, we aim to validate our analysis of the trade-offs involved in q
 and to evaluate the effectiveness of our design and prototype implementation in providing an effective mechanism to applications
 for navigating these trade-offs.
 
-The aim of this evaluation is to answer the following questions:
+This evaluation consists of two parts.
+The first part (\S\ref{sec:eval_1}) is based on the case study of a read-heavy web application, presented in Section~\ref{sec:lobsters}.
+It focused on the placement of a materialized view,
+and examines two placement options: in the data center, close to the corpus, or at the edge close to the clients.
+The aim of the first part is to answer the following questions:
 
 \begin{itemize}
 
@@ -22,10 +26,25 @@ The aim of this evaluation is to answer the following questions:
 
 \end{itemize}
 
-\section{Experimental scenario}
+The second part (\S\ref{sec:eval_2}) of the evaluation is based on the case study of federated query processing on a multi-cloud
+corpus, presented in Section~\ref{sec:zenko}.
+In this part we examine three partitioning and placement configurations for a multi-cloud secondary index.
+We compare the three configurations under different types of workloads, and evaluate three metrics:
+query processing performance, freshness and data transfer costs.
+
+The aim of the second part is to (1) demonstrate the expressiveness of the QPU approach,
+by deploying and comparing three query engine configurations across 3 data centers without any changes to the client application and the storage tier,
+and (2) validate that by controlling the configuration of QPU-based query engines,
+applications can navigate the trade-offs of geo-distributed query processing and optimize for different criteria according to their needs.
+
+
+\section{Placing materialized views at the edge}
+\label{sec:eval_1}
+
+\subsection{Experimental scenario}
 \label{sec:eval_scenario}
 
-The evaluation in this chapter is based on the case study presented in Section~\ref{sec:lobsters},
+The evaluation in this section is based on the case study presented in Section~\ref{sec:lobsters},
 which describes the Lobsters \cite{lobste:rs} web application.
 We choose this application for the following reasons:
 \begin{itemize}
@@ -159,7 +178,7 @@ the client site.
 We evaluate the effects and trade-offs of materialized view placement by comparing these two placement schemes.
 
 
-\section{Experimental Setup}
+\subsection{Experimental Setup}
 \label{sec:eval_setup}
 
 While the actual Lobsters Ruby-on-Rails application is open-source,
@@ -275,7 +294,7 @@ Experiments run for 5 minutes unless otherwise specified, and we start taking me
 Repeated runs have shown that results are stable and consistent across runs.
 
 
-\section{Query processing performance}
+\subsection{Query processing performance}
 \label{sec:eval_query_processing_perf}
 
 \begin{figure}[H]
@@ -340,7 +359,7 @@ In reality, all systems' plots have a ``hockey stick'' shape:
 latency remains relatively low until a point in which the system fails to keep up with the offered load.
 After that point, the system cannot achieve additional throughput, and response time increases.
 
-Materialized-view-internal scales up to 9800 requests/seconds,
+Materialized-view-internal scales up to 9800 requests/second,
 outperforming both Proteus deployments.
 This deployment is intended to evaluate the performance of the core functionality of the Materialized view QPU,
 by directly translating front page and vote operations to accesses to the QPU's state using a thread pool,
@@ -382,14 +401,14 @@ by removing costly round-trip communication across sites, and achieves scalabili
 This results is expected, and shows the benefits that can be achieved by enabling this placement.
 
 
-\section{Freshness}
+\subsection{Freshness}
 \label{sec:eval_freshness}
 
-\subsection{Freshness vs Throughput}
+\subsubsection{Freshness vs Throughput}
 \label{sec:eval_freshness_throughput}
 
-In the real Lobsters application (and the Baseline/remote deployment),
-the vote count is maintained is maintained in the $stories$ table.
+In the actual Lobsters application (and the Baseline/remote deployment),
+the vote count is maintained in the $stories$ table.
 Because of the consistency guarantees of MariaDB,
 the vote count of a story, is always up-to-date with the state of the $votes$ table.
 However, maintaining a materialized view placed at a remote site synchronously adds prohibitive overhead to write operations.
@@ -519,7 +538,7 @@ most queries observe tha latest materialized view entries.
 \begin{figure}[H]
 \centering
   \includegraphics[width=0.7\textwidth]{./figures/evaluation/readV_cdf_throughput.png}
-  \caption{CDF of returned version at 4250 requests/s for the Proteus/remote and Proteus/local deployments.}
+  \caption{CDF of returned version at 4250 requests/second for the Proteus/remote and Proteus/local deployments.}
   \label{fig:readV_cdf_throughput}
 \end{figure}
 
@@ -546,7 +565,7 @@ Moreover, update latency and versions freshness scale well as the system's load 
 We can argue that the level of freshness shown in these experiments to be achievable when placing materialized views close
 to the client is sufficient for many query-heavy applications that tolerate eventual consistency.
 
-\subsection{Freshness vs round-trip latency}
+\subsubsection{Freshness vs round-trip latency}
 \label{sec:eval_freshness_rtt}
 
 The experiments in the previous section evaluated the effect of the query processing state placement under a constant
@@ -587,11 +606,13 @@ between the two sites, while under 4000 requests/second it is at most 11ms (2.2X
     \caption{4000 requests/second.}
     \label{fig:readV_freshness_netLatency_400}
   \end{subfigure}%
-\caption{Round-trip time between sites vs distribution of returned version.}
+\caption{Distribution of returned version vs round-trip time between sites.}
 \label{fig:readV_freshness_netLatency}
 \end{figure}
 
-Figures~\ref{fig:readV_freshness_netLatency_200} and~\ref{fig:readV_freshness_netLatency_400}.
+Figures~\ref{fig:readV_freshness_netLatency_200} and~\ref{fig:readV_freshness_netLatency_400}
+show the distribution of returned version (which version relative to the most recent one was returned by a query)
+for 2000 and 4000 requests/second respectively.
 We observe that under both loads freshness decreases as round-trip time increases;
 Increasing the load of the system increases the gradient of this decrease.
 However, in both cases, queries, generally, observe at most the forth most recent version:
@@ -603,7 +624,7 @@ Only 0.06\% and 0.8\% of query results are more stale than the forth most recent
 Update latency, and the freshness of query results are primarily affected by round-trip time between sites,
 and to a lesser degree by the system's load.
 
-\section{Data transfer between sites}
+\subsection{Data transfer between sites}
 \label{sec:eval_data_transfer}
 
 \begin{table}[H]
@@ -642,71 +663,460 @@ This is because the size of a query response is around 4MB
 We conclude that, in this the evaluation scenario, the materialized view can be placed in the client site without incurring
 significant data transfer costs.
 
-\section{Conclusion}
+\subsection{Conclusion}
 
-The aim of the experimental evaluation presented in this chapter is to validate our analysis of the trade-offs
-involved in the placement of derived state,
-and to evaluate the effectiveness of Proteus in allowing applications to navigate these trade-offs.
-In particular, we focus on the decision of placing materialized views close to the client or close to the corpus.
-
-The evaluation confirms our analysis.
-It demonstrates that there are benefits and drawbacks to both placement options:
-Placing materialized views close to the client achieves improvements in response time and throughput,
+The evaluation presented in this section demonstrates that there are benefits and drawbacks to both placement options:
+Placing materialized views close to the client results in improvements in response time and throughput,
 at the expense of freshness.
 Conversely, placing materialized views close to the corpus ensures fresh query results,
 but brings limitations to response time and throughput.
-This validates the central argument of this thesis:
-No single placement decision is optimal for all needs.
-In the application scenario used in this evaluation,
-client-site placement of materialized views is more suitable for applications that require low query response times or high
+As a result, client-site placement of materialized views is more suitable for applications that require low query response times or high
 query load, and can tolerate stale query results;
 server-site placement is better-suited for applications for which query processing performance is not critical,
 but require up-to-date query results.
+In addition, evaluation results show that Proteus can to efficiently implement both placement schemes.
 
-Furthermore, the evaluation demonstrates that Proteus can be used to efficiently implement both placement schemes,
-Therefore, by using Proteus, applications can make fine-grained derived state placement decisions
--- for example using different placement schemes for different types of queries within an application.
-As described in Chapter~\ref{ch:proteus}, this can be achieved by simple configuration changes.
 
-% \section{Navigating the design space of geo-distributed query}
-% (Note: The title might be a bit too fancy. To re-think.)
+\section{Federated metadata search for multi-cloud object storage}
+\label{sec:eval_2}
 
-% Question to answer:
-% Can the QPU approach be used to adjust to navigate the design space
-% geo-distributed query, making different trade-offs depending on the requirements
-% and characteristics of specific applications.
+\subsection{Experimental scenario}
 
-% Hypothesis to validate:
-% For a given pair of workload type (eg. query-heavy) and requirement (expressed
-% as performance/efficiency metric) there is a query engine configuration that
-% ''optimizes'' the given metric.
+The evaluation presented in this section is based on the case study presented in Section~\ref{sec:zenko}.
+We consider a multi-cloud data serving system, composed of three storage locations.
+A storage location may be a public cloud storage platform (e.g. Amazon S3, Microsoft Azure Blob storage, Google Cloud Storage),
+or an on-premise storage system.
+Each storage location is independent (not aware of the other locations),
+and a multi-cloud data controller (\S\ref{sec:zenko}) is responsible for providing a common namespace across storage locations.
+The controller implements an object storage API, such the AWS S3 API:
+objects are composed of a primary key, a set of metadata attributes, and content.
+This evaluation focuses on providing support for federated queries on metadata attributes.
 
-% (Idea on how to visualize this: 2D matrix ''workloads - metrics'':
-% for each cell, find which configuration is best for this workload and metric.
+We consider a system model composed of the 3 storage locations, in 3 geographically distant data
+centers.
+Each storage location stores a disjoin subset of the dataset.
+An instance of the multi-cloud controller is deployed on each storage location,
+and users are served by the controller that is geographically closer to their location.
+An overview of the system model is shown in Figure~\ref{fig:eval_part2_overview}.
 
-% High-level plan:
-% \begin{itemize}
-%   \item Run a set of different workloads, measuring different metrics (query
-%   performance, freshness, cost)
-%   \item Repeat this for a set of query system configurations.
-%   \item Examine for each worload-metric pair, how changing the query engine
-%   configuration affects the target metric.
-% \end{itemize}
+We consider an application that consists of two types of operations:
+updating the metadata attributes of a given object,
+and performing queries on metadata attributes.
 
-% \section{Application benchmark}
-% (Note: I ran out of inspiration for titles)
+\begin{figure}[H]
+\centering
+  \includegraphics[width=0.7\textwidth]{./figures/evaluation/eval_part2_overview.pdf}
+  \caption{An overview of the system model in \S\ref{sec:eval_2}.}
+  \label{fig:eval_part2_overview}
+\end{figure}
 
-% Question to answer:
-% What performance gains can the QPU approach deliver to an application, and how
-% it Proteus compare against state-of-the-art systems?
+\subsection{Methodology}
 
-% Hypotheses to validate
-% \begin{itemize}
-%   \item 1. The QPU approach (Proteus) can provide the performance comparable to
-%   that of state-of-the-art systems when used with a similar configuration.
-%   \item 2. The QPU approach (Proteus) can improve the application's performance
-%   (or improve freshness or cut cost) by enabling query engine designs (placement
-%   schemes, ...) not possible with current query systems.
-% \end{itemize}
+As discussed in Section~\ref{sec:zenko}, there are alternative approaches for designing a multi-cloud query engine.
+The aim of this evaluation is to demonstrate the need for flexibility in the query engine's design for addressing the
+needs of different applications,
+and validate that QPU-based query engines can provide the required flexibility.
 
-% (This is currently being designed and implemented.)
+To achieve that, we consider 3 query engine configurations (QPU graphs), 3 workload types with different query-update ratios,
+and 3 metrics (query processing performance, freshness, and data transfer between storage locations);
+We experimentally determine which query engine configuration is better-suited for each combination of workload type and target metric.
+
+\bigskip
+\noindent
+\textbf{Query engine configurations.}
+The main functionality of the query engine in this scenario is to maintain secondary indexes for accelerating queries on
+metadata attributes.
+We consider the following approaches for partitioning and placing a multi-cloud secondary index across the system.
+
+\begin{itemize}
+  \item \textbf{Replicated global indexes (rg-index):}
+  An index responsible for indexing data from all storage locations is deployed on each location.
+  This approach has the advantage that queries are served by the local index.
+  However, each index needs to receive update notifications from the two remote storage locations.
+  Depicted in Figure~\ref{fig:rg_index}.
+
+  \item \textbf{Partitioned index (p-index):}
+  In this configuration, the index on each storage location is responsible for the local corpus.
+  The system forwards each query to all 3 storage locations, and combines the retrieved results.
+  This approach requires a third of the storage space for indexes compared to rg-index,
+  and ensures that update notifications are sent only to the local index,
+  at the expense of requiring cross-site communication for serving queries.
+  Depicted in Figure~\ref{fig:p_index}.
+
+  \item \textbf{Partitioned index with caching (p-index-cache):}
+  This configuration is an extension to p-index that uses a caching layer with the aim of reducing access to remote indexes.
+  For each index, a cache responsible for caching sub-query results from it is deployed on the two remote storage locations.
+  Depicted in Figure~\ref{fig:p_index_cache}.
+\end{itemize}
+
+\begin{figure}[H]
+  \begin{subfigure}{0.5\textwidth}
+    \includegraphics[width=\linewidth]{./figures/evaluation/rg_index.pdf}
+    \caption{}
+    \label{fig:rg_index}
+  \end{subfigure}%
+  \hspace*{\fill}
+  \begin{subfigure}{0.5\textwidth}
+    \includegraphics[width=\linewidth]{./figures/evaluation/p_index.pdf}
+    \caption{}
+    \label{fig:p_index}
+  \end{subfigure}%
+  \caption{The (a) replicated global indexes (rg-index) and (b) partitioned index (p-index) QPU graph configurations.}
+  \label{fig:p_rg_index}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+  \includegraphics[width=0.7\textwidth]{./figures/evaluation/p_index_cache.pdf}
+  \caption{The partitioned index with caching (p-index-cache) QPU graph configuration.}
+  \label{fig:p_index_cache}
+\end{figure}
+
+\bigskip
+\noindent
+\textbf{Workload types.}
+Overall, we consider a query-heavy application that requires the use of secondary indexes for query processing.
+We examine 3 workload types, each with a different mix of query and update operations:
+95\% queries - 5\% updates (w95/5), 80\% queries - 20\% update (w80/20),
+60\% queries - 40\% update (w60/40).
+
+\bigskip
+\noindent
+\textbf{Evaluation metrics.}
+For this evaluation, we use the metrics discussed in Section~\ref{sec:eval_1}:
+query processing performance, freshness and data transfer cost for data transferred between storage locations.
+
+\subsection{Experimental Setup}
+On each storage location, data is stored on an instance of MongoDB.
+We use MongoDB as an object store:
+an object is represented by a MongoDB document, with document fields representing the object's metadata attributes.
+At the start of each experiment, we preload each storage location with with 33k objects,
+so that in total the system stores 100k objects.
+
+The Index QPU implements an in-memory B-tree secondary index.
+The Cache QPU implements a cache with a least recently used (LRU) eviction policy,
+and a time-to-live (TTL) based invalidation policy.
+We set the size of caches so that each cache can hold 50\% of the index entries it is responsible for,
+and configure the TLL value to 5 seconds.
+
+We configure the system so that there is an 80sm round trip time between storage locations in order to
+simulate a multi-cloud system deployed over distant geographic locations.
+
+\bigskip
+\noindent
+\textbf{Workload generation and measurements configuration.}
+We use the Yahoo! Cloud Serving Benchmark (YCSB) \cite{ycsb} for generating workload and performing measurements.
+The core operation of the YCSB framework is that it drives a number of client threads,
+each executing a sequential series of operations by making calls to the underlying system,
+and measures the latency and achieved throughput of their operations.
+At the end of an experiment, a statistics model aggregates the measurements and reports the achieved throughput and
+the measured latency percentiles.
+
+We have modified YCSB's MongoDB driver to send query operations to Proteus.
+We deploy a YCSB instance on each storage location.
+On each location, YCSB client threads send update operations to the local MongoDB instance,
+and query operations to the local Partition Manager QPU.
+At the end of an experiment, we gather and aggregate measurements from all three storage locations,
+and compute the total achieved throughput and latency percentiles.
+
+Each object in the dataset has multiple, randomly generated metadata attributes.
+We ensure that a numeric attribute with a specified key existing in every object.
+Query operation in the workload are point queries that refer to this attribute.
+Both the attribute's values and query predicated follow a uniform distribution.
+We use the mechanism presented in Section \ref{sec:eval_setup} for measuring freshness.
+
+Experiments run for 5 minutes unless otherwise specified, and we start taking measurements after an initial
+warmup period of 30 seconds.
+
+\subsection{Query processing performance}
+
+\begin{figure}[H]
+\centering
+  \includegraphics[width=0.9\textwidth]{./figures/evaluation/ycsb_responseTime.png}
+  \caption{Throughput vs query response time. Plots for the rg-index and p-index configuration show the 90th percentile response time;
+  Plots for the p-index-cache configuration show average response time in order to capture the effect of caching in reponse time.}
+  \label{fig:ycsb_responseTime}
+\end{figure}
+
+Figure~\ref{fig:ycsb_responseTime} shows throughput--query response time plots for the 3 QPU graph configuration and 3 workload
+types.
+We observe that:
+\begin{itemize}
+  \item Response time in the p-index configuration is 80ms higher than in the rg-index configuration.
+  This is because in p-index the query engine forwards queries to indexes across storage locations while
+  in rg-index queries are served by the local index.
+  \item Average response time in the p-index-cache configuration is around 80ms when load is low,
+  and then decreases as load increases.
+  This effect is the result of caching:
+  In low load values, caches are not filled, and most queries result in cache misses;
+  As load increases, more queries are served from the cache, decreasing the average query response time.
+  \item The p-index configuration achieves around 50\% throughput compared to rg-index.
+  This can be attributed to the closed loop workload generation mechanism of YCSB:
+  Given a certain number of client threads, in rg-index each query operation has a takes less than 25ms
+  when the system is not saturated, while in p-index each query operation take 85-90ms because of the 80ms
+  round trip time between storage locations.
+  Therefore, in p-index each client thread cannot offer the same load as in rg-index.
+  \item The p-index-cache configuration achieves 21\% lower throughput (for the w95/5 workload).
+  This is expected as each cache miss adds an 80ms overhead to response time,
+  resulting in client threads being able to generate less load.
+\end{itemize}
+
+We conclude that the rg-index configuration is better-suited for achieving the best query processing performance.
+However, this comes at the expense of memory overhead for maintaining a global index at each storage location.
+The rg-index-cache configuration requires achieve query processing performance comparable to rg-index,
+and requires 66\% the memory of rg-index (because each cache is configured to 50\% the size of an index).
+
+\subsection{Freshness}
+
+In this section, we examine the query result freshness achieved by the alternative QPU graph configurations.
+In order to evaluate the freshness of the different configurations,
+we break them down into \text{placement patterns}, we evaluate the freshness of each placement pattern,
+and reason about how placement pattern freshness contributes to the overall freshness of QPU graph configurations.
+The placement patterns present in the three QPU graph configurations are shown in Figure~\ref{fig:placement_patterns}.
+
+\begin{figure}[H]
+  \begin{subfigure}{0.24\textwidth}
+    \includegraphics[width=\linewidth]{./figures/evaluation/ycsb_freshness_local.pdf}
+    \caption{}
+    \label{fig:ycsb_freshness_local}
+  \end{subfigure}%
+  \hspace*{\fill}
+  \begin{subfigure}{0.24\textwidth}
+    \includegraphics[width=\linewidth]{./figures/evaluation/ycsb_freshness_remote_corpus.pdf}
+    \caption{}
+    \label{fig:ycsb_freshness_remote_corpus}
+  \end{subfigure}%
+  \hspace*{\fill}
+  \begin{subfigure}{0.24\textwidth}
+    \includegraphics[width=\linewidth]{./figures/evaluation/ycsb_freshness_remote_client.pdf}
+    \caption{}
+    \label{fig:ycsb_freshness_remote_client}
+  \end{subfigure}%
+  \hspace*{\fill}
+  \begin{subfigure}{0.24\textwidth}
+    \includegraphics[width=\linewidth]{./figures/evaluation/ycsb_freshness_remote_client_cache.pdf}
+    \caption{}
+    \label{fig:ycsb_freshness_remote_client_cache}
+  \end{subfigure}%
+  \caption{Placement patterns. (a) Corpus, index and clients are located on the same storage location (local).
+  (b) The corpus is located on a remote storage location (remote-corpus). (c) The index is co-located with the corpus;
+  clients are located on a remote storage location (remote-client). (d) A cache is used to reduce cross-location communication (remote-client-cache).}
+  \label{fig:placement_patterns}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c||c|c|c|c||}
+\hline
+& local & remote-corpus & remote-client & remote-client-cache \\
+\hline
+rg-index & $\blacksquare$ & $\blacksquare$ &  & \\
+\hline
+p-index & $\square$ & & $\blacksquare$ & \\
+\hline
+p-index-cache & $\square$ & &  & $\blacksquare$ \\
+\hline
+\end{tabular}
+\caption{Placement patterns that QPU graph configurations are composed of.
+$\blacksquare$ $\blacksquare$ indicates that both patterns contribute to the configuration's freshness.
+$\square$ $\blacksquare$ indicated that only the pattern with $\blacksquare$ contributed to the configuration's freshness.}
+\label{tab:placement_patterns}
+\end{table}
+
+Table \ref{tab:placement_patterns} shows the placement patterns used for each QPU graph configuration.
+In rg-index, each index is connected to both local (\ref{fig:ycsb_freshness_local}) and remote (\ref{fig:ycsb_freshness_remote_corpus}) corpus.
+As a result, query result freshness is affected by the freshness characteristics of both patterns.
+In p-index, each Partition Manager QPU is connected to the the local index (\ref{fig:ycsb_freshness_local}),
+and two remote indexes (\ref{fig:ycsb_freshness_remote_client}).
+The Partition Manager forwards a given query to all three indexes and waits to receive all responses before responding to
+the client.
+Because of that, the freshness of p-index is determined by the freshness of the remote-client pattern.
+Similarly, the freshness of p-index-cache is determined by the freshness of the remote-client-cache pattern
+(\ref{fig:ycsb_freshness_remote_client_cache}).
+
+
+\begin{figure}[H]
+  \begin{subfigure}{0.5\textwidth}
+    \includegraphics[width=\linewidth]{./figures/evaluation/ycsb_update_latency_local.png}
+    \caption{}
+    \label{fig:ycsb_update_latency_local}
+  \end{subfigure}%
+  \hspace*{\fill}
+  \begin{subfigure}{0.5\textwidth}
+    \includegraphics[width=\linewidth]{./figures/evaluation/ycsb_update_latency_remote.png}
+    \caption{}
+    \label{fig:ycsb_update_latency_remote}
+  \end{subfigure}%
+  \caption{Throughput vs 95th percentile update latency for the Index QPU in the local (a) and remote-corpus (b) placement patterns.}
+  \label{fig:ycsb_update_latency_local_local_remote}
+\end{figure}
+
+Figures~\ref{fig:ycsb_update_latency_local} and~\ref{fig:ycsb_update_latency_remote} show the 95th percentile update latency as throughput increases,
+for local (\ref{fig:ycsb_update_latency_local}) and remote-corpus (\ref{fig:ycsb_update_latency_remote}) placement patterns.
+
+We implement the storage tier's Subscribe API (\S\ref{sec:storage_tier_api}) using MongDB's change stream functionality \cite{mongo:changestreams}.
+Our results show that, with the configuration used for these experiments, the change stream client receives a notification with a 50-60ms delay.
+We indicate this as the baseline update latency in the plots (notification).
+
+In addition, we note that our mechanism for measuring update latency includes in update latency
+the response time of the update operation performed by the client.
+Because update operation response time increases with load, part of the increase in update latency is due to the update operation response time.
+Update operation response time is shown in Figure~\ref{fig:ycsb_write_latency}.
+
+\begin{figure}[H]
+\centering
+  \includegraphics[width=0.7\textwidth]{./figures/evaluation/ycsb_write_latency.png}
+  \caption{Throughput vs client update response time. Client updates are always local,
+  as in all configurations clients write to the local MongoDB instance.}
+  \label{fig:ycsb_write_latency}
+\end{figure}
+
+\noindent
+For the update latency results in Fig.~\ref{fig:ycsb_update_latency_local_local_remote}, we observe that:
+\begin{itemize}
+  \item In remote-corpus, update latency is at least 40ms higher that the baseline
+  due to the 40ms network latency between storage locations.
+
+  \item Update latency increases with the ratio of updates.
+  This is due to contention, as each update needs to acquire a write lock on the index.
+  For both placement patterns, for the w80/20 and w60/40 workloads,
+  update latency does not scale to loads larger than 13k operations/second.
+\end{itemize}
+
+The evaluation results shown in Figures~\ref{fig:ycsb_responseTime} and~\ref{fig:ycsb_update_latency_local_local_remote} demonstrate the trade-off betwee
+query performance and query result freshness.
+The rg-index configuration, in which queries are served locally, achieves better query processing performance at the expense of increased update latency;
+The update latency overhead is determined by the network communication latency between storage locations.
+Conversely, the p-index configuration ensures low update latency at the expense query processing performance.
+\begin{figure}[H]
+  \begin{subfigure}{0.5\textwidth}
+    \includegraphics[width=\linewidth]{./figures/evaluation/ycsb_readV_freshness_throughput_9505.png}
+    \caption{}
+    \label{fig:ycsb_readV_freshness_throughput_9505}
+  \end{subfigure}%
+  \hspace*{\fill}
+  \begin{subfigure}{0.5\textwidth}
+    \includegraphics[width=\linewidth]{./figures/evaluation/ycsb_readV_freshness_throughput_6040.png}
+    \caption{}
+    \label{fig:ycsb_readV_freshness_throughput_6040}
+  \end{subfigure}%
+  \caption{Throughput vs percentage of queries that returned the most recent version in the w95/5 (a) and w60/40 (b) workload.}
+  \label{fig:ycsb_readV_freshness_throughput}
+\end{figure}
+
+Next, we examine how update latency affects query result freshness.
+Figures~\ref{fig:ycsb_readV_freshness_throughput_9505} and~\ref{fig:ycsb_readV_freshness_throughput_9505} show
+the percentage of query operations that return the most recent version of an object as load increases,
+for the w95/5 and w60/40 workloads respectively.
+We observe that:
+\begin{itemize}
+  \item For the w95/5 workload, all patterns except remote-client-cache return fresh result for close to 100\% of queries.
+
+  \item For the w60/40 workload, local and remote-corpus return stale results for loads greater than 10k operations/second
+  (8\% and 23\% stale query results respectively).
+
+  \item For both workloads, the remote-client-cache pattern results in significantly more stale query results than the other
+  patters.
+  This is due to the time-based invalidation policy, and the TTL value of 5 seconds.
+\end{itemize}
+
+We conclude that, for query-dominated workloads, all pattern exhibit high freshness.
+For workloads with higher update rations,
+caching with time-based invalidation offers a balance between memory resource overhead and query processing performance,
+at the expense of lower query result freshness.
+
+\subsection{Data transfer between storage locations}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c||c|c|c|c||}
+\hline
+& \textbf{w95/5} & \textbf{w80/20} & \textbf{w60/40} & \textbf{w5/95}\\
+\hline
+\textbf{rg-index} & 64MB & 213MB & 467MB & 1.37GB \\
+\hline
+\textbf{p-index} & 18GB & 5.95GB & 5.85GB & 1.25GB \\
+\hline
+\textbf{p-index-cache} & 4.95GB & 5.58GB & 4.97GB & 947MB \\
+\hline
+\end{tabular}
+\caption{Amount of data transfer between sites for a 5 minute benchmark with 256 YCSB client treads at each storage location.}
+\label{tab:ycsb_data_transfer}
+\end{table}
+
+In this section, we measure the amount of data sent across storage location for different QPU graph configurations and
+workload types.
+
+In the rg-index configuration, cross-location data transfer occurs for sending update notifications from the corpus
+to remote Index QPUs:
+Each update operation generates three update notifications, one for each storage location.
+As a result, data transfer increases as update ratio increases.
+
+In the p-index configuration, cross-location data transfer occurs for retrieving query results from remote Index QPUs.
+Partition Manager QPUs forward every query to all three storage locations, and retrieve the results.
+As a result, data transfer decreases as query ratio decreases.
+
+In the p-index-cache configuration, cross-location data transfer occurs on cache misses.
+When an index entry is not present in a cache, the Cache QPU forwards it to the corresponding Index QPU, and retrieves the
+results.
+Similarly to the case of p-index, data transfer decreases as query ratio decreases.
+
+These results demonstrate another aspect of the trade-off between the rg-index and p-index configurations.
+In general, p-index results in significantly higher data transfer than rg-index.
+Our results show that the rg-index configuration results in more data transfer than the p-index configuration for workloads with at least 95\% updates (w5/95).
+This because the size of an update notification is significantly smaller than the size of a query response.
+Given an update, the update notification contains the object's primary key, the updated attribute(s) and a timestamp;
+Given a query, the response contains the primary keys, attributes and timestamps of all objects that match the query predicate.
+
+Furthermore, we observe that using a caching layer results in a 72\% data transfer reduction for the w95/5 workload.
+Therefore, using the p-index-cache configuration can result in significant data transfer cost reduction compared to
+the p-index configuration.
+
+\subsection{Conclusion}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c||c|c|c||}
+\hline
+& \textbf{w95/5} & \textbf{w80/20} & \textbf{w60/40}\\
+\hline
+\textbf{Query processing performance} & rg-index & rg-index & rg-index \\
+\hline
+\textbf{Query result freshness} & p-index & p-index & p-index \\
+\hline
+\textbf{Data transfer cost} & rg-index & rg-index & rg-index \\
+\hline
+\end{tabular}
+\caption{Summary of experimental comparison between the three QPU graph configurations.}
+\label{tab:ycsb_summary}
+\end{table}
+
+Table~\ref{tab:ycsb_summary} summarizes the evaluation results presented in this section
+by showing which QPU graph configuration is better-suited for each combination of target metric
+and workload type.
+
+However, applications are rarely interested in optimizing a single metric,
+but rather finding the right balance in the trade-offs between metrics.
+Our evaluation results indicate that, for query heavy workloads,
+the p-index-cache configuration offers a balance between query processing performance,
+freshness, and memory resource and data transfer overhead.
+
+The evaluation presented in this section demonstrates the trade-offs between
+different index and cache partitioning and placement approaches,
+and shows that Proteus can be efficiently used to tune the trade-offs between query processing
+performance, freshness and operational costs by controlling the query engine's architecture.
+
+\section{Conclusions}
+
+The evaluation results presented in this chapter confirm our analysis of the trade-offs
+involved in the placement of derived state.
+This validates the central argument of this thesis:
+No single derived state partitioning and placement approach is optimal for all needs,
+and flexibility is required for addressing different needs.
+
+Moreover, the evaluation demonstrates the expressiveness of the proposed approach:
+QPU-based query engines enable the flexibility for configuring derived state partitioning and placement
+with simple configuration changes to the query processing middleware, without requiring changes to the application.
+QPU-based query engines can be used to flexibly partition derived state, and place state and query processing computation
+freely across the system.
+THanks to that they can be employed to address diverse application characteristics and requirements.

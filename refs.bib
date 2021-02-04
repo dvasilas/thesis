@@ -71,10 +71,19 @@ pages = {1360–-1369},
 }
 
 @online{mongo:shards,
-  title = {Mongo{DB} {M}anual: {S}hards},
+  title = {Mongo{DB} {D}ocumentation: {S}hards},
   author = {MongDB, Inc.},
   howpublished = {\url{https://docs.mongodb.com/manual/core/sharded-cluster-shards/}},
   year = {2020},
+  note = {(visited on 25/12/2020)},
+}
+
+@online{mongo:changestreams,
+  title = {Mongo{DB} {D}ocumentation: {C}hange {S}treams},
+  author = {MongDB, Inc.},
+  howpublished = {\url{https://docs.mongodb.com/manual/changeStreams/}},
+  year = {2020},
+  note = {(visited on 4/01/2021)},
 }
 
 @online{elastic:shards,
@@ -1397,4 +1406,18 @@ month = aug,
 pages = {2–19},
 numpages = {18},
 keywords = {streaming media, quality of service, CDN, content delivery, Akamai, application acceleration, HTTP, overlay networks, DNS, fault tolerance}
+}
+
+@inproceedings{ycsb,
+author = {Cooper, Brian F. and Silberstein, Adam and Tam, Erwin and Ramakrishnan, Raghu and Sears, Russell},
+title = {Benchmarking {C}loud {S}erving {S}ystems with {YCSB}},
+year = {2010},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+abstract = {While the use of MapReduce systems (such as Hadoop) for large scale data analysis has been widely recognized and studied, we have recently seen an explosion in the number of systems developed for cloud data serving. These newer systems address "cloud OLTP" applications, though they typically do not support ACID transactions. Examples of systems proposed for cloud serving use include BigTable, PNUTS, Cassandra, HBase, Azure, CouchDB, SimpleDB, Voldemort, and many others. Further, they are being applied to a diverse range of applications that differ considerably from traditional (e.g., TPC-C like) serving workloads. The number of emerging cloud serving systems and the wide range of proposed applications, coupled with a lack of apples-to-apples performance comparisons, makes it difficult to understand the tradeoffs between systems and the workloads for which they are suited. We present the "Yahoo! Cloud Serving Benchmark" (YCSB) framework, with the goal of facilitating performance comparisons of the new generation of cloud data serving systems. We define a core set of benchmarks and report results for four widely used systems: Cassandra, HBase, Yahoo!'s PNUTS, and a simple sharded MySQL implementation. We also hope to foster the development of additional cloud benchmark suites that represent other classes of applications by making our benchmark tool available via open source. In this regard, a key feature of the YCSB framework/tool is that it is extensible--it supports easy definition of new workloads, in addition to making it easy to benchmark new systems.},
+booktitle = {Proceedings of the 1st ACM Symposium on Cloud Computing},
+pages = {143–-154},
+numpages = {12},
+keywords = {benchmarking, cloud serving database},
+series = {SoCC '10}
 }
