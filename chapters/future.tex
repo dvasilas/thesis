@@ -1,6 +1,32 @@
 \section{Future Work}
 
+In this chapter, we outline directions for future work
+and discuss additional topics related to the work presented in this thesis.
+
+\noindent
+Directions for future work include:
+
+\begin{itemize}
+
+  \item Studying algorithms for computing efficient placement of the QPU graph across the system
+  based on application-specified optimization goals and constraints (\S\ref{sec:future_placement_policies}).
+
+  \item Extending the current design for supporting online changes to the QPU graph topology and placement,
+  with the aim of dynamically adjusting to workload changes. (\S\ref{sec:future_dynamic}).
+
+  \item Developing protocols for transactionally consistent query processing over eventually consistent derived state
+  (\S\ref{sec:future_consistent_snapshots}).
+
+\end{itemize}
+
+The discussion includes the scope and limitations of the work (\S\ref{sec:discussion_scope}),
+fault-tolerance (\S\ref{sec:discussion_fault_tolerance}),
+the dependence of our design on APIs provided by the storage tier (\S\ref{sec:discussion_apis}),
+and the implications of geo-replication under weak consistency in the maintenance of
+derived state (\S\ref{sec:discuss_geo_replication}).
+
 \subsection{Placement policies}
+\label{sec:future_placement_policies}
 
 In this work, we have focused on the mechanisms required for supporting flexible placement of state
 and computations in geo-distributed query processing.
@@ -11,7 +37,7 @@ However, our design relies on developers or system administrators for making pla
 An important direction for future work is to study query processing state placement algorithms.
 This can be expressed by the following problem statement:
 Given a QPU graph (or more generally, a directed acyclic graph of stateful and stateless query processing operators),
-a collection of processing nodes available for placing operators, organized in clusters, data centers and so on,
+a collection of processing nodes available for placing operators organized in a hierarchy of clusters and data centers,
 and a description of the placement of corpus data on processing nodes,
 how can we compute an assignment of operators to processing nodes that optimally satisfies an optimization criterion.
 This is a challenging problem because the inherent tensions between different optimization criteria mean that
@@ -20,7 +46,7 @@ However, applications are rarely interested in a single metric.
 Furthermore, placement decisions need to take into account the applications' workload characteristics.
 
 \subsection{Dynamic query engine architectures}
-
+\label{sec:future_dynamic}
 Throughout this thesis, we make the assumption that QPU graphs are static.
 Extending the current design with mechanisms and policies for online reconfiguration of QPU graphs,
 with the aim of adapting to changes in the workload, is an interesting area for future investigation.
@@ -49,8 +75,8 @@ There are several directions to examine:
   adding new queries and materializing views and indexes on the fly.
   Existing works have proposed approaches for generating query processing operator graphs based on user-specified queries
   \cite{gjengset:noria, kate:pequod}.
-  Extending this work with such techniques raises some of the problems described above, such as supporting online
-  reconfiguration of the QPU graph.
+  Extending this work with such techniques would require addressing the problems described above,
+  such as supporting online reconfiguration of the QPU graph.
 
 \end{itemize}
 
@@ -67,7 +93,8 @@ and subsequently issues a query that requires reading from both views.
 The write operation is propagated to one of the views, but the message to the other view is delayed,
 and, as a result, the query observes a snapshot that contains the write operation in one view,
 and a snapshot that does not contain it in the other.
-This can potentially lead to inconsistencies in query results.
+This can potentially lead to inconsistencies in query results,
+cause by computing queries using materialized views with different views of the corpus.
 
 This problem is similar to that of distributed transactions:
 A query needs to be executed over a consistent snapshot across multiple indexes and materialized views (or index/view shards)
@@ -91,7 +118,7 @@ each QPU can summarize the view of its outgoing connections, and only propagate 
 \section{Discussion}
 
 \subsection{Scope}
-
+\label{sec:discussion_scope}
 The query engine architecture presented in this thesis is not designed as a general-purpose query engine.
 Instead, our design assumption is that each QPU architecture is designed for a specific application,
 with a specific set of queries in mind.
@@ -115,7 +142,7 @@ Furthermore, the query engine architecture presented in this thesis can be appli
 systems that aim to support flexible placement of derived state.
 
 \subsection{Fault Tolerance}
-
+\label{sec:discussion_fault_tolerance}
 Proteus' approach to fault-tolerance is based on redundancy.
 When a QPU along the execution path of a query is not available, or fails during the execution of a query,
 sub-queries to that QPU are retried, and, after a timeout, a failure response is returned to the client.
@@ -126,7 +153,7 @@ For example, in the case of a materialized view, a secondary execution path that
 the view can be used as a secondary path in case the materialized view fails.
 
 \subsection{Data storage tier APIs}
-
+\label{sec:discussion_apis}
 The query engine design presented in this thesis is based on the assumption that the data storage tier exposes
 two interfaces (Section~\ref{sec:storage_tier_api}):
 An interface for iterating over the corpus data (list), and one for subscribing to notifications for changes to the
@@ -144,12 +171,13 @@ as such mechanisms were not initially available in these systems.
 
 Proteus could be used with storage systems supporting a subset of the required interfaces.
 However, this would result in some of the capabilities presented in this thesis not being available.
-More specifically, if used with a data storage system that does not support the subscribe interface,
+More specifically, if used with a data storage system that supports only the list interface,
 derived state QPUs would not support incremental updates.
-Instead, those QPUs would need to periodically rebuild their state by scanning the corpus, using the list interface.
+Instead, those QPUs would need to periodically rebuild their state by scanning the corpus using the list interface.
 The query processing unit design already supports periodic rebuilding of derived state.
 
 \subsection{Derived state in geo-replicated databases}
+\label{sec:discuss_geo_replication}
 A consideration related to maintaining derived state in geo-replicated databases stems from the CAP impossibility theorem \cite{brewer:cap}.
 In the face of network partitions between data centers,
 geo-replicated databases must choose between strongly consistent and highly-available designs.

@@ -1,15 +1,25 @@
-Today's internet-scale applications must handle large volumes of requests from users worldwide.
-The database systems that these applications rely on distribute data across multiple geographically distributed sites
-in order to offer fast responses and remain available in the presence of failures.
-Query processing is an essential component of these systems.
-In this thesis, we have studied the problem of building query engines that maintain derived state,
-such as secondary indexes and materialized views, for speeding-up query processing, in the context of geo-distribution.
-We have presented an analysis of the design decisions and trade-offs involved in geo-distributed query processing,
-and have shown that, in the presence of these trade-offs, the placement of query processing state across the system,
+Query processing is a crucial component of data serving systems.
+Nowadays, applications distribute data across multiple geographically distributed data centers in order to
+efficiently serve users worldwide.
+Moreover, organizations spread their data and processing between on-premise and cloud environments,
+as well as between multi-cloud cloud providers, in order to improve fault tolerance and decrease costs.
+As a result, efficient geo-distributed query processing is essential for addressing the needs of today's internet-scale
+applications.
+
+In this thesis, we have studied the design decisions and trade-offs involved in the design of geo-distributed query engines
+that maintain derived state for speeding-up query processing.
+We have shown that, in the presence of these trade-offs, the placement of query processing state across the system,
 and the communication patterns involved in query processing and state maintenance are crucial aspects that affect
-the query engine's performance and effectiveness.
+the query engine's performance, effectiveness and operational costs.
 However, existing systems lack support for configurable placement of query processing state.
 To address this problem, this thesis has presented a query engine architecture model aimed at enabling flexible and
 configurable placement of query processing state and computations,
 and an implementation of that model in Proteus, a framework for constructing application-specific, geo-distributed
 query engines.
+The core contribution of this thesis is a query processing component abstraction that combines microservice and
+stream processing semantics, called Query Processing Unit.
+This abstraction serves as the building block for composing modular query engine architectures.
+The characteristics of the query processing unit enable flexibility in the design of the query engine's architecture,
+and the placement of the query engine's state across the system.
+This flexibility is essential for navigating the trade-offs of geo-distributed query processing,
+and adjusting to the requirements and characteristics of different applications.
