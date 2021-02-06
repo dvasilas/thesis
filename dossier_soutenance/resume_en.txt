@@ -1,0 +1,18 @@
+This thesis addresses the problem of supporting efficient geo-distributed query processing.
+We study the design decisions involved in the design of a geo-distributed query engine that uses derived
+state (indexes, materialized views, caches) to accelerate query processing,
+focusing on three metrics: query processing performance, query result freshness and operational cost.
+These metrics are often in tension and create trade-offs.
+Today's large scale geo-distributed applications have diverse characteristics and requirements,
+and therefore different applications need to make different trade-offs.
+We show that navigating these trade-offs requires the ability to control the query engine's architecture,
+such as the partitioning of indexes and the use of caches, and the placement of query processing state and computations
+across the system.
+The contributions of this thesis are summarized as follows:
+- Query Processing Unit, a query processing component abstraction that combines microservice and stream processing semantics,
+and encapsulates basic query processing tasks.
+Multiple instances of the abstraction can be composed to perform more complex query processing tasks.
+- A model for constructing modular query engine architectures as composition of components implementing
+the Query Processing Unit abstraction. This model enables flexibility in the query engine architecture design and in the
+placement of its components across the system.
+- Proteus, a framework for constructing and deploying application-specific query engines.
