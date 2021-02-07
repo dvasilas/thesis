@@ -1,0 +1,640 @@
+\documentclass[aspectratio=169]{beamer}
+\usepackage{subcaption}
+
+\usetheme{metropolis}
+\title{A flexible and decentralised approach to query processing for geo-distributed data systems}
+\author{\normalsize Dimitrios Vasilas}
+
+\date{\scriptsize{Thesis defended on February 19, 2021 before a defense committee composed of: \\ \medskip
+\textbf{S{\'e}bastien Monnet}, Full Professor, Universit{\'e} Savoie Mont Blanc \hfill Reviewer \\
+\textbf{Nuno Pregui\c{c}a}, Associate professor, Universidade Nova de Lisboa. \hfill Reviewer \\
+\textbf{Bernd Amann}, Full Professor, Sorbonne Universit{\'e}  \hfill Examiner \\
+\textbf{Bettina Kemme}, Associate Professor, McGill University \hfill Examiner \\
+\textbf{Themis Palpanas}, Professor, Universit\'{e} de Paris \hfill Examiner \\
+\textbf{Masoud Saeida Ardekani}, Software Engineer, Google \hfill Examiner \\
+\textbf{Bradley King}, Co-founder \& Field CTO, Scality \hfill Advisor \\
+\textbf{Marc Shapiro}, Distinguished Research Scholar, Inria \hfill Advisor \\
+}
+}
+
+\setbeamertemplate{title page}{
+  \begin{minipage}[b][\paperheight]{\textwidth}
+    \ifx\inserttitle\@empty\else\usebeamertemplate*{title}\fi
+    \centering
+    \ifx\beamer@shortauthor\@empty\else\usebeamertemplate*{author}\fi
+    \vspace*{3pt}
+    \ifx\insertdate\@empty\else\usebeamertemplate*{date}\fi
+    \begin{figure}
+      \hspace*{2cm}
+      \begin{subfigure}{0.25\textwidth}
+        \includegraphics[scale=.08]{./figures/logos/Scality_logo.png}
+      \end{subfigure}%
+      \begin{subfigure}{0.25\textwidth}
+        \includegraphics[scale=.04]{./figures/logos/Logo_Sorbonne_Universite.png}
+      \end{subfigure}%
+      \begin{subfigure}{0.25\textwidth}
+        \hspace*{.2cm}\includegraphics[scale=.15]{./figures/logos/logo_lip6.png}
+      \end{subfigure}%
+      \begin{subfigure}{0.25\textwidth}
+        \hspace*{-1.2cm}\includegraphics[scale=.3]{./figures/logos/inria_logo.png}
+      \end{subfigure}
+    \end{figure}
+  \end{minipage}
+}
+
+\setbeamertemplate{title}{
+  \raggedright%
+  \centering
+  \linespread{1.0}%
+  \inserttitle%
+  \par%
+  \vspace*{0.5em}
+}
+
+\setbeamertemplate{author}{
+  \vspace*{1em}
+  \insertauthor%
+  \par%
+  \vspace*{1em}
+}
+
+\begin{document}
+\begin{frame}[plain]
+\vspace{-1cm}
+\titlepage
+\end{frame}
+  % \titlepage
+
+% \begin{frame}
+%    \tikz [remember picture,overlay]
+%     \node at
+%         ([yshift=3cm]current page.south)
+%         %or: (current page.center)
+%         {};
+%    \titlepage
+% \end{frame}
+
+% \begin{frame}{Sections}
+% 	\begin{itemize}
+% 	\item Motivation - Background
+% 	\item Architecture
+% 	\item Evaluation
+% 	\item Related Work
+% 	\item Conclusion
+% 	\end{itemize}
+% \end{frame}
+
+% \section{Motivation}
+
+% \begin{frame}{Motivation}
+% 	\begin{tabular}{cl}  
+% 		\begin{tabular}{c}
+% 		\parbox{0.6\linewidth}{
+% 		\visible<2,3,4,5>{\small{Bioinformatics Researcher}} \\
+% 		\visible<3,4,5>{\footnotesize{DNA sequencing application}} \\
+% 		\visible<4,5>{\footnotesize{12 CPU threads: 206 min.}} \\
+% 		\visible<5>{\textbf{\footnotesize{Faster?}}}
+% 		\vspace{1.3cm}
+% 		}
+% 	\end{tabular}
+% 	&\begin{tabular}{l}
+% 	\includegraphics[scale=0.25]{bob}
+% 	\par \phantom{} \\ 
+% 	\hspace{2em} Bob
+% 	\end{tabular}  \\
+% 	\end{tabular}
+% \end{frame}
+
+% \begin{frame}{Graphics Processing Unit (GPU)}
+% 	\visible<2,3,4,5,6>{\textbf{\small{Special Purpose Processor}}} \\
+% 	\visible<3,4,5,6>{\footnotesize{Offload computer graphics calculations}} \\
+% 	\visible<4,5,6>{\footnotesize{Optimized for SIMD operations}} \\
+% 	\visible<5,6>{\footnotesize{Well-suited for data-parallel applications}} \\
+% 	\visible<6>{\footnotesize{Increase in performance and capabilities}} \\
+% 	\phantom{}
+% 	%Massively Parallel Processor
+% 	%Thousands concurrently running threads
+% 	%high rate of computations per data item
+% 	%Computational Power
+% 	%High arithmetic and memory bandwidth
+% \end{frame}
+
+% %\begin{frame}{GPU vs. CPU}
+% 	%\begin{figure}[ht]						
+% 	%\includegraphics[width=.9\columnwidth]{floating-point-operations-per-second.png}
+% 	%\end{figure}
+% %\end{frame}
+
+% \begin{frame}{GPGPU (General Purpose Computations on GPUs)}
+% 	\par \textbf{\small{Offload non-graphics calculations that fit the parallel computing model to the GPU}} \\
+% 	\visible<2,3,4>{\footnotesize{Heterogeneous Computing: GPUs as accelerators}} \\
+% 	\visible<3,4>{\footnotesize{High Performance Computing}} \\
+% 	\visible<4>{\footnotesize{GPU-accelerated scientific applications}} \\
+% 	\phantom{}
+% \end{frame}
+
+% \begin{frame}{Motivation}
+% 	\begin{tabular}{cl}  
+% 		\begin{tabular}{c}
+% 		\parbox{0.6\linewidth}{
+% 		\small{Bioinformatics Researcher} \\
+% 		\footnotesize{DNA sequencing application} \\
+% 		\footnotesize{12 CPU threads: 206 min.} \\
+% 		\textbf{\footnotesize{Faster?}} \\
+% 		\vspace{1.7cm}
+% 		}
+% 	\end{tabular}
+% 	&\begin{tabular}{l}
+% 	\includegraphics[scale=0.25]{bob}
+% 	\par \phantom{} \\ 
+% 	\hspace{2em} Bob
+% 	\end{tabular}  \\
+% 	\end{tabular}
+% \end{frame}
+
+% \begin{frame}[noframenumbering]{Motivation}
+% 	\begin{tabular}{cl}  
+% 		\begin{tabular}{c}
+% 		\parbox{0.6\linewidth}{
+% 		\visible<1,2,3,4>{\small{Bioinformatics Researcher}} \\
+% 		\visible<1,2,3,4>{\footnotesize{DNA sequencing application}} \\
+% 		\visible<1,2,3,4>{\footnotesize{12 CPU threads: 206 min.}} \\
+% 		\bigskip
+% 		\visible<1,2,3,4>{\footnotesize{Nvidia Tesla GPU: 16 min.}} \\
+% 		\visible<2,3,4>{\footnotesize{GPU: purchase is costly}} \\
+% 		\visible<3,4>{\footnotesize{Low resource utilization}} \\
+% 		\visible<4>{\textbf{\footnotesize{Virtual GPU resources}}} \\
+% 		}
+% 	\end{tabular}
+% 	&\begin{tabular}{l}
+% 	\includegraphics[scale=0.25]{bob}
+% 	\par \phantom{} \\ 
+% 	\hspace{2em} Bob
+% 	\end{tabular}  \\
+% 	\end{tabular}
+% \end{frame}
+
+% %breaks this relationship between the physical hardware and the logical resources needed for an application's execution, by creating a layer of abstraction between a workload and its underlying hardware.
+% \begin{frame}{Virtualization}
+% 	\par \small{Decouples software from hardware by forming a level of abstraction}
+% 	\par \small{Backbone of Cloud Computing}
+% \end{frame}
+
+% \begin{frame}{Benefits}
+% 	\visible<1,2,3,4>{\textbf{\small{Resource Sharing}}} \\
+% 	\visible<2,3,4>{\footnotesize{Improved resource utilization}} \medskip \\
+% 	\visible<1,2,3,4>{\textbf{\small{Server Consolidation}}} \\
+% 	\visible<3,4>{\footnotesize{Several virtual machines on a single host}} \medskip \\
+% 	\visible<1,2,3,4>{\textbf{\small{Isolation}}} \\
+% 	\visible<4>{\footnotesize{Protection of services running on the same hardware}} \\
+% 	\phantom{}
+% \end{frame}
+
+% \begin{frame}{Heterogeneous Cloud}
+% 	\par Need to provide heterogeneous resources, particularly GPUs, within the cloud environment
+% \end{frame}
+
+% \begin{frame}{Contributions}
+% 	\begin{tabular}{cl}  
+% 	\begin{tabular}{c}
+% 	\parbox{0.45\linewidth}{
+% 	\begin{itemize}
+% 	\visible<1,2,3>{\item \small{GPU Virtualization}} \\
+% 	%Enable GPU-accelerated applications to execute in VMs
+% 	\visible<2,3>{\item \small{GPU Resource Sharing}} \\
+% 	%Execute GPU applications concurrently on co-located VMs
+% 	\visible<3>{\item \small{Proof of concept} \\
+% 					\scriptsize{CUDA: Binary compatibility} \\
+% 					\scriptsize{QEMU/KVM} \\
+% 	}
+% 	\end{itemize}
+% 	}
+% 	\end{tabular}
+% 	&\begin{tabular}{l}
+% 	\includegraphics[scale=0.45]{GeneralArchitecture}
+% 	\par \phantom{} \\ 
+% 	\end{tabular}  \\
+% 	\end{tabular}
+% \end{frame}
+
+
+% \section{Background}
+
+% \begin{frame}{GPGPU Development Environments}
+% 	\begin{figure}[!tbp]
+% 	\centering
+%   	\begin{minipage}[b]{0.45\textwidth}
+% 	\includegraphics[width=\textwidth]{nvidia_cuda.jpg}
+%   	\end{minipage}
+%  	\hfill
+% 	\begin{minipage}[b]{0.45\textwidth}
+% 	\includegraphics[width=\textwidth]{opencl.jpg}
+% 	%open standard for cross-platform, parallel programming of heterogeneous platforms
+%   	\end{minipage}
+% 	\end{figure}
+% \end{frame}
+
+% \begin{frame}{CUDA Software Stack}
+% 	\begin{figure}[ht]
+% 	\includegraphics[width=.9\columnwidth]{CUDASoftwareStack}
+% 	\end{figure}
+% \end{frame}
+
+% \begin{frame}{I/O Virtualization Approaches}
+% 	\visible<1,2,3>{\textbf{\small{Full Virtualization}}} \\
+% 	\visible<2,3>{\footnotesize{Guest OS not aware it is being virtualized} \\ Requires no modification} \\
+% 	\bigskip
+% 	\visible<1,2,3>{\textbf{\small{Parvirtualization}}} \\
+% 	\visible<3>{\footnotesize{Communication between the guest OS and the hypervisor \\ Improved performance \\ Requires modified kernel}} \\
+% 	\phantom{}
+% \end{frame}
+
+% \begin{frame}{Virtio}
+% 	\begin{tabular}{cl}  
+% 	\begin{tabular}{c}
+% 	\parbox{0.5\linewidth}{
+% 	\visible<1,2,3,4,5>{\small{{\textbf{virtio} [Russel 2008]}}} \\
+% 	\visible<2,3,4,5>{\footnotesize{Interface for paravirtualized \\ device development}} \\
+% 	\visible<3,4,5>{\footnotesize{Implementation of data transport \\ channel and control mechanism}} \\
+% 	\visible<4,5>{\footnotesize{Shared queue implemented  \\ as ring buffer}} \\
+% 	\visible<5>{\footnotesize{Constrain: physically contiguous buffers}} \\
+% 	}
+% 	\end{tabular}
+% 	& \begin{tabular}{l}
+% 	\includegraphics[scale=0.4]{SharedRing}
+%     \end{tabular}  \\
+% 	\end{tabular}
+% \end{frame}
+	
+% \section{Architecture}
+
+% \begin{frame}{System Architecture}
+% 	\begin{tabular}{cl}  
+% 		\begin{tabular}{c}
+% 		\parbox{0.4\linewidth}{
+% 		\visible<2,3,4,5>{\textbf{\small{Paravirtualization}}} \\
+% 		\bigskip
+% 		\visible<3,4,5>{\footnotesize{Split driver architecture}} \\
+% 		\medskip \\
+% 		\visible<4,5>{\textbf{\small{API Redirection}}} \\
+% 		\visible<5>{\footnotesize{Intercept library calls. \\ Execute at the backend}}}
+% 	\end{tabular}
+% 	&\begin{tabular}{l}
+% 		\includegraphics[scale=0.3]{Architecture9}
+% 	\end{tabular}  \\
+% 	\end{tabular}
+% \end{frame}
+
+% \begin{frame}{Data - Control Flow}
+% 	\begin{tabular}{cl}  
+% 	\begin{tabular}{c}
+% 	\parbox{0.4\linewidth}{
+% 	\bigskip
+% 	\small{\textbf{Memory allocated \\ in guest user space}} \\
+% 	\phantom{}
+% 	\vspace{2.5cm}
+% 	}
+% 	\end{tabular}
+% 	&\begin{tabular}{l}
+% 	\includegraphics[scale=0.3]{Architecture8_1}
+% 	\end{tabular}  \\
+% 	\end{tabular}
+% \end{frame}
+
+% \begin{frame}[noframenumbering]{Data - Control Flow}
+% 	\begin{tabular}{cl}  
+% 		\begin{tabular}{c}
+% 		\parbox{0.4\linewidth}{
+% 		\bigskip
+% 		\small{\textbf{Memory allocated \\ in guest user space}} \\
+% 		\medskip \\ 
+% 		\visible<2,3,4>{\small{\textbf{Library routine call}}} \\
+% 		\visible<2,3,4>{\footnotesize{e.g. \textit{cudaMemcpy}}} \\
+% 		\visible<3,4>{\footnotesize{Expose same interface as \\ Runtime API library}} \\
+% 		\visible<4>{\footnotesize{Intercept arguments}}
+% 		}
+% 		\end{tabular}
+% 	&\begin{tabular}{l}
+% 		\includegraphics[scale=0.3]{Architecture8}
+% 	\end{tabular}  \\
+% 	\end{tabular}
+% \end{frame}
+
+% \begin{frame}{Data - Control Flow}
+% 	\begin{tabular}{cl}  
+% 		\begin{tabular}{c}
+% 		\parbox{0.4\linewidth}{
+% 		\small{\textbf{Routine implementation}} \\
+% 		\visible<2,3>{\footnotesize{Pack arguments to data \\ structure}} \\
+% 		\visible<3>{\footnotesize{System call to forward arguments to kernel space}} \\
+% 		}
+% 		\end{tabular}
+% 	&\begin{tabular}{l}
+% 		\includegraphics[scale=0.3]{Architecture7}
+% 	\end{tabular}  \\
+% 	\end{tabular}
+% \end{frame}
+
+% \begin{frame}{Data - Control Flow}
+% 	\begin{tabular}{cl}  
+% 		\begin{tabular}{c}
+% 		\parbox{0.4\linewidth}{
+% 		\bigskip
+% 		\small{\textbf{Copy required data from user to kernel space}} \\
+% 		\medskip \\
+% 		\visible<2,3,4>{\small{\textbf{Allocate memory in kernel space}}} \\
+% 		\visible<3,4>{\footnotesize{Must be physically contiguous}} \\
+% 		\visible<4>{\footnotesize{Scatter-Gather mechanism}}
+% 		}
+% 		\end{tabular}
+% 	&\begin{tabular}{l}
+% 		\includegraphics[scale=0.3]{Architecture6}
+% 	\end{tabular}  \\
+% 	\end{tabular}
+% \end{frame}
+
+% \begin{frame}{Data - Control Flow}
+% 	\begin{tabular}{cl}  
+% 		\begin{tabular}{c}
+% 		\parbox{0.4\linewidth}{
+% 		\small{\textbf{Send execution request to backend}} \\
+% 		\visible<2,3,4>{\footnotesize{Push buffer to shared ring \\ (virtio)}} \bigskip \\
+% 		\smallskip \\
+% 		\visible<3,4>{\small{\textbf{Backend can access data without copying them}}} \\
+% 		\visible<4>{\footnotesize{Pass by reference: zero-copy}}
+% 		}
+% 		\end{tabular}
+% 	&\begin{tabular}{l}
+% 		\includegraphics[scale=0.3]{Architecture5}
+% 	\end{tabular}  \\
+% 	\end{tabular}
+% \end{frame}
+
+% \begin{frame}{Data - Control Flow}
+% 	\begin{tabular}{cl}  
+% 		\begin{tabular}{c}
+% 		\parbox{0.4\linewidth}{
+% 		\small{\textbf{Notify backend}} \bigskip \\
+% 		\smallskip \\
+% 		\visible<2,3,4>{\small{\textbf{Wait for execution results}}} \\
+% 		\visible<3,4>{\footnotesize{Busy wait loop}} \\
+% 		\visible<4>{\footnotesize{Sleep}}
+% 		}
+% 		\end{tabular}
+% 	&\begin{tabular}{l}
+% 		\includegraphics[scale=0.3]{Architecture4}
+% 	\end{tabular}  \\
+% 	\end{tabular}
+% \end{frame}
+
+% \begin{frame}{Data - Control Flow}
+% 	\begin{tabular}{cl}  
+% 		\begin{tabular}{c}
+% 		\parbox{0.4\linewidth}{
+% 		\small{\textbf{Execution on the GPU}} \bigskip \\
+% 		\smallskip \\
+% 		\visible<2,3>{\small{\textbf{Use Driver API routines}}} \\
+% 		\visible<3>{\footnotesize{Explicit context and module management}} \\
+% 		}
+% 		\end{tabular}
+% 	&\begin{tabular}{l}
+% 		\includegraphics[scale=0.3]{Architecture3}
+% 	\end{tabular}  \\
+% 	\end{tabular}
+% \end{frame}
+
+% \begin{frame}{Data - Control Flow}
+% 	\small{\textbf{CUDA contexts}}  \\
+% 	\visible<2,3,4,5>{\footnotesize{Analogue of host processes}} \\
+% 	\visible<3,4,5>{\footnotesize{Ensure protection}} \bigskip \\
+% 	\small{\textbf{CUDA modules}}  \\
+% 	\visible<4,5>{\footnotesize{Analogue of dynamically loaded libraries}} \\
+% 	\visible<5>{\footnotesize{Load device code}} \\
+% \end{frame}
+
+% \begin{frame}{Data - Control Flow}
+% 	\begin{tabular}{cl}  
+% 	\begin{tabular}{c}
+% 	\parbox{0.4\linewidth}{
+% 	\small{\textbf{Return Execution results}} \\
+% 	\visible<2,3>{\footnotesize{Trigger virtual interrupt}} \\
+% 	\visible<3>{\footnotesize{Copy data back to user space}}
+% 	}
+% 	\end{tabular}
+% 	&\begin{tabular}{l}
+% 	\includegraphics[scale=0.3]{Architecture1}
+% 	\end{tabular}  \\
+% 	\end{tabular}
+% \end{frame}
+
+% \begin{frame}{GPU Resource Sharing}
+% 	\begin{tabular}{cl}  
+% 	\begin{tabular}{c}
+% 	\parbox{0.4\linewidth}{
+% 	\visible<2,3,4,5,6>{\footnotesize{Resource sharing between \\ applications}} \\
+% 	\visible<3,4,5,6>{\footnotesize{Resource sharing between VMs}} \\
+% 	\visible<4,5,6>{\footnotesize{Isolation and Protection}} \\
+% 	\visible<5,6>{\footnotesize{Handle requests in FIFO order}} \\
+% 	\visible<6>{\footnotesize{Scheduling mechanism}}
+% 	}
+% 	\end{tabular}
+% 	&\begin{tabular}{l}
+% 	\includegraphics[scale=0.4]{SharedRing1}
+% 	\end{tabular}  \\
+% 	\end{tabular}
+% \end{frame}
+
+% \begin{frame}{Implementation Details}
+% 	\begin{tabular}{cl}  
+% 	\begin{tabular}{c}
+% 	\parbox{0.35\linewidth}{
+% 	\visible<2,3,4,5,6,7,8>{\small{\textbf{Kernel launch extension}}} \\
+% 	\visible<3,4,5,6,7,8>{\footnotesize{Discover and implement \\ internal routines}} \\
+% 	\visible<4,5,6,7,8>{\footnotesize{Reverse engineering}} \\
+% 	\visible<5,6,7,8>{\footnotesize{CUDA 5.0}} \bigskip \\
+% 	\smallskip \\
+% 	\visible<6,7,8>{\small{\textbf{Load device code}}} \\
+% 	\visible<7,8>{\footnotesize{Different API}} \\
+% 	\visible<8>{\footnotesize{Just-in-time loading}} \\
+% 	}
+% 	\end{tabular}
+% 	&\begin{tabular}{l}
+% 	\includegraphics[scale=0.35]{Compilation}
+% 	\end{tabular}  \\
+% 	\end{tabular}
+% \end{frame}
+
+% \section{Evaluation}
+
+% \begin{frame}{Experimental Setup}
+% 	\begin{itemize}
+% 	\footnotesize{\item 2 Intel Xeon X5650 CPUs (@2.66 GHz)}
+% 	\footnotesize{\item 48 GB of main memory}
+% 	\footnotesize{\item Nvidia Tesla M2050 GPU}
+% 	\footnotesize{\item QEMU-KVM 2.3}
+% 	\footnotesize{\item Each VM: 1 VCPU \& 1 GB RAM}
+% 	\footnotesize{\item Host: Ubuntu Linux 14.04 (kernel 3.19.0)}
+% 	\footnotesize{\item Guest: Debian 3.16.7 with kernel version 3.16.0}
+% 	\end{itemize}
+% \end{frame}
+
+% \begin{frame}{Benchmarks}
+% 	\small{\textbf{Matrix Multiplication}} \smallskip \\
+% 	\small{\textbf{BandwidthTest:} Measures memcopy bandwidth} \smallskip \\
+% 	\small{\textbf{LU Decomposition:} Solves set of linear equations} \smallskip \\
+% 	\small{\textbf{BlackScholes:} Evaluates fair call and put prices a set of options} \smallskip \\
+% 	\small{\textbf{FastWalshTransform:} Walsh–Hadamard Transform} \smallskip \\
+% 	\small{\textbf{Back Propagation:} Machine-learning algorithm} \smallskip \\
+% 	\small{\textbf{GPUStore:} Offload hashing-based operations to GPUs} \smallskip \\
+% 	\phantom{}
+% \end{frame}
+
+% \begin{frame}{Sleep vs. Busy-Wait}
+% 	\begin{figure}
+% 	\includegraphics[width=.9\columnwidth]{sleep_busywait_exec_time} \bigskip \\
+% 	\flushleft
+% 	\footnotesize{Matrix Multiplication Benchmark}
+% 	\end{figure}
+% \end{frame}
+
+% \begin{frame}{Sleep vs. Busy-Wait}
+% 	\begin{figure}
+% 	\includegraphics[width=.9\columnwidth]{sleep_busywait_cpu_util} \bigskip \\
+% 	\flushleft
+% 	\footnotesize{Matrix Multiplication Benchmark} \bigskip \\
+% 	\centering
+% 	\visible<2>{\footnotesize{\textbf{Hybrid Mechanism}}}
+% 	\end{figure}
+% \end{frame}
+
+% \begin{frame}{Microbenchmark Performance}
+% 	\begin{figure}[h]
+% 	\includegraphics[width=.9\columnwidth]{Benchmarks} \bigskip \\
+% 	\phantom{}
+% 	\end{figure}
+% \end{frame}
+
+% \begin{frame}{Breakdown Analysis - cudaMemcpy}
+% 	\begin{figure}[h]
+% 	\includegraphics[width=.9\columnwidth]{Breakdown} \bigskip \\
+% 	\flushleft
+% 	\footnotesize{BandwidthTest Benchmark}
+% 	\end{figure}
+% \end{frame}
+
+% \begin{frame}{Data Size Impact}
+% 	\begin{figure}[h]
+% 	\includegraphics[width=.9\columnwidth]{Data_Size_LuD} \bigskip \\
+% 	\flushleft
+% 	\footnotesize{LU Decomposition Benchmark}
+% 	\end{figure}
+% \end{frame}
+
+% \begin{frame}{Data Size Impact}
+% 	\begin{figure}[h]
+% 	\includegraphics[width=.9\columnwidth]{Breakdown_Application} \medskip \\
+% 	\flushleft
+% 	\footnotesize{Virtualization Overhead}
+% 	\begin{itemize}
+% 	\item \footnotesize{\textit{cudaMalloc} 24 $\mu$s} \\
+% 	\item \footnotesize{\textit{cudaFree} 23 $\mu$s} \\
+% 	\item \footnotesize{Kernel Launch 64 $\mu$s}
+% 	\end{itemize}
+% 	\end{figure}
+% \end{frame}
+
+% \begin{frame}{Application Performance}
+% 	\begin{figure}[h]
+% 	\includegraphics[width=.9\columnwidth]{Application} \bigskip \\
+% 	\flushleft
+% 	\footnotesize{GPUStore Application}
+% 	\end{figure}
+% \end{frame}
+
+% \begin{frame}{Performance at Scale}
+% 	\begin{figure}[h]
+% 	\includegraphics[width=.9\columnwidth]{Scalability} \bigskip \\
+% 	\flushleft
+% 	\footnotesize{BlackScholes benchmark}
+% 	\end{figure}	
+% \end{frame}
+
+
+% \section{Related Work}
+
+% \begin{frame}{Related Work}
+% 	\textbf{\small{API Remoting}} \\
+% 	\visible<2,3,4>{\footnotesize{{\textbf{rCUDA} [Pe\~na et al. 2014]}}} \\
+% 	\visible<2,3,4>{\footnotesize{{\textbf{vCUDA} [Shi et al. 2009]}}} \\
+% 	\visible<2,3,4>{\footnotesize{{\textbf{gVirtuS} [Giunta et al. 2010]}}} \bigskip \\
+% 	\visible<3,4>{\textbf{\small Paravirtualization}} \\
+% 	\visible<4>{\footnotesize{\textbf{GViM} [Gupta et al. 2009]}} \\
+% 	\visible<4>{\footnotesize{\textbf{LoGV} [Gottschlag et al. 2013]}} \\
+% \end{frame}
+
+% \begin{frame}{Related Work}
+% 	\textbf{\small{Full Virtualization}} \\
+% 	\visible<2,3,4>{\footnotesize{{\textbf{GPUvm} [Suzuki et al. 2014]}}} \\
+% 	\visible<2,3,4>{\footnotesize{{\textbf{gVirt} [Tian et al. 2014]}}} \bigskip \\
+% 	\visible<3,4>{\textbf{\small Pass-Through}} \\
+% 	\visible<4>{\footnotesize{\textbf{Gdev} [Kato et al. 2012]}} \\
+% 	\visible<4>{\footnotesize{\textbf{Nvidia GRID}}} \\
+% \end{frame}
+
+
+% \begin{frame}{Performance Comparison}
+% \centering
+% \begin{table}[b!]
+%   \begin{tabular}{|c|c|c|c|c|c|}
+% 	\hline
+% 	{} & \textbf{Ours} & rCuda & vCuda & GViM & LoGV \\
+% 	\hline 
+% 	MatrixMul[32MB] & -4.40\% & N/A & N/A & -3\% & -0.06\% \\
+%     \hline
+%     BlackScholes & 1.74\% & 60.87\% & 73.57\% & 6\% & N/A \\
+%     \hline
+%     FastWalshTransform & 9.23\% & 41.78\% & 378.08\% & 14\% & N/A \\
+%     \hline
+%     LU Decomposition & 3.32\% & N/A & N/A & N/A & -0.56\% \\
+%     \hline
+%   \end{tabular}
+%   \caption{Results relative to native}
+% \end{table}
+% \begin{center}
+% \small{Lower is the better}
+% \end{center}
+% \end{frame}
+
+% \begin{frame}{Current GPU Cloud Provider}
+% 	\small{Amazon Elastic Compute Cloud (EC2)} \medskip \\
+% 	\small{Microsoft Azure} \medskip \\
+% 	\small{Nimbix, Cirrascale}
+% \end{frame}
+
+
+% \section{Conclusion}
+
+% \begin{frame}{Future Work}
+% 	\begin{itemize}
+% 	\item \small{\textbf{Reduce Virtualization Overhead}} \\ 
+% 		\footnotesize{Zero Copy Mechanism - Memory Pinning}
+% 	\item \small{\textbf{GPU Resource Management}} \\ 
+% 		\footnotesize{Schedule Execution Requests}
+% 	\end{itemize}
+% \end{frame}
+% % {
+% % \setbeamercolor{background canvas}{bg=mDarkTeal}
+% % \begin{frame}{}
+% % 	\vspace*{\fill}
+% % 	\begin{center}
+% % 	\centering
+% % 	\textcolor{white}{\Huge{Thank you!}} \\
+% % 	\vfill
+% % 	\textcolor{white}{\scriptsize{This work has been submitted to InterCloud-HPC 2016}}
+% % 	\end{center}
+% % \end{frame}
+% % }
+
+% %\section{Thank you!}
+
+\end{document}
