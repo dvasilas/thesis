@@ -1,0 +1,1 @@
+Une approche flexible et décentralisée du traitement de requêtes dans les systèmes géo-distribués

@@ -32,6 +32,13 @@
 \usepackage{multirow}
 \usepackage{tabularx}
 \newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
+\usepackage{afterpage}
+
+\newcommand\blankpage{%
+    \null
+    \thispagestyle{empty}%
+    \addtocounter{page}{-1}%
+    \newpage}
 
 \colorlet{punct}{red!60!black}
 \definecolor{delim}{RGB}{20,105,176}
@@ -101,6 +108,7 @@
 \date{}
 
 \begin{document}
+\afterpage{\blankpage}
 
 \maketitle
 
@@ -127,11 +135,30 @@ Proteus consists of an extensible library of Query Processing Unit implementatio
 The experimental evaluation supports the theoretical analysis of the trade-offs involved in query processing state placement, and suggests that Proteus can effectively occupy multiple different points in the design space of geo-distributed query processing.
 }
 
+\afterpage{\blankpage}
+
+\chapter*{}
+\thispagestyle{empty}
+
+\begin{flushright}
+\begin{minipage}{8cm}
+\begin{center}
+{\Large To my family.}
+\end{center}
+\end{minipage}
+\end{flushright}
+\normalsize\vfill
+
+\afterpage{\blankpage}
+
+\input{acknowledgments}
 % \listoftodos
+
+\afterpage{\blankpage}
 
 \tableofcontents
 
-\input{content.tex}
+\input{content}
 
 \bibliographystyle{plainnat}
 \refstepcounter{chapter}
