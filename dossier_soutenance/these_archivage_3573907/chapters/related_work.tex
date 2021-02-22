@@ -1,0 +1,573 @@
+In this chapter, we discuss literature related to varying aspects of the work presented in this thesis.
+
+The work presented in this thesis builds upon existing approaches in the areas of secondary indexing,
+materialized views, and caching.
+In Sections~\ref{sec:secondaryindexing},~\ref{sec:mv} and~\ref{sec:related_caching} we outline design alternatives
+in each of these areas, and place our design existing approaches with respect to these.
+In more detail, in Section~\ref{sec:secondaryindexing},
+we present secondary indexing systems proposed in the literature, focusing on index partitioning schemes.
+The main difference with these approaches, is that our design aims at flexibly supporting both partitioning schemes.
+Another goal of our design is to enable configurable derived state maintenance.
+In Section~\ref{sec:related_index_corpus_consistency}, we outline index maintenance strategies proposed in the literature,
+and present existing indexing systems that support multiple maintenance schemes.
+Our work expands on these designs by enabling configurable maintenance for materialized views in addition to indexes.
+In Section~\ref{sec:mv}, we outline related work on systems that maintain materialized views for reducing query response
+time and increasing supported load.
+We present techniques that these works propose, and discuss how these techniques have motivated our design.
+Section~\ref{sec:related_caching} discusses query result caching.
+In particular, we present techniques for keeping cached results up to date
+as changes in the corpus occur,
+and discuss how these techniques can be implemented in QPU-based query engines.
+
+Section~\ref{sec:federation} examines the problem of query processing when the corpus is distributed across multiple data
+centers.
+This problem has been studied in the context of multi-site web search engines.
+We present a taxonomy of multi-site search engine architectures,
+which have motivated the design of Proteus.
+In addition, we outline the differences between the problem multi-site web search and the problem of geo-distributed
+query processing studied in this thesis.
+
+Two central properties of Proteus is the modular architecture, designed so that it can be assembled using basic building blocks,
+and its ability to enable configurable state and computation placement.
+Sections~\ref{sec:modular_arch} and~\ref{sec:placement} discuss related works in these areas.
+In Section~\ref{sec:modular_arch}, we present approaches for modular and composable system architectures.
+While these works address different research problems (Click \cite{kohler:click} addresses the problem of building configurable
+routers, and Pleiades \cite{bouget:pleiades} addresses the problem of enforcing large-scale distributed structural invariants),
+the techniques proposed by these works have motivated the modular architecture of Proteus.
+Section~\ref{sec:placement_computation} and~\ref{sec:placement_state} discuss
+operator and placement techniques respectively.
+
+Finally, the query processing unit computation model shares similarities with other computation models,
+including the MapReduce and dataflow computation models.
+In Section~\ref{sec:dataflowmapreduce},
+we discuss the similarities and differences between the QPU computation model and these paradigms.
+
+
+\section{Secondary indexing in distributed data stores}
+\label{sec:secondaryindexing}
+
+A number of works \cite{kejriwal:slik, dsilva:tworings, tan:diffindex, tang:deferredindexing}
+have examined the challenges of implementing secondary indexing in distributed databases.
+
+SLIK \cite{kejriwal:slik} discusses the design space for implementing a secondary indexing system in a distributed key-value store,
+including aspects such as index partitioning, consistency between corpus and index,
+and performing long-running operations such as index creation and migration.
+
+SLIK uses the B+tree data structure for indexing,
+and partitions secondary indexes using the partitioning scheme that we refer to as partitioning by term (\S\ref{sec:index_partitioning_background}).
+A difference between SLIK and our design is that in SLIK an index entry stores only data items' primary keys,
+while in Proteus, index entries also store the data items' attributes.
+Therefore, in SLIK, an index lookup needs to retrieve each data item in the lookup results from the storage engine.
+
+To achieve consistent index lookups SLIK uses two techniques.
+First, index entries are created before updates are applied to the corresponding data items,
+and old index entries are removed asynchronously, after updates have been applied.
+This ensures that the lifespan of an index entry spans that of the corresponding data item,
+and thus guarantees that if a data item contains a secondary attribute value, then an index lookup for that value will
+return the data item.
+Second, the query engine removes false positives by verifying index lookup results with the corresponding corpus data items.
+In other words, corpus data is treated as the ground truth and index entries as hints.
+
+Moreover, SLIK performs long-running bulk operations such as index creation, deletion and migration in the background,
+in order to avoid blocking blocking normal operations.
+
+While the authors discuss alternative approaches for several aspects of secondary indexing,
+SLIK's design specific certain points in the design space.
+For instance, it ensures strong consistency for index lookups at the expense of increased query response time
+(due to the mechanism that removes false positives).
+In contrast, the query processing architecture proposed in this thesis aims at occupying different points in the secondary indexing
+design space.
+
+\bigskip
+\noindent
+D'Silva et al.\ \cite{dsilva:tworings} study two approaches for partitioning a secondary index over a distributed data store.
+The first approach implements indexes as tables in the underlying data store.
+As a result, index entries are partitioned using the partitioning scheme implemented by the database.
+In the second approach, each node is responsible for maintaining its portion of the secondary index.
+In this approach, index entries are stored on the same node as the corresponding base table records.
+Both approaches have been implemented in HBase \cite{hbase:doc}.
+
+Experimental comparison of the two approaches shows that there is no single right solution in this setting.
+Rather, each approach is better suited for different needs,
+depending on factors including the distribution of values of the indexed attribute,
+the size of the system (number of partitions), the amount of concurrency in index lookups,
+and the selectivity of queries.
+
+While other works \cite{kejriwal:slik, tan:diffindex} analyze the design alternatives and trade-offs related to secondary
+indexing in distributed data stores, the work of D'Silva et al.\ is, to our knowledge, the first to experimentally
+demonstrate that no single approach to secondary indexing can be best for all cases.
+
+The work of D'Silva et al.\ considers a system model of a cluster of servers, and employs a synchronous maintenance scheme.
+Our work expands on that work in two directions.
+First, we consider geo-distribution.
+Second, in addition to analyzing secondary indexing design alternatives,
+we propose an architecture for enabling configurable secondary indexing techniques.
+
+%  // Replex
+% no need to compromise scalability for functionality.
+% We present Replex, a data store that enables efficient querying on multiple keys by rethinking data placement during replication
+% multi-key datastore.
+% Traditionally, a data store is first globally partitioned, then each partition is replicated identically to multiple nodes
+% Replex relies on a novel replication unit, termed replex, which partitions a full copy of the data based on its unique key.
+% Several NoSQL datastores have emerged that can support queries on multiple keys through the use of secondary indexes.
+% In Replex, each full copy of the data may be partitioned by a different key,
+% thereby retaining the ability to support queries against multiple keys without incurring a performance penalty
+% or storage overhead beyond what is required to protect the database against failure.
+% which makes use of a novel replication unit we call a replex. The key insight of a replex is to combine the need to replicate for fault- tolerance and the need to replicate for index availability.
+% A replex stores a table and shards the rows across multiple partitions. All replexes store the same data (ev- ery row in the table), the only difference across replexes is the way data is partitioned and sorted, which is by the sorting key of the index associated with the replex.
+% uses chain replication to replicate a row to a number of replex partitions, each of which sorts the row by the replex’s corresponding index
+% Programmers need to be able to query data by more than just a single key. For many NoSQL systems, supporting multiple indexes is more of an afterthought: a reaction to programmer frustration with the weakness of the NoSQL model.
+% Replex reconsiders multi-index data stores from the bottom-up, showing that implementing secondary in- dexes can be inexpensive if treated as a first-order concern.
+% novel replication scheme which considers fault- tolerance, availability, and indexing simultaneously.
+
+% In this paper, we explore the challenges associated with indexing modern distributed table-based data stores and investigate two secondary index approaches which we have integrated within HBase.
+% Our detailed analysis and experimental results prove the benefits of both the approaches.
+% Further, we demonstrate that such secondary index implementation decisions cannot be made in isolation of the data distribution and that different indexing approaches can cater to different needs.
+% We discuss two indexing strategies for distributed key-value stores:
+% one based on distributed tables that is able to exploit the table model of the underlying system for index management,
+% the other using a co-location approach allowing for efficient main-memory access
+
+\subsection{Consistency between corpus and index}
+\label{sec:related_index_corpus_consistency}
+In traditional database management systems, search is a primary mechanism for data retrieval.
+In addition, indexes are used internally for other operations such as view maintenance.
+Due to these reasons, these systems keep indexes always up to date with corpus data by performing
+index maintenance synchronously, in the critical path of write operations.
+In contrast, in non-relational distributed databases there exists a spectrum of design alternatives for index maintenance.
+In this section, we present an outline of index maintenance approaches proposed in the literature.
+
+\bigskip
+\noindent
+
+Azure DocumentDB is Microsoft's multi-tenant distributed database service for managing JSON documents at large scale.
+Shukla et al.\ \cite{shukla:schemaagnostic} describe DocumentDB's indexing subsystem.
+DocumentDB supports two index update policies.
+In ``consistent'' mode, the index is updated synchronously as part of the document update, and therefore
+queries have the same consistency level as the level specified for the point-reads
+(consistency levels include strong, bounded-staleness, session and eventual).
+In ``lazy'' mode, the index is updated asynchronously, when enough resources are available, so that indexing can proceed
+without affecting the performance guarantees offered for user requests.
+As a result, queries are eventually consistent (they can observe a stale )
+This mode is better suited for ``ingest now, query later'' workloads requiring efficient document ingestion.
+The indexing policy is set at the level of a document collection.
+
+\bigskip
+\noindent
+
+Diff-Index \cite{tan:diffindex} and Hindex \cite{tang:deferredindexing} study secondary
+indexing in data stores based on the log-structured merge tree data structure,
+which are characterized by the lack in-place update functionality and asymmetric read/write latency.
+This makes maintaining a consistent index with reasonable update performance challenging.
+
+Diff-Index \cite{tan:diffindex} proposes algorithms for alternative levels of consistency between corpus and indexes:
+causal, eventual and session consistency.
+The system enables users to choose the consistency level in a per-index basis.
+% The consistency levels make different trade-offs between index update latency and index consistency.
+% depending on the workload and consistency requirements.
+To implement eventual consistency, Diff-index logs writes that require index processing in a queue.
+Writes are immediately acknowledged to the client, and a background process ingests the queue and updates the index.
+Session consistency is implemented by tracking additional state in the client library.
+We note that the authors define causal consistency as the guarantee that once a write operation is
+acknowledged to the client, both corpus data and associated index entries are persisted in the data store.
+In this thesis, we use the term strong consistency for this guarantee.
+
+Hindex \cite{tang:deferredindexing} decomposes the task of index maintenance into two sub-tasks:
+inserting new index entries and removing old index entries (called index-repair).
+It executes the fast insert task synchronously while deferring the expensive repair task.
+Hindex makes use of a compaction mechanism used in log-structured data stores,
+which cleans up obsolete data and reorganizes the on-disk data layout.
+The authors propose two scheduling strategies for the repair operations:
+offline, coupled with the compaction mechanism,
+and online, where index-repair operations are performed in the execution path of query operations.
+
+\bigskip
+\noindent
+Enabling configurable index (and, more generally, state) maintenance schemes is one of the design goals of the work
+presented in this thesis.
+This is achieved by: 1) supporting both synchronous and asynchronous streams between QPUs,
+and 2) allowing different QPU types to treat updates using different schemes.
+
+\section{Materialized views}
+\label{sec:mv}
+Materialized views were devised for pre-computing the results of expensive query computations in relational databases.
+Support for materialized views is limited \cite{mysql:mvs} and views must usually be rebuilt when there are changes to
+the corpus \cite{postgresql:mvs}.
+
+The concept of materialized views has been employed by a number of works \cite{kate:pequod, amiri:dbproxy, gjengset:noria}
+aiming at improving ad-hoc application caching approaches.
+
+Noria \cite{gjengset:noria} is database system that lowers latency and increases supported load for read-heavy applications
+by using materialized views.
+It is designed with the aim of delivering the same fast reads as an in-memory cache in front of a database,
+without the application having to manage the cache.
+Noria's shares several similarities with our design.
+Applications register long-term queries with Noria for repeated use.
+Noria constructs a data-flow graph that connects database tables at its inputs to materialized views at its leaves,
+and incrementally evaluates these queries when the underlying data changes.
+Similarly to a QPU-based architecture, Noria's data-flow is a directed acyclic graph of relational operators.
+This is because both systems' designs are based on database query planning.
+% Noria generates the data-flow graph for an SQL query using a process similar to database query planning.
+
+Pequod \cite{kate:pequod} and DBProxy \cite{amiri:dbproxy} are application-level caches that support incrementally
+maintained, partially-materialized views \cite{zhou:dynamicmv}.
+Both systems maintain materialized views by subscribing to a stream of updates propagated by the underlying database.
+Our design uses the same technique in order to propagate update information from the data store to the QPU graph.
+
+Pequod, similarly to our design, acts as a write-around cache;
+Application writes go directly to the database, and applications access Pequod only for reads.
+In contrast, in Noria and DBProxy, applications issue writes to the cache, and the system transparently forwards them to the database.
+
+In Noria and Pequod, view materialization is controlled by users.
+Noria receives a program specifying a relational schema and a set of parametrized queries, written in SQL,
+and installs a corresponding data-flow graph.
+In addition, Noria is able to adapt its data-flow graph to new queries without downtime.
+Similarly, in Pequod users can textually define views using a simple grammar.
+In contrast, DBProxy decides dynamically which views to maintain and which can be evicted to save space.
+It achieves that by transparently intercepting application SQL calls.
+
+There are two main differences between Proteus and these works.
+First, these works consider the problems of view selection and view definition,
+and address aspects such as materializing views for additional queries at runtime.
+In contrast, in this thesis, we focus on the challenges of maintaining materialized views over geo-distributed data.
+We consider the problems of view selection and view definition to be out of the scope of this work.
+In our current design, a QPU-graph (akin to Noria's data-flow graph) is defined by the database administrator by passing
+the corresponding configuration to the graph's query processing units.
+However, the task of configuration and deployment of a QPU graph based on a given query could be automatically performed
+by an external component, analogous to Noria's or Pequod's dataflow generation components.
+The second difference is that Proteus is designed as a more general-purpose query processing framework:
+in addition to materialized views, Proteus supports caching and secondary indexing.
+
+\section{Result caching}
+\label{sec:related_caching}
+An important aspect of query result caching is the problem of keeping cached results consistent with the corpus
+as changes to the corpus occur.
+Caching systems employ invalidation and refreshing techniques for achieving that.
+We can categorize cache invalidation and refreshing approaches in two types.
+\textit{Coupled} or ``push-based'' approaches provide the cache with information about changes to the corpus.
+\textit{Decoupled} or ``pull-based'' approaches invalidate cached entries without any concrete knowledge of changes to the corpus.
+
+Cambazoglu et al.\ \cite{cambazoglu:yahoorefreshing} present the design of the result cache used
+in the Yahoo! search engine.
+This caching system uses the decoupled approach:
+Cache entries are invalidated using a time-to-live based strategy,
+and are refreshed by issuing refresh queries to the web search index.
+The authors present an algorithm for prioritizing cache entries to be refreshed based on the access frequency of entries and
+the age of the cached entry.
+
+Proteus supports both push and pull:
+In pull-based refreshing, the Cache QPU refreshes cache entries by sending query requests to the underlying query engine.
+In push-based refreshing, the Cache QPU, upon a cache miss issues a query request and additionally subscribes to
+notifications for the corresponding query results.
+In Proteus, the invalidation and refresh policy of a Cache QPU is controlled by a configuration parameter.
+In addition, the Cache QPU supports a hybrid approach in which it receives update notifications,
+and refreshes the cache entry when a threshold number of updates is crossed,
+by performing a query request.
+
+\section{Geo-distributed query processing}
+\label{sec:federation}
+
+A series of papers \cite{cambazoglu:multisitequantifying, yates:multisitefeasibility, cambazoglu:multisiteforwarding, frances:multisiteefficiency, kayaaslan:multisitereplication}
+have studied the problem of designing a large-scale web search engine over multiple geographically distributed data centers.
+
+These works consider the following system model:
+A search engine architecture composed of multiple data centers, each associated with a geographical region.
+Each data center stores and crawls documents that are served by web sites in its geographical region.
+As a result, each data center is responsible for a disjoint subset of the Web.
+The search engine builds an inverted index over the crawled documents, which is used to serve queries.
+Documents are ranked based on a ranking function; the result of a query consists of the $k$ most highly ranked documents
+for that query.
+
+Cambazoglu et al.\ \cite{cambazoglu:multisitequantifying} present a taxonomy of search engine architectures for this problem.
+In a \textit{centralized} architecture, the entire index is stored in one, central site, and all user queries are submitted to this site.
+The index might be replicated or partitioned within the site.
+This architecture was used by early web search engines as well as small-scale engines.
+
+In a \textit{replicated} architecture, the entire index is replicated over multiple data centers.
+Queries are routed to data centers based on geographical proximity of users to data centers.
+
+Finally, in a \textit{partitioned} architecture, the document collection is partitioned into smaller, non-overlapping
+sub-collections such that each data center is responsible for a different sub-collection.
+Queries originating in a particular region are evaluated over the partial index in the corresponding search site.
+The underlying assumption in this approach is that users are interested more in documents located in their own region,
+and local documents are more relevant for queries originating from the same region.
+
+This problem is similar to the problem of multi-cloud federated metadata search discussed in Section~\ref{sec:zenko}.
+Similarly to the multi-site web search problem,
+in multi-cloud metadata search a corpus is partitioned into disjoint parts, each placed on a geographically distant
+data center.
+Thanks to its flexibility, our architecture design supports all three types of search engine architectures discussed in
+\cite{cambazoglu:multisitequantifying}.
+This use case is amongst the main motivations for this work.
+
+There are two main differences between the problem examined in this thesis and multi-site web search.
+First, our query model does not involve the notion of a ranking function.
+In both problems, the challenge with the partitioned architecture is to retrieve relevant query results that are not
+local to the site serving a given query.
+Taking advantage of the ranked query results, approaches to multi-site web search have proposed two solutions:
+partial replication of the popular documents across search sites \cite{frances:multisiteefficiency},
+and selectively forwarding queries to remote sites that are expected to contribute relevant query results
+\cite{yates:multisitefeasibility, cambazoglu:multisiteforwarding}.
+In this work, we rely on techniques such as caching and replication of popular index and materialized view entries in
+order to reduce the need to forward queries to remote sites.
+Cambazoglu et al.\ \cite{cambazoglu:multisiteforwarding} have evaluated the impact of result caching
+on the rate of locally processed queries.
+Results show that with result caching, the fraction of queries that can be locally processed inc increases by 35\% to 45\%.
+
+Second, the problem of web search has a different index update model than the problem of attribute-based querying.
+In web search, indexes are updated periodically based on information from crawlers,
+while attribute-based querying involves incremental index updates,
+and potentially high rates of updates.
+
+% The downside of this approach is that documents that are relevant to a query but are not local to the search site are
+% not retrieved, leading to inferior search quality.
+% The problem of accessing non-local documents has two immediate solutions:
+% taking the data to where it is sought and/or taking the queries to what they seek.
+% The first is an offline solution that requires partial replication of the popular documents in a region on some non-local search sites.
+% The second is an online solution that requires selective forwarding of queries between search sites to extend cover- age of search results.
+% forwarding of queries between search sites to extend cover- age of search results.
+
+% The works in \cite{yates:multisitefeasibility} and \cite{cambazoglu:multisiteforwarding}
+% have proposed techniques for selective query forwarding.
+% Selective forwarding works as follows:
+% When a search site receives a query, it estimates the quality of the locally computed results relative to globally computed results
+% (results that which would have been obtained through evaluation over the full index).
+% If it is determined that the local index misses some documents that would have appeared in the global ranking,
+% the local site estimates which remote sites might have those documents, and forwards the query to those sites.
+% Finally, non-local and local results are merged and returned to the user.
+
+% In \cite{frances:multisiteefficiency} Kayaaslan et al.
+% propose strategies for selectively replicating documents across search engine sites.
+% The key idea is to identify documents that are of interest to the users of certain geographical regions,
+% based on the occurrence frequencies of documents in past search results,
+% and then replicate identified documents on remote sites so that future queries can be processed without the need for
+% forwarding.
+% Documents replication leads to improvements in the query processing efficiency, as when performed effectively,
+% fewer queries need to be forwarded, this reducing average query response times and the overall query workload of the search engine.
+% At the same time, increasing the volume of replicated documents has a negative impact on query processing times of local data centers,
+% due to the increase in their index sizes.
+% There is thus a trade-off between replication and search performance.
+% The work in \cite{kayaaslan:multisitereplication}
+% proposes three different document replication strategies, each optimizing a different objective:
+% reducing the potential search quality loss, the average query response time, or the total query workload of the search system.
+
+
+
+\section{Modular \& Composable architectures}
+\label{sec:modular_arch}
+Click \cite{kohler:click} proposes a software architecture for building flexible and configurable routers.
+A Click router is assembled from packet processing modules, called elements.
+A Click element represents a unit of router processing.
+Individual elements implement simple router functions like packet classification, queueing, scheduling, and interfacing with network devices.
+A router configuration is a directed graph with elements at its vertices.
+An edge between two elements represents a possible path for packet; packets flow along the edges of the graph.
+
+While aimed at a different field, Click's core philosophy is close the QPU model.
+A Click element, akin to a query processing unit, is responsible for a simple packet processing function,
+and different types of elements are responsible for different packet processing tasks.
+
+Pleiades \cite{bouget:pleiades} is a framework for constructing and enforcing large-scale distributed structural invariants.
+It addressed the need of system architectures to organize nodes in complex topologies.
+Pleiades is based on assembly-based modularity for enabling configurations to express complex topologies:
+A structural invariant is expressed as a combination of basic shapes, such as rings, grids, and stars.
+A configurations specifies a set of basic shapes, and how these shapes should be connected.
+
+\section{State and computation placement}
+\label{sec:placement}
+\subsection{Computation placement}
+\label{sec:placement_computation}
+The problem of the placement of computations on processing nodes has been studied primarily in the context of distributed
+stream processing systems \cite{lakshmanan:placementstrategies}.
+
+A stream processing system can be viewed as a flow graph composed of a set of message sources (producers),
+and a collection of stream processing operators that periodically consume messages, perform processing tasks,
+and deliver results either to message sinks (consumers) or to other operators.
+In addition, there exists a collection of processing nodes available for deploying operators.
+The operator placement problem consists of computing an assignment of operators to nodes that optimally satisfies a
+certain metric, such as load, latency, or network resource usage.
+
+From an architecture point of view, placement decisions are performed either by a central placement module, independent
+from the stream processing engine, or are decentralized, each operator taking local placement decisions.
+Our work currently consider the placement decisions as independent to the query processing tasks;
+the placement of the QPU graph on system nodes is decided on by an central entity (a system operator in our current design)
+before the system is deployed.
+A direction for future work could be a hybrid placement logic, in which after an initial global placement decision,
+individual QPUs make local decisions at runtime in response to changing workload, network and resource conditions.
+
+Placement algorithms can be categorized to centralized and decentralized.
+Centralized placement algorithms require global view of the system, including workload information and resource availability.
+These algorithms can compute globally optimal placement assignments, but often have limited scalability.
+On the other had, decentralized algorithms achieve improved scalability by making placement decisions based on local
+workload and resource information.
+Our design implicitly assumes that an system operator deciding on the placement of a QPU graph has a global view of the
+system.
+
+An important difference with these works is that in our current design placement decisions are performed offline,
+before a QPU graph is deployed, and placement is static throughput the system's operation.
+
+Another distinction is that, most often, this approaches consider stateless operators.
+In this work we propose an approach for enabling flexible placement of not only stateless operators, such as
+filters, but stateful components such and indexes and materialized views.
+In addition, we take into account techniques such as partitioning and replication of query processing state.
+We consider this one of our mains contributions.
+
+More generally, in this work, we focus on the \textit{mechanisms} (as opposed to placement algorithms)
+required for enabling flexible placement.
+While we evaluate different placement configurations in order to demonstrate the benefits of flexile placement,
+we consider placement algorithms an orthogonal problem that is out of the scope of this work.
+
+\bigskip
+\noindent
+Two optimization techniques often employed by operator placement algorithms are operator reuse and replication.
+Operator reuse is based on the observation that consumers commonly execute identical of partially identical queries.
+Instead of instantiating new operators for each query,
+some placement algorithms \cite{pietzuch:networkawareopplacement} try to detect opportunities for sharding intermediate results across queries.
+This avoids transmitting multiple redundant copies of the same data.
+The design and implementation of query processing units includes two mechanisms that enable operator reuse.
+First, each QPU can perform multiple independent processing tasks in parallel.
+As a result, queries that require the functionality of a certain QPU can share the same QPU instance,
+provided there are enough resources.
+Second, when a QPU receives a query request, it first examines if that particular query is already being executed,
+and if so it appends the component that submitted the query to the receivers of the query's output stream.
+
+Operator replication consists of deploying multiple instances of an operator,
+and partitioning the input stream among operator replicas.
+This enhances the scalability of stream processing as it parallelizes the processing task among operator replicas
+\cite{stonebraker:streamprocessingrequirements}.
+This technique has been also applied to distributed query processing.
+Query processing in CockroachDB \cite{cockroachdb:distsql} uses the concept of grouping to partition a logical stream
+(that is part of a query processing task) into multiple physical streams which can be processed in parallel.
+A stream is divided into groups so that computation within a group is independent from other groups.
+Parallelizing query processing across operator replicas is also possible in QPU-based architectures.
+The QPU graph and configuration for achieving that is akin to the index partitioning scheme presented in Section~\ref{sec:cs_index_partitioning}.
+
+We note that in the the scope of this work neither operator reuse nor replication are automatically handled by the system,
+as in some stream processing systems.
+The system however provides the functionalities required for putting in place these techniques.
+Employing operator replication and reuse in a QPU graph can be performed by configuring the graph accordingly.
+
+\bigskip
+\noindent
+Helios \cite{potharaju:helios} is a system used at Microsoft for ingestion, indexing, and aggregation of large streams
+of real-time data.
+Helios is used to collect very large amounts (in the order of several PB per day) across 15 data centers.
+It was developed in response to limitation of existing systems
+(``None of our existing systems could handle these requirements adequately; either the solution did not scale or it was
+too expensive to capture all the desired telemetry.'')
+Amongst Helios' principal design decisions is to support computation offloading at the edge.
+In Helios' architecture, data collection is performed by an independently-running executable that can run in any pod/rack/data center.
+Using this components the tasks of data summarization, index generation, and aggregation can be distributed to edge devices.
+
+Helios' support for computation offloading at the edge is similar to the core design goal of the architecture proposed in the work:
+enabling flexible placement of both (query processing) state and computation across the system.
+While we have focused on scenarios in which data sources reside in the data center,
+QPU-based architectures are not restricted to such configurations and can be also used to ingest and index data from geo-distributed
+sources.
+Helios is, of course, a system deployed in production in Microsoft and provides support for aspects that are out of the
+scope of this work, such as the ability to impose restrictions on the resource consumption of the data collection component
+so that in can run on resource constrained devices.
+
+\subsection{State placement}
+\label{sec:placement_state}
+Large scale web services are concurrently used by a large number of geographically distributed clients.
+A significant challenge that these services face is the large request latencies resulting from the geographical distance
+between clients and application state.
+A common solution to this latency problem is to place data closer to clients in order to avoid costly round-trips
+to the data center.
+For example, Google has comparatively few data center locations relative to edge nodes \cite{google:infra}.
+
+Content delivery networks (CDNs), such as Akamai \cite{nygren:akamai} aim at deploying data on edge nodes,
+close to clients.
+However, CDNs focus on static data as such images and video content and are not well suited for mutable state.
+
+Other works have studied the problem placing application state across data centers.
+Volley \cite{agarwal:volley} is a system for automatic data placement across geo-distributed data centers.
+Volley makes placement decisions based on request logs submitted by applications.
+The difference between the placement of application state and derived state used for query processing (indexes, materialized)
+views, is that efficient placement decisions about application state result in reduced latency for both reads and writes
+to the state.
+However, in the system model considered in this work, corpus data has a static placement,
+while derive state can be flexibly placed across the system.
+This often results to trade-offs between read and write operations,
+as derived state receives read requests from the clients, and update notifications from the corpus.
+
+% update propagation across different edges and processing at different vertices can happen in parallel.
+% Therefore, data-flow processing is well-suited to scaling across multiple CPU cores and servers.
+
+
+% \section{Scaling search services through partitioning and replication}
+% It is widely known that caching, partitioning, and replication are three primary strategies for scaling up large,
+% distributed web services (e.g., search) with high-throughput and low-latency requirements.
+% sharing the distributed search architecture that underlies Twitter user search, a service for discovering relevant accounts on the popular micro-blogging service.
+% issues that are critical to their operation in real-world production environments.
+% Focusing in particular on partitioning and replication, some of these important questions include:
+% manage partition and replica configurations in coordinate automatic, seamless failover of partition and replica
+% dynamically adjust configurations in response to increasing (or decreasing) load in an elastic manner
+% Our goal is to share experiences in answering the above questions, in the context of user search
+% The solution that we describe makes extensive use of ZooKeeper
+% make use of the design principle that eliminates the distinction between failures and other anticipated service disruptions (e.g., code deployments, configuration changes, etc.)
+% explication of many production and operational issues associated with partitioned, replicated search services.
+
+\section{Distributed computation models}
+\label{sec:dataflowmapreduce}
+
+\subsection{MapReduce}
+
+MapReduce \cite{dean:mapreduce} is a programming paradigm for distributing computational tasks over multiple processing nodes.
+The core idea is that many types of tasks can be expressed as a map operation that operates on the dataset which is organized
+as a collection of records (key-value pairs);
+The map operation can be distributed, each individual operation processing a different subset of the input dataset.
+The output of these map operations can be then collected and merged into the desired result by reduce operations.
+
+McCreadie et al.\ \cite{mccreadie:mapreduceindexing} have examined the benefits that can be obtained by performing document
+indexing using MapReduce.
+In particular, this work presents and evaluates four strategies for applying the MapReduce paradigm
+to the task of indexing large document collections.
+
+The query processing unit computation model could be compared with the MapReduce paradigm.
+Two central characteristics of MapReduce are that:
+1) each map task is independent and not aware of its context in the overall job
+(because of this that map tasks can be performed by a large number of workers in parallel, each operating on a different
+subset of the input dataset)
+and, 2) map and reduce tasks form a two-tiered hierarchical structure,
+with the output of the map tasks being used as input to the reduce tasks.
+The QPU model has similar characteristics:
+Each individual QPU is independent, and communicates with its connection in the graph graph through well-defined interfaces;
+Connections between QPUs from from tiered architectures in which the output of one tier is used as input to the next.
+Because of these similarities, a QPU graph can be configured to perform MapReduce-style distributed computations.
+For example, the task of indexing a large document collection, can be implemented with a QPU-based architecture
+as follows:
+``Indexing'' QPUs, responsible for receiving documents as input, can be used as map tasks.
+For each document, an indexing QPU computed and emits a (term, docID) records.
+``Reduce'' QPUs be connected a parents of multiple indexing QPUs,
+so that each reduce QPU receives the output of multiple indexing QPUs.
+Reduce QPU then merge (term, docID) records into posting lists for each docID.
+
+On the other hand, the MapReduce paradigm and the QPU model have important differences in their design goals.
+MapReduced has been developed with the aim of parallelizing and distributing one-time computational tasks,
+while the QPU model is mainly intended for building and incrementally maintaining derived state.
+
+\subsection{Dataflow engines}
+An evolution of the MapReduce model is the model used in dataflow execution engines.
+Dataflow engines explicitly model the flow of data through processing stages (henge the term dataflow).
+A dataflow system represents computations as a graph, in which vertices are user-defined operators.
+An operator receives input records, process each record and emits zero or more output records.
+Edge carry records between operators; the output of one operator becomes the input of another.
+Some of the most well known systems that perform dataflow computations at their core is
+Apache Spark \cite{zaharia:spark} and Flink \cite{carbone:flink}.
+
+These systems are based on research systems such as Dryad.
+Dryad \cite{isard:dryad} is a general-purpose distributed execution engine that employs the dataflow model.
+A Dryad job is a directed acyclic graph; each vertex is a program and edges represent data channels.
+Dryad's runtime is responsible for mapping a logical computation graph to physical resources,
+and abstracts several distributed computing problems from the developer,
+such as resource allocation, scheduling, and the transient or permanent failures.
+
+Noria \cite{gjengset:noria} proposes partially-stateful dataflow,
+a dataflow model that supports eviction and reconstruction of data-flow state on demand.
+Noria employs partially-stateful dataflow to support partially materialized view maintained
+using updates from a database system.
+
+The QPU computation model also makes use of dataflow computations for maintaining derived state
+over corpus data.
+An important difference from general dataflow engines is that the QPU model is designed for executing
+query processing computations rather than arbitrary distributed computations.

@@ -1,0 +1,251 @@
+\documentclass[a4paper,usenames,dvipsnames]{report}
+\usepackage{fancyhdr}
+\usepackage[ddmmyyyy,hhmmss]{datetime}
+\usepackage{tcolorbox}
+\usepackage[numbers,square,sort&compress]{natbib}
+\usepackage[
+  colorlinks=true,
+  breaklinks=true,
+  allcolors=blue]{hyperref}
+\usepackage{chapterbib}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage[]{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amssymb}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage[]{xcolor}
+\usepackage{array,longtable,calc}
+
+\def\UrlBreaks{\do\/\do-}
+
+\setcounter{tocdepth}{3}
+\setcounter{secnumdepth}{4}
+
+\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+\usepackage{booktabs}% http://ctan.org/pkg/booktabs
+\newcommand{\tabitem}{~~\llap{\textbullet}~~}
+\usepackage{adjustbox}
+\usepackage{multirow}
+\usepackage{tabularx}
+\newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
+\usepackage{afterpage}
+
+\newcommand\blankpage{%
+    \null
+    \thispagestyle{empty}%
+    \addtocounter{page}{-1}%
+    \newpage}
+
+\colorlet{punct}{red!60!black}
+\definecolor{delim}{RGB}{20,105,176}
+\colorlet{numb}{magenta!60!black}
+
+\lstdefinelanguage{qpulang}{
+  basicstyle=\normalfont\ttfamily,
+  captionpos=b,
+}
+
+\lstdefinelanguage{json}{
+  basicstyle=\normalfont\ttfamily,
+  breaklines=true,
+  commentstyle=\color{gray},
+  morecomment={[l]{//}},
+  literate=
+    {\#}{{{\color{numb}{\#}}}}{1}
+    {:}{{{\color{punct}{:}}}}{1}
+    {,}{{{\color{punct}{,}}}}{1}
+    {\{}{{{\color{delim}{\{}}}}{1}
+    {\}}{{{\color{delim}{\}}}}}{1}
+    {[}{{{\color{delim}{[}}}}{1}
+    {]}{{{\color{delim}{]}}}}{1},
+    captionpos=b,
+}
+
+\lstset{float,
+  basicstyle=\normalfont\ttfamily,
+  language=SQL,
+  % frame=tb,
+  keywordstyle=[1]\color{NavyBlue},
+  keywordstyle=[2]\color{PineGreen},
+  keywords=[2]{attributeName, tableName, stringValue, floatValue, intValue, dateTimeValue, timestampValue},
+  captionpos=b,
+  mathescape=true,
+  % tabsize=2,
+  % xleftmargin=\parindent,
+  escapeinside={(*@}{@*)},
+  breaklines=true,
+  morekeywords=[1]{SYNC, ASYNC, TO, SYSTEM, START, LATEST},
+  deletekeywords={VALUE},
+  literate=
+    *{=}{{{\color{gray}=}}}{1}
+    {<}{{{\color{gray}<}}}{1}
+    {>}{{{\color{gray}>}}}{1}
+    {!}{{{\color{gray}!}}}{1}
+  }
+
+\lstdefinelanguage{pseudo}{
+  basicstyle=\normalfont\ttfamily,
+  keywordstyle=\color{NavyBlue},
+  captionpos=b,
+  breaklines=true,
+  keywords={type, class, function},
+}
+
+% \pagestyle{fancy}
+% \lhead{}
+% \rfoot{Compiled on \today\ at \currenttime}
+% \cfoot{}
+% \lfoot{Page \thepage}
+
+\makeindex
+
+\title{A flexible and decentralised approach to query processing for geo-distributed data systems}
+\author{Dimitrios Vasilas}
+\date{}
+
+\begin{document}
+\pagenumbering{roman}
+
+\afterpage{\blankpage}
+
+\thispagestyle{empty}
+
+% \newgeometry{textheight=25cm,textwidth=16cm}
+
+% \begin{figure}
+%   \begin{subfigure}{0.33\textwidth}
+\includegraphics[scale=.08]{./figures/Logo_Sorbonne_Universite.png}
+%   \end{subfigure}%
+%   \begin{subfigure}{0.33\textwidth}
+%     \hspace*{1.5cm}\includegraphics[scale=.3]{./figures/logo_lip6.png}
+%   \end{subfigure}%
+%   \begin{subfigure}{0.33\textwidth}
+%     \includegraphics[scale=.7]{./figures/inria_logo.png}
+%   \end{subfigure}
+% \end{figure}
+
+\vspace*{1.5cm}
+
+\begin{center}
+
+{\Huge{\bf Sorbonne Universit\'e}}
+
+\vspace*{1cm}
+
+{\Large\'Ecole Doctorale Informatique, T\'el\'ecommunications et \'Electronique}
+
+\vspace*{0.3cm}
+
+{\Large Scality}
+
+\vspace*{0.3cm}
+
+{\Large Laboratoire d’Informatique de Paris 6}
+
+\vspace*{0.3cm}
+
+{\Large Inria}
+
+\vspace*{0.3cm}
+
+{\Large \'Equipe DELYS}
+
+\vspace*{1cm}
+
+{\LARGE {\bf A flexible and decentralised approach to query processing for geo-distributed data systems}}
+
+\vspace*{1.5cm}
+
+{\Large Par Dimitrios Vasilas}
+
+\vspace*{1cm}
+
+{\Large Th\`ese de doctorat en informatique}
+
+\vspace*{1cm}
+
+{\Large Dirig\'ee par Marc Shapiro et Bradley King}
+
+\vspace*{1cm}
+
+{\large Pr\'esent\'ee et soutenue publiquement le 19 f\'evrier 2021}
+
+\end{center}
+
+\vspace*{1cm}
+\flushleft{{{\large Devant le jury compos\'{e} de :  }}\\
+\flushleft{\resizebox{\textwidth}{!}{\begin{tabular}{r@{\ }ll}
+  & {\large \textbf{M. Bernd} {\sc\textbf{Amann}}, Full Professor, Sorbonne Universit{\'e}} & {\large Examinateur}\\
+  & {\large \textbf{Mme. Bettina} {\sc\textbf{Kemme}}, Associate Professor, McGill University} & {\large Examinateur}\\
+  & {\large \textbf{M. Bradley} {\sc \textbf{King}}, Co-founder \& Field CTO, Scality} & {\large Encadrant}\\
+  & {\large \textbf{M. S\'{e}bastien} {\sc\textbf{Monnet}}, Full Professor, Universit{\'e} Savoie Mont Blanc} & {\large Rapporteur}\\
+  & {\large \textbf{M. Themis} {\sc\textbf{Palpanas}}, Professeur, Universit\'{e} de Paris} & {\large Examinateur}\\
+  & {\large \textbf{M. Nuno} {\sc\textbf{Pregui\c{c}a}}, Associate professor, Universidade Nova de Lisboa} & {\large Rapporteur}\\
+  & {\large \textbf{M. Masoud} {\sc\textbf{Saeida Ardekani}}, Software Engineer, Google} & {\large Examinateur}\\
+  & {\large \textbf{M. Marc} {\sc\textbf{Shapiro}}, Distinguished Research Scholar, Inria} & {\large Directeur de th\`{e}se}\\
+\end{tabular}}
+
+
+% \maketitle
+
+\abstract{
+Query processing is an essential component of today's data serving systems.
+Query processing involves a variety of metrics that are in tension and create trade-offs.
+Because of these trade-offs, application developers need to tune query engines to the characteristics and needs of each application.
+Today's query engines often handle requests from users around the world, accessing data spread across geographically distributed sites.
+This thesis studies how to support efficient query processing in contexts in which users and data are distributed across multiple geographic locations.
+
+We present an analysis of the design decision and trade-offs in geo-distributed query processing.
+In particular, we study how the placement of derived state used by the query engine to accelerate query processing (indexes, materialized views)
+and the communication patterns involved in query processing and state maintenance affect three metrics: query performance, query result freshness, and cross-site network resource consumption.
+We propose a query engine architecture that, as opposed to current state-of-the-art approaches, allows application developers to make derived state placement decisions in a case-by-case basis.
+
+The enabling technique that this thesis presents is composition-based design:
+a query engine architecture can be constructed by composing building block components that encapsulate primitive query processing tasks into a directed acyclic graph that provides higher-order query processing capabilities.
+We introduce a query processing component abstraction, the Query Processing Unit (QPU), that defines a uniform interface and interaction semantics for query processing architecture building blocks.
+This uniform interface and interaction semantics allows us to expose design decisions about the query engine’s architecture and placement to application developers.
+
+Finally, we present an implementation of the proposed approach, in the form of a framework for constructing and deployment application-specific query engines, called Proteus.
+Proteus consists of an extensible library of Query Processing Unit implementations, and mechanisms for facilitating the definition and deployment of QPU-based query engines.
+
+The experimental evaluation supports the theoretical analysis of the trade-offs involved in query processing state placement, and suggests that Proteus can effectively occupy multiple different points in the design space of geo-distributed query processing.
+}
+
+\afterpage{\blankpage}
+
+\chapter*{}
+\thispagestyle{empty}
+
+\begin{flushright}
+\begin{minipage}{8cm}
+\begin{center}
+{\Large To my family.}
+\end{center}
+\end{minipage}
+\end{flushright}
+\normalsize\vfill
+
+\afterpage{\blankpage}
+
+\input{acknowledgments}
+% \listoftodos
+
+\afterpage{\blankpage}
+
+\pagenumbering{arabic}
+
+\tableofcontents
+
+\afterpage{\blankpage}
+
+\input{content}
+
+\bibliographystyle{plainnat}
+\refstepcounter{chapter}
+\bibliography{refs}
+
+\end{document}

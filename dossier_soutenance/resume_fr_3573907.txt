@@ -1,12 +1,10 @@
-This thesis studies the design of query processing systems, across a diversity of geo-distributed settings.
-Optimising performance metrics such as response time, freshness, or operational cost involves design decisions,
-such as what derived state (e.g., indexes, materialised views, or caches) to maintain,
-and how to distribute and where to place the corresponding computation and state.
-These metrics are often in tension, and the trade-offs depend on the specific application and/or environment.
-This requires the ability to adapt the query engine's topology and architecture, and the placement of its components.
-This thesis makes the following contributions:
-- A flexible architecture for geo-distributed query engines, based on components connected in a directed acyclic graph.
-- A common microservice abstraction and API for these components, the Query Processing Unit (QPU). A QPU encapsulates some primitive query processing task. Multiple QPU types exist, which can be instantiated and composed into complex graphs.
-- A model for constructing modular query engine architectures as a distributed topology of QPUs, enabling flexible design and trade-offs between performance metrics.
-- Proteus, a QPU-based framework for constructing and deploying query engines.
-- Representative deployments of Proteus and experimental evaluation thereof.
+Cette thèse présente l'étude de la conception de systèmes de traitement de requêtes dans divers cadres géo-distribués.
+L'optimisation des mesures de performance telles que le temps de réponse, la fraîcheur ou le coût opérationnel implique des décisions de conception tel que le choix de l’état dérivé (indices, vues matérialisées, caches par ex.) à construire et maintenir, et la distribution et le placement de ces derniers et de leurs calculs.
+Ces métriques sont souvent opposées et les compromis dépendent de l'application et/ou de la spécificité de l'environnement.
+La capacité d'adapter la topologie et l'architecture du système de traitement de requêtes devient alors essentielle, ainsi que le placement de ses composants.
+Cette thèse apporte les contributions suivantes :
+- Une architecture flexible pour les systèmes de traitement de requêtes géo-distribués, basée sur des composants connectés dans un graphe bidirectionnel acyclique.
+- Une abstraction de micro-service et une API communes pour ces composants, le Query Processing Unit (QPU). Un QPU encapsule une tâche de traitement de requête primitive. Il existe plusieurs types de QPU qui peuvent être instanciés et composés en graphes complexes.
+- Un modèle pour construire des architectures de systèmes de traitement de requêtes modulaires composées d’une topologie distribuée de QPUs, permettant une conception flexible et des compromis selon les mesures de performance visées.
+- Proteus, un framework basé sur les QPU, permettant la construction et le déploiement de systèmes de traitement de requêtes.
+- Déploiements représentatifs de systèmes de traitement de requêtes à l'aide de Proteus, et leur évaluation expérimental.

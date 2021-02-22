@@ -1,0 +1,202 @@
+% The goal of this chapter is to present the first contribution of the thesis:
+% An abstraction of a query processing operator that enables constructing query
+% engines by composing instances of this abstraction.
+
+% \begin{tcolorbox}
+% Note:
+
+% The goals of the structure of this chapter are
+% \begin{enumerate}
+%   \item Give the reader a clear understanding of what a QPU is.
+%   It may be frustrating to go into too much detail in something as vague and
+%   abstract as the ``QPU abstraction'' without showing how it is actually used.
+%   \item Explain \textbf{why} we came up with it (Themis has already pointed out
+%   that this was not clear to him).
+%   My solution is to try to do a ``step-by-step walk-through'' of the design:
+%   ``This is what we are trying to achieve (objective, requirements)'', ``this
+%   is why'', ``these are the observations that guide our design'', and, finally,
+%   ``here is what we came up with and why it works''.
+
+%   It is probably a good idea to have ``toy examples'' of QPU usage here to make
+%   things more clear.
+% \end{enumerate}
+% \end{tcolorbox}
+
+% We need to start by motivating the contribution:
+% Building on the trade-off discussion of the previous chapter, argue that query
+% processing systems need to be able to be adjusted to the characteristics and
+% requirements of different applications.
+
+
+In this section we present our first contribution,
+an architectural design pattern for constructing and deploying geo-distributed query processing systems.
+
+This pattern
+and shifts the task of designing and implementing it from the database designer to the application architect.
+
+\section{Design goals}
+We first define 
+% In particular, our design is based on the following objectives:
+% \vspace{-2.5mm}
+% \begin{itemize}
+%   \item \textbf{Declaratively defined architecture.} The query system architecture should not be predefined.
+%   Rather, system architects should be able to construct query processing architectures in a per use case basis, and
+%   have control over the query processing techniques that the system employs.
+%   The query system design process should include decisions such as selecting the query processing state
+%   partitioning and replication schemes, and whether to use caching.
+%   In addition, the architecture should not make assumptions about the distribution scheme of the base data.
+%   \item \textbf{Flexible component placement.} The system designer should have fine-grained control over the placement
+%   of the query system's state and computations.
+% \end{itemize}
+
+
+\section{Query processing as a composition of modular operators}
+% Point out the inherent characteristics of query processing that make the QPU
+% approach possible.
+% \begin{itemize}
+%   \item Query processing can be broken down to primitive (cannot be broken down
+%   any more) self-contained tasks.
+%   \item These tasks can fit in categories/class (there can be many
+%   different indexes but they all be expressed as specializations of a general
+%   ``indexing'' task).
+%   \item Task classes are composable and their interaction has certain
+%   characteristics.
+%   \begin{itemize}
+%     \item They all expose a similar ``query'' interface.
+%     \item Describe how data and control message flow among them.
+%   \end{itemize}
+% \end{itemize}
+
+
+% % \subsection{Designing a query processing component abstraction}
+% % Νο 4.1.2
+% Present the objective: design a query processing operator abstraction ...
+
+% Requirements:
+% \begin{itemize}
+%   \item Generic and Expressive. Must to be able to express multiple different
+%   query processing operators (it is probably better to have explicitly listed
+%   them by this point in the text).
+%   \item Extensible. Must be able to express other operators, or enable
+%   additional functionality.
+%   \item Modularity, Composition. Must enable composition/interoperability.
+%   \item Encapsulation(?). Example: A ``partitioned index'' might be a
+%   complicated sub-graph of QPUs.
+%   Higher-level QPUs don't need to know the details, just interface with the
+%   QPU(s) at the root of the sub-graph.
+% \end{itemize}
+
+
+
+
+% The characteristics and properties of the system are emergent from the properties of its building block and the interactions
+% between them.
+% Because of that, we first present these building blocks.
+
+
+The query processing unit abstraction encapsulates relational operators such as filters, joins 
+
+polymorphic, set of common properties that enable composability, specialized implementations
+
+In that way, complex query processing tasks can be expressed through composition of simple building blocks.
+To enable this architecture design pattern, we introduce an architecture component abstraction, termed Query Processing
+Unit (QPU).
+
+% The QPU abstraction has the role of an architecture component template: it defines a set of properties including
+% interfaces, functionalities, and communication patterns.
+% Different instantiations (classes) of the QPU abstraction can be constructed, but all need to conform
+% to the properties defined by the abstraction.
+% Instances of these QPU classes are the concrete building blocks that can be composed to construct query processing
+% systems.
+
+The key idea is that query processing systems can be constructed by assembling composable building blocks that
+encapsulate primitive query processing tasks.
+
+The key idea is that query processing systems can be constructed by assembling composable building blocks that
+encapsulate primitive query processing tasks.
+In that way, complex query processing tasks can be expressed through composition of simple building blocks.
+To enable this architecture design pattern, we introduce an architecture component abstraction, termed Query Processing
+Unit (QPU).
+
+
+
+
+This pattern decouples the query system from the storage architecture,
+and shifts the task of designing and implementing it from the database designer to the application architect.
+
+This architecture is aimed at enabling
+
+polymorphic, set of common properties that enable composability, specialized implementations
+
+
+an architectural design pattern
+
+modular query system architecture
+constructed by assembling composable building blocks that encapsulate primitive query processing tasks
+
+% such as indexing and caching, and share a uniform interface.
+
+key idea is that index-based query processing can be decomposed into primitive tasks that can be encapsulated by simple components.
+key idea is that query processing can be decomposed into basic tasks that can be encapsulated by independent components.
+
+emergent properties -> first present
+Having a common abstraction ensures that ...
+
+architecture component abstraction, called Query Processing Unit (QPU), that embodies this principle.
+
+The QPU abstraction defines a set of interfaces and a communication protocol.
+
+Different instantiations of the abstraction implement different functionalities while conforming to the common specification.
+Query processing systems are constructed by interconnecting QPU instances in a modular microservice-like architecture.
+
+To address this challenge, we propose a modular query system architecture.
+
+
+Components are designed to be composable:
+a single unified interface is used for all components encapsulating different query processing tasks, and they are able to collaborate using the interface of one another.
+Since components communicate through a well-defined interface, they can be flexibly placed across the system.
+This abstraction, called a Query Processing Unit (QPU), can express query processing components such as indexes, caches and Bloom filters.
+
+A database administrator can deploy a query subsystem by interconnecting a collection of query processing units into a directed acyclic graph, and deploying them across the system infrastructure.
+Different points in the design space between response time, consistency and resource utilization can be occupied by adjusting the graph topology and its placement across the system.
+
+An individual QPU represents a unit of query processing computation, such as performing an index or cache lookup, or selecting the data items satisfy a given query by scanning a given set of data items.
+Units with different functionalities but uniform interface and semantics can be composed to implement higher order functionalities.
+Using this insight, we utilize the QPU abstraction as a building block for constructing query engines.
+
+
+
+
+In more detail ...
+
+\label{subsec:qpu}
+% We enable these objectives using an assembly-based design strategy.
+% The key idea is that query processing systems can be constructed by assembling composable building blocks that
+% encapsulate primitive query processing tasks.
+% In that way, complex query processing tasks can be expressed through composition of simple building blocks.
+% To enable this architecture design pattern, we introduce an architecture component abstraction, termed Query Processing
+% Unit (QPU).
+
+% The QPU abstraction has the role of an architecture component template: it defines a set of properties including
+% interfaces, functionalities, and communication patterns.
+% Different instantiations (classes) of the QPU abstraction can be constructed, but all need to conform
+% to the properties defined by the abstraction.
+% Instances of these QPU classes are the concrete building blocks that can be composed to construct query processing
+% systems.
+% In the rest of this section we use the terms \textit{query processing unit}, \textit{QPU}, and \textit{unit}
+% interchangeably.
+
+
+% The goal of this section is to do a clean presentation of the QPU abstraction.
+
+% \begin{tcolorbox}
+% Note:
+
+% Not sure how to transition from the ``step-by-step'' approach of the
+% previous section to a ``definitions'' approach for this section.
+% \end{tcolorbox}
+
+% Note: Mostly keeping the outline for the rest of this chapter short as it has
+% been written in various paper drafts and LightKone deliverables.
+
+% TODO: subsection: Graph of QPUs (?)

@@ -5,7 +5,7 @@ and how to distribute and where to place the corresponding computation and state
 These metrics are often in tension, and the trade-offs depend on the specific application and/or environment.
 This requires the ability to adapt the query engine's topology and architecture, and the placement of its components.
 This thesis makes the following contributions:
-- A flexible architecture for geo-distributed query engines, based on components connected in a directed acyclic graph.
+- A flexible architecture for geo-distributed query engines, based on components connected in a bidirectional acyclic graph.
 - A common microservice abstraction and API for these components, the Query Processing Unit (QPU). A QPU encapsulates some primitive query processing task. Multiple QPU types exist, which can be instantiated and composed into complex graphs.
 - A model for constructing modular query engine architectures as a distributed topology of QPUs, enabling flexible design and trade-offs between performance metrics.
 - Proteus, a QPU-based framework for constructing and deploying query engines.

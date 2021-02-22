@@ -95,11 +95,11 @@
   keywords={type, class, function},
 }
 
-\pagestyle{fancy}
-\lhead{}
-\rfoot{Compiled on \today\ at \currenttime}
-\cfoot{}
-\lfoot{Page \thepage}
+% \pagestyle{fancy}
+% \lhead{}
+% \rfoot{Compiled on \today\ at \currenttime}
+% \cfoot{}
+% \lfoot{Page \thepage}
 
 \makeindex
 
@@ -108,9 +108,77 @@
 \date{}
 
 \begin{document}
+\pagenumbering{roman}
+
 \afterpage{\blankpage}
 
-\maketitle
+\thispagestyle{empty}
+
+% \newgeometry{textheight=25cm,textwidth=16cm}
+
+\includegraphics[scale=.08]{./figures/Logo_Sorbonne_Universite.png}
+\vspace*{1.5cm}
+\begin{center}
+  {\Huge{\bf Sorbonne Universit\'e}}
+
+  \vspace*{1cm}
+
+  {\Large\'Ecole Doctorale Informatique, T\'el\'ecommunications et \'Electronique}
+
+  \vspace*{0.3cm}
+
+  {\Large Scality}
+
+  \vspace*{0.3cm}
+
+  {\Large Laboratoire d’Informatique de Paris 6}
+
+  \vspace*{0.3cm}
+
+  {\Large Inria}
+
+  \vspace*{0.3cm}
+
+  {\Large \'Equipe DELYS}
+
+  \vspace*{1cm}
+
+  {\LARGE {\bf A flexible and decentralised approach to query processing for geo-distributed data systems}}
+
+  \vspace*{1.5cm}
+
+  {\Large Par Dimitrios Vasilas}
+
+  \vspace*{1cm}
+
+  {\Large Th\`ese de doctorat en informatique}
+
+  \vspace*{1cm}
+
+  {\Large Dirig\'ee par Marc Shapiro et Bradley King}
+
+  \vspace*{1cm}
+
+  {\large Pr\'esent\'ee et soutenue publiquement le 19 f\'evrier 2021}
+\end{center}
+
+\vspace*{1cm}
+\begin{flushleft}
+{\large Devant un jury compos\'{e} de :  }\\
+\resizebox{\textwidth}{!}{\begin{tabular}{r@{\ }ll}
+  & {\large \textbf{M. Bernd} {\sc\textbf{Amann}}, Professeur, Sorbonne Universit{\'e}} & {\large Examinateur}\\
+  & {\large \textbf{Mme. Bettina} {\sc\textbf{Kemme}}, Associate Professor, McGill University} & {\large Examinateur}\\
+  & {\large \textbf{M. Bradley} {\sc \textbf{King}}, Co-founder \& Field CTO, Scality} & {\large Encadrant}\\
+  & {\large \textbf{M. S\'{e}bastien} {\sc\textbf{Monnet}}, Professeur, Universit{\'e} Savoie Mont Blanc} & {\large Rapporteur}\\
+  & {\large \textbf{M. Themis} {\sc\textbf{Palpanas}}, Professeur, Universit\'{e} de Paris} & {\large Examinateur}\\
+  & {\large \textbf{M. Nuno} {\sc\textbf{Pregui\c{c}a}}, Associate professor, Universidade Nova de Lisboa} & {\large Rapporteur}\\
+  & {\large \textbf{M. Masoud} {\sc\textbf{Saeida Ardekani}}, Software Engineer, Google} & {\large Examinateur}\\
+  & {\large \textbf{M. Marc} {\sc\textbf{Shapiro}}, Directeur de Recherche \'Em\'erite, Sorbonne Universit{\'e} \& Inria} & {\large Directeur de th\`{e}se}\\
+\end{tabular}}
+\end{flushleft}
+% \restoregeometry
+
+% \maketitle
 
 \abstract{
 Query processing is an essential component of today's data serving systems.
@@ -154,9 +222,11 @@ The experimental evaluation supports the theoretical analysis of the trade-offs 
 \input{acknowledgments}
 % \listoftodos
 
-\afterpage{\blankpage}
+\pagenumbering{arabic}
 
 \tableofcontents
+
+\afterpage{\blankpage}
 
 \input{content}
 

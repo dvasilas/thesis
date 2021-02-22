@@ -1,1 +1,1 @@
-A flexible and decentralised approach to query processing for geo-distributed data systems
+Une approche flexible et décentralisée du traitement de requêtes dans les systèmes géo-distribués
