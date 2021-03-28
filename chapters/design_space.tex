@@ -37,11 +37,13 @@ SELECT * FROM photoAlbum
 WHERE tags.predominantColor BETWEEN #0a6fb6 AND #52aca2
 \end{lstlisting}
 
+\begin{sloppypar}
 When no derived state is used, the read path evaluates this query by scanning all images in $photoAlbum$.
 If this is a frequent type of query,
 a database administrator can create a secondary index on the $predominantColor$ tag to accelerate it.
 In that case, the read path performs an index lookup for the $predominantColor$ predicate in the given query,
 while the write path updates the secondary index for each write operation.
+\end{sloppypar}
 
 Using an index moves an amount of work from the read to the write path:
 less work is required for serving the query (a fast index lookup rather than an expensive scan operation),

@@ -16,8 +16,8 @@ More specifically:
   freshness (section~\ref{sec:zenko}).
   Moreover, we present a QPU architecture that implements partial index replication.
   This approach provides fine-grained control over the placement of index entries:
-  Heavily queries index entries are placed closer to the users,
-  while heavily update are placed closer to the corpus
+  Heavily queried index entries are placed closer to the users,
+  while heavily updated entries are placed closer to the corpus.
 
   \item We examine a read-heavy news aggregator application,
   and propose a QPU-based query processing system for maintaining pre-computed state in order to improve the application's performance,
@@ -91,7 +91,7 @@ section~\ref{sec:read_write_path}:
   only index partitions with relevant index entries are involved in processing a given query.
 \end{itemize}
 
-We present QPU architectures for the two index partitioning approaches using the photo album example of section~\ref{sec:read_write_path} as a reference.
+We present QPU architectures for the two index partitioning approaches using the example that we introduced in section~\ref{sec:read_write_path}.
 The corpus is composed of a set of image files.
 Each image is identified by a primary key, and is associated with a set of user-defined tags.
 The corpus is partitioned using a hash of the primary key as the partitioning key.
@@ -617,7 +617,7 @@ A difference with the Index QPU is therefore that the Partial Index establishes 
 index entry, while the Index requires a single input stream.
 
 While the partial index replication can potentially reduce the write path cross data center communication of an index replica,
-it might still incur significant between storage locations,
+it might still incur significant data transfer between storage locations,
 in cases in which materialized index entries are updated frequently.
 To address this issue,
 we extend the Partial Index class with a mechanism for measuring the rate of updates to each index entry.
@@ -780,7 +780,7 @@ INTERVAL FROM LATEST
 The Join QPU in turn generates two downstream queries:
 
 \begin{lstlisting}[
-  caption={Quey sent by the Join QPU to the $stories$ Corpus Driver QPU in Figure~\ref{fig:lobsters_architecture_basic}
+  caption={Query sent by the Join QPU to the $stories$ Corpus Driver QPU in Figure~\ref{fig:lobsters_architecture_basic}
   during initialization.}
 ]
 Q1 = SELECT id, author_id, title, url
@@ -789,7 +789,7 @@ Q1 = SELECT id, author_id, title, url
 \end{lstlisting}
 
 \begin{lstlisting}[
-  caption={Quey sent by the Join QPU to the Sum QPU in Figure~\ref{fig:lobsters_architecture_basic}
+  caption={Query sent by the Join QPU to the Sum QPU in Figure~\ref{fig:lobsters_architecture_basic}
   during initialization.}
 ]
 Q2 = SELECT story_id, SUM(vote)
@@ -799,15 +799,15 @@ Q2 = SELECT story_id, SUM(vote)
 \end{lstlisting}
 
 \noindent
-It sends $Q1$ to the stories Corpus Driver QPU and $Q2$ to the Sum QPU.
+It sends $Q1$ to the $stories$ Corpus Driver QPU and $Q2$ to the Sum QPU.
 We note that it may send the two downstream queries to the corresponding Selection QPUs;
 The two query plans are equivalent.
 
-When Join receives $Q1$, it initiates an output stream,
+When the Corpus Driver QPU receives $Q1$, it initiates an output stream,
 first sending a snapshot of all stories in the stories table,
 and then sending an update for each write to the table.
 
-When Sum receives $Q2$, its query processing method sends a downstream query to the votes Corpus Driver QPU
+When the Sum QPU receives $Q2$, its query processing method sends a downstream query to the $votes$ Corpus Driver QPU
 in order to receive the most recent snapshot of the votes table and subscribe to subsequent writes to the table.
 As a result, tt receives an input stream consisting of each record in the votes table snapshot,
 and incrementally calculates the sum of the $vote$ attribute ($vote\_count$) for each distinct $story\_id$.
