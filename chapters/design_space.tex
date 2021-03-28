@@ -230,12 +230,14 @@ Given the following update to a data item $d$:
 d.predominantColor := \#c78f83
 \]
 updating a secondary index on the $predominantColor$ attribute includes the following steps:
+\begin{sloppypar}
 \begin{enumerate}
   \item Insert $d$ to the index entry that corresponds to $predominantColor$ $=$ $\#c78f83$.
   \item Remove $d$ from the index entry that corresponds to the previous value of $d.predominantColor$
   (Depending on the protocol, the system might need to retrieve the previous value of $d.predominantColor$ from the data
   storage tier)
 \end{enumerate}
+\end{sloppypar}
 
 In practice, the derived state subscribes to the change log of the corpus.
 If the change log contains the information about the value of $d.predominantColor$ before the change, then step (2) is not
@@ -337,7 +339,7 @@ More specifically, considering an update that changes $d.attributeA$ from $x$ to
 
 % \todo{MUST HAVE: Figures~\ref{fig:prob1_6_2} and~\ref{fig:prob1_6_1} (temporary; borrowed) redo}
 
-Scaling derived state both in terms of size and and read access requires partitioning it across multiple system nodes.
+Scaling derived state both in terms of size and read access requires partitioning it across multiple system nodes.
 % The same partitioning schemes can be applied to a materialized view.
 % In the rest of this section we refer to secondary indexes.
 % The same results apply to Materialized views.
@@ -432,7 +434,7 @@ The evaluation results show that:
 \begin{itemize}
 
   \item Partitioning-by-document is more suitable for:
-  (1) smaller scale systems with a small number of nodes and light index lookup concurrency,
+  (1) smaller scale systems with a small number of nodes and low index lookup concurrency,
   (2) workloads with less selective queries that return large result sets,
   (3) skewed data distribution where a large number of data items have the same indexed value,
   or (4) write-intensive workloads.
@@ -536,9 +538,6 @@ both of which result in slower query processing.
 This approach is more suitable for cases in which some data centers receive more queries than others.
 Moreover, this approach can be supplemented with the use of caches in data centers without index replicas.
 
-% This architecture poses a design choice which
-% from an impossibility property, known as the [60].
-% In addition, strongly-consistent designs are susceptible to downtimes due to network partitions. In a highly-available design, replicas synchronize in the background, out of the critical path of write operations. This ensures low latency and availability under network par- titions, as each replica serves write operations locally. Nevertheless, this allows replicas to accept concurrent conflicting updates and temporary diverge.
 
 \subsubsection{Geo-partitioning}
 A different geo-distribution strategy is geo-partitioning.
