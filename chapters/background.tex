@@ -25,34 +25,35 @@ with the intend of identifying the primitives and approaches common in both clas
 \section{Query Processing in Relational Database Systems}
 \label{sec:query_pr_relational}
 The database component responsible for query processing is the \textit{query processor}.
-The role of a relational query processor is, a declarative query (e.g. written in SQL) to validate it,
-optimize it into a procedural dataflow execution plan, and execute that dataflow program.
+Given a declarative query (e.g. written in SQL), the role of the query processor is to validate it,
+optimize it into a procedural dataflow execution plan, and execute that plan.
 
-Query processing processed in three main phases \cite{hellerstein:databasearchitecture, kossmann:distqeuryprocessing}.
-First, the query is parsed;
-The result is parse tree representing the query structure.
-Second, the query processor performs semantics analysis in order to transform the parse tree into a relational algebra expression tree.
+Query processing consists of three main phases \cite{hellerstein:databasearchitecture, kossmann:distqeuryprocessing}.
+First, the query processor parses the given query and generates a parse tree that represents the query's structure.
+Second, the query processor performs semantic analysis in order to transform the parse tree into a relational algebra expression tree.
 Finally, the query processor produces a query execution plan,
 which indicates the operations to be performed, the order in which they are to be evaluated,
-and the algorithm chosen for each operation, and the way intermediate results are passed from one operation to another.
+the algorithm chosen for each operation, and the way intermediate results are to be passed from one operation to another.
 
-We describe in more detail the steps involved in query query processing below.
+\noindent
+We describe in more detail the phases involved in query processing below.
 
 \bigskip
 \noindent
 \textbf{Query Parsing.}
-The goal of the query parsing is to translate a given query into an internal representation that can
+The goal of the query parsing phase is to translate a given query into an internal representation that can
 be processed by later phases, commonly a tree of relational operators \cite{silberschatz:dbbook}.
-In generating the internal form of the query,
-the query processor checks the syntax of the given query,
-verifies that the relation names that appear in the query are valid names of relation in the database,
+While building the internal representation of the query,
+the query processor checks the query's syntax,
+verifies that the relation names that appear in the query are valid names of relations in the database,
 and verifies that the user is authorized to execute the query.
 
 \bigskip
 \noindent
 \textbf{Query Rewrite.}
-In the query rewrite phase, the query processor transforms the relational operator tree in order to carry out optimizations that are
-beneficial regardless of the physical state of the system (the size of tables, presence of indices, locations of copies of tables etc.).
+In the query rewrite phase, the query processor transforms the internal representation of the query in order to carry
+out optimizations that are beneficial regardless of the physical state of the system
+(the size of tables, presence of indices, locations of copies of tables etc.).
 
 Typical transformations include:
 \begin{itemize}
@@ -294,8 +295,7 @@ doubling the number of nodes in the system should make the system able to handle
 should double the system's read and write throughput.
 
 Partitioning has implications for query processing.
-Database records are assigned to partitions based on a \textit{partitioning key},
-and are typically sorted based on that key.
+Database records are assigned to partitions based on a \textit{partitioning key}.
 Because of that, performing a selection operation on a key other than the partitioning key,
 requires every partition to perform a full scan of its records, and retrieve the ones that satisfy the selection predicate.
 A technique employed to more efficiently identify the requested records is secondary indexing.
