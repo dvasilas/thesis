@@ -190,12 +190,18 @@ Timestamps can be implemented using any data type that provides a partial or tot
 \noindent
 In summary, we model a table as a collection of tuples of the form:
 \[
-  (PrimaryKey,~[(AttributeName,~AttributeValue)],~Timestamp)
+  (PrimaryKey,~[Attribute],~Timestamp)
 \]
+where
+\[
+  Attribute = (AttributeName,~AttributeValue)
+\]
+
 \begin{sloppypar}
+\noindent
 Each tuple represents a data item version.
-$PrimaryKey$ is the data item's primary key, $[(AttributeName,~AttributeValue)]$ is an array of attribute names and values
-representing the data item's attributes, and $Timestamp$ is the timestamp associated with that version.
+$PrimaryKey$ is the data item's primary key, $[Attribute]$ is a set of attributes, each represented a name - value pair,
+and $Timestamp$ is the timestamp associated with that version.
 \end{sloppypar}
 
 \subsubsection{Data storage tier API}
