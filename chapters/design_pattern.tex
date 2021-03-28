@@ -167,19 +167,19 @@ as shown in Listing~\ref{lst:observations_example_1}.
 TABLE stories (id int, title text, url text)
 TABLE votes (story_id int)
 
-VIEW stories_with_voteCount
-  SELECT id, title, url, vote_count
+VIEW storiesWithVoteCount
+  SELECT stories.id, stories.title, stories.url, v.vote_count
   FROM stories
   JOIN (
-    SELECT story_id, SUM(*) as vote_count
+    SELECT story_id, COUNT(*) as vote_count
     FROM votes
     GROUP BY story_id
-  )
-  ON stories.id = votes.story_id
+  ) v
+  ON stories.id = v.story_id
   WHERE stories.id = ?
 \end{lstlisting}
 
-Moreover, this materialized view is partitioned with the partition by document approach, using the $story_id$ as partitioning key.
+Moreover, this materialized view is partitioned with the partition by document approach, using the $story_{id}$ as partitioning key.
 
 \begin{figure}[H]
   \centering
@@ -190,7 +190,7 @@ Moreover, this materialized view is partitioned with the partition by document a
 
 
 Figure~\ref{fig:running_example} depicts a simplified version of the application's query processing architecture.
-An aggregation and a join operator incrementally compute the $stories_with_voteCount$ view as new stories and votes are added.
+An aggregation and a join operator incrementally compute the $storiesWithVoteCount$ view as new stories and votes are added.
 The view is partitioned among multiple view partitions.
 A partition manager is used to manage access to the view partitions.
 
@@ -249,16 +249,15 @@ Next, we examine the service interface's response for the three types of query p
   \noindent
   \textbf{Relational operators} \textit{transform} an input set of attribute tuples, to an output set of tuples:
     \begin{itemize}
-    \item A projection operator discards one more attributes.
+    \item A selection operator selects the input tuples for which a given condition is true, and emits them as output tuples.
+    \item A projection operator discards a given set of attributes from the input tuples.
     \item A join operator receives two sets of input tuples.
     Its output is a set of tuples containing a combination of the attributes in the input tuples.
     In the example, the join operator extends the story's attributes by adding the $vote\_count$ attribute.
-    \item An aggregation operator (such as count or sum) generates output tuples that represent groups of input tuples.
-    These output tuples contain the attributes of input tuples, extended with an additional attribute that represents the
-    result of applying a \textit{function} over the tuples in a group.
-    In the example, the count operator's response is a set of tuples,
-    each containing a unique $story\_id$, extended with the $vote\_count$ attributes
-    which is the result of applying the count function to the tuples of each group to input tuples with common $story\_id$.
+    \item An aggregation operator (e.g. count, sum) divides input tuples into groups based on a \textit{grouping attribute},
+    and applies an \textit{aggregation function} over the tuples of each group.
+    In the example, the count operator groups stories by $story\_id$ and calculates the count of tuples for each $story\_id$
+    value.
     \end{itemize}
   We can unify these transformations by modeling the output of a relational operator component as a tuple of attributes.
 
@@ -306,9 +305,9 @@ The response to an invocation of this interface can be modeled as is a set of da
 Our forth observation is related to the \textit{input} required for each query processing functionality type:
 \begin{itemize}
   \item Indexes and materialized views expose a second interface for being updated to reflect changes to the corpus.
-  In the news aggregator example, a materialized view partition receives receives from the join operator
-  \textit{information about changes in the join operation result}.
-  The following types of changes in the can occur in the join operation result:
+  In the news aggregator example, a materialized view partition receives \textit{information about changes in the join operation result}
+  from the join operator.
+  The following types of changes can occur in the join operation result:
   \begin{itemize}
     \item A new story has been created.
     \item The vote count for an existing story has changed.
@@ -763,7 +762,7 @@ Query processing units expose an interface for receiving query requests:
 \noindent
 $QueryResponse$ is a stream with the following structure:
 \[
-  QueryResponse = [StreamRecord]
+  QueryResponse = [StreamRecord]^*
 \]
 where
 \[
@@ -779,22 +778,14 @@ where
 \textbf{Query types.}
 
 \noindent
-We categorize queries in three types: snapshot, interval or hybrid queries.
-A snapshot query is an one-time query that is evaluated on a snapshot of the corpus data,
-and returns the data items that items that match the query predicate.
-
-An interval query is a \textit{persistent} query.
-It is akin to subscribing to the given query predicate;
-Each time an update to the corpus causes a result to be added or removed from the query's results,
-the query notifies the subscriber.
-
-Finally, a hybrid query is a combination of the two other types.
-It is used in order to avoid missing updates in the common case in which a snapshot query is
-directly followed by an interval query.
+We categorize queries in three types: snapshot, interval and hybrid queries.
 
 \medskip
 \noindent
 \textbf{Snapshot queries.}
+A snapshot query is an ``one-time'' query that is evaluated on a snapshot of the corpus data,
+specified by a timestamp, and returns the data items that match the query predicate.
+
 Given a query $Q$,
 specifying a projection $Proj_Q$, a predicate $Pred_Q$, and a timestamp $t_Q$,
 a snapshot query is evaluated on a snapshot of the corpus that contains the effects of all updates with
@@ -813,9 +804,17 @@ the data item is associated with an attribute $AttributeName$ with the value $At
 \medskip
 \noindent
 \textbf{Interval queries.}
+An interval query is a ``long-running'' (\textit{persistent}) query.
+It is akin to subscribing to a query:
+Each time an update to the corpus causes a result to be added or removed from the query's results,
+or an existing result to be modified,
+the system notifies the subscriber about the change.
+
+\begin{sloppypar}
 Given a query $Q$,
 specifying a projection $Proj_Q$, a predicate $Pred_Q$, and an interval $[t_1, t_2)$,
 a $StreamRecord$ is added to $QueryResponse$ each time one of the following is true:
+\end{sloppypar}
 \begin{itemize}
 \item An update creates a data item $d$, and $d$ satisfies $Q$
 
@@ -857,6 +856,10 @@ the update modified the value of attribute $AttributeName$ from $AttributeValue_
 \medskip
 \noindent
 \textbf{Hybrid queries.}
+A hybrid query is a combination of a snapshot and an interval query.
+It is used in order to avoid missing updates in the common case in which a snapshot query is
+directly followed by an interval query.
+
 Given a query $Q$,
 specifying a projection $Proj_Q$, a predicate $Pred_Q$, and an interval $[t_1, t_2)$,
 a hybrid query is equivalent to executing two queries in parallel:
@@ -946,7 +949,7 @@ block for constructing fully-functional query processing systems.
 The QPU model's query language has following syntax:
 
 \begin{lstlisting}[
-  caption={Query language of the QPU's query interface},
+  caption={Query language of the QPU's query interface. TableExpression corresponds to an equi join.},
   label={lst:query_language},
 ]
 QueryRequest          ::=  SELECT SelectExpression
@@ -957,11 +960,13 @@ QueryRequest          ::=  SELECT SelectExpression
                            [ ORDER BY OrderByExpression { ASC | DESC } ]
                            { SYNC | ASYNC }
 
-SelectExpression      ::=  ALL |
-                           SelectExprItem , SelectExpression |
-                           SelectExprItem
+SelectExpression      ::=  ALL | ProjectionExpression
 
-SelectExprItem        ::=  SUM(attributeName) |
+ProjectionExpression  ::=  ProjectionItem |
+                           ProjectionItem, ProjectionExpression |
+
+ProjectionItem        ::=  COUNT(attributeName) |
+                           SUM(attributeName) |
                            AVG(attributeName) |
                            MAX(attributeName) |
                            MIN(attributeName) |
@@ -971,10 +976,12 @@ TableExpression       ::=  tableName JOIN tableName On
                            tableName.attributeName = tableName.attributeName |
                            tableName
 
-PredicateExpression  ::=  PredicateExpression OR
+PredicateExpression   ::=  ( PredicateExpression ) |
+                           PredicateExpression OR
                               PredicateExpression |
                            PredicateExpression AND PredicateExpression |
                            NOT PredicateExpression |
+
                            Term Op Term
 
 Term                  ::=  attributeName | Value
@@ -987,6 +994,8 @@ Value                 ::=  stringValue | floatValue | intValue |
 IntervalExpression    ::=  FROM TimestampTerm [ TO TimestampTerm ]
 
 TimestampTerm         ::=  SYSTEM START | LATEST | timestampValue
+
+OrderByExpression     ::=  attributeName
 
 \end{lstlisting}
 
@@ -1111,7 +1120,7 @@ The query processing method is responsible for processing a single query.
 It spawns a result stream and sends the results back to the requestor over that stream.
 
 For each query $q$ being processed, the QPU initiates an output stream, $R_q$,
-and executes an instance of the query processing function, $QPF_q$.
+and executes the query processing method, $QPF_q$.
 $QPF_q$ is responsible for emitting records to $R_q$.
 Moreover, if $QPF_q$ initiates input streams $I_{q-1}$, $I_{q-2}$, ..., then $QPF_q$ is responsible for handing the return
 values of stream processor methods for records received through $I_{q-i}$.
@@ -1135,7 +1144,7 @@ In addition to $QPState$ and $[DownstreamConn]$, $ProcessQuery$ receives:
 
 \end{itemize}
 
-An instance of the query processing method is executed for each received query request,
+The query processing method is executed for each received query request,
 therefore query processing unit can run multiple instances of the query processing method in parallel.
 
 \subsubsection{Input stream processor method}
@@ -1156,7 +1165,6 @@ function ProcessInputRecord(StreamRecord, QueryRequest, QPState)
 
 \noindent
 Listing~\ref{lst:callback_func} shows the query processing method's signature.
-
 An instance of the stream processor method is executed for each record received through an input stream.
 
 \subsection{Stream semantics}
@@ -1166,9 +1174,8 @@ In this section we describe more detail the semantics of the stream connections 
 \medskip
 \noindent
 Apart from \textit{data records} (updates), \textit{control records} can also be sent through a stream.
-Although ata records can be sent only in one direction (``upstream''), control records can be sent in both directions.
-Types of control records include acknowledgements, heartbeats, and re-send requests.
-A re-send records requests for a data record to be re-send.
+Although data records can be sent only in one direction (``upstream''), control records can be sent in both directions.
+Types of control records include acknowledgements, heartbeats, and resend requests.
 
 \medskip
 \noindent
@@ -1177,9 +1184,9 @@ A synchronous send operation blocks until an acknowledgement for the data record
 
 \medskip
 \noindent
-Finally, we assume that stream connections do not drop, re-order, of duplicate messages;
+Finally, we assume that stream connections do not drop, re-order, or duplicate messages;
 however messages may be arbitrarily delayed.
-These guarantees are not based on assumptions about the transport layer, but as we discuss in In chapter~\ref{ch:evaluation}
+These guarantees are not based on assumptions about the transport layer, but as we discuss in chapter~\ref{ch:evaluation}
 are implemented by query processing units on top of potentially unreliable connections.
 
 \subsection{QPU classes}
@@ -1202,8 +1209,8 @@ We categorize QPU classes in three groups, according to their general characteri
 \begin{itemize}
   \item \textbf{Relational operator classes}.
   Classes in this group encapsulate \textit{streaming relational operators}.
-  A relational operator QPU receives one or more input data streams, and perform a transformation over these streams.
-  For every record received through one of the input streams, the QPU emits zero or one record at the output stream.
+  A relational operator QPU receives one or more input data streams, and perform a transformation over these streams,
+  and emits an output stream.
 
   Every input stream of relational operator QPU is the output stream of another QPU, and has been establish as a response
   to a query request.
@@ -1215,8 +1222,8 @@ We categorize QPU classes in three groups, according to their general characteri
 
     \item \textbf{Join}:
     A join QPU encapsulates a streaming join operator.
-    It receives records from two or more input streams, and performs a join operation one those stream, according
-    to parameters specified by a given query request.
+    It receives records from two input streams, and performs a join operation over them,
+    according to parameters specified by a query request.
     The join QPU initiates input streams by sending the appropriate query requests to its downstream connections,
     and emits ths join operation result as its output stream.
 
@@ -1233,9 +1240,12 @@ We categorize QPU classes in three groups, according to their general characteri
   % QPUs of derived state classes make use of the same use of the ``query request - output stream'' semantics to implement their functionality:
   \begin{itemize}
     \item \textbf{Secondary index and Materialized view:}
-    A secondary index (or materialized view) QPU receives its index or view definition as a configuration parameter.
+    Secondary index and materialized view QPUs support both incremental updates and re-evaluation from the corpus.
+    For the rest of this chapter, we focus on the case in which a secondary index or materialized view is initially
+    evaluated when created, and then incrementally updated.
 
-    The QPU's initialization method establishes an input steam by sending an \textit{interval} query
+    A secondary index (or materialized view) QPU receives its index or view definition as a configuration parameter.
+    Its initialization method establishes an input stream by sending an \textit{interval} query
     (a query without an upper bound timestamp) to its downstream connection:
     In that way, the QPU effectively \textit{subscribes to notifications} for updates to the corpus.
     For each record received through the input stream, the stream processor method updates the query processing state accordingly.
@@ -1249,9 +1259,9 @@ We categorize QPU classes in three groups, according to their general characteri
     in the query processing state.
     If yes, the method retrieves the corresponding query results and emits them at the output stream.
     Alternatively, it sends a query request at the QPU's downstream connection,
-    with the given query.
-    The stream processor method stores each received record, and then returns it to the query processing method with emits it
-    at the output stream.
+    with the same query.
+    The cache QPU's input stream processor method stores each record received as a response that request,
+    and then returns it to the query processing method which emits it to the output stream.
     \end{itemize}
 
   \item \textbf{Routing classes}.
@@ -1313,7 +1323,7 @@ stream processor methods respectively for the filter QPU class using pseudocode.
 \label{algo:filter_query_processing_func}
 \begin{algorithmic}
 \Function{ProcessQuery}{queryReq, qpState, [downstreamConn], outputStream}
-\State conn = get endpoint from [downstreamConn] \Comment{we assume one downstream connection}
+\State conn = get endpoint from [downstreamConn] \Comment{We assume one downstream connection}
 \State inStream = forward queryReq to conn
 \While{not at end of this the stream}
 \State inRecord = inStream.Recv()
@@ -1350,40 +1360,6 @@ show the initialization, query processing, and stream processor methods respecti
 class using pseudocode.
 
 \begin{algorithm}
-\caption{Secondary index QPU class initialization method}
-\label{algo:index_init_func}
-\begin{algorithmic}
-\Function{Init}{qpState, [downstreamConn]}
-\State conn = get endpoint from [downstreamConn] \Comment{we assume one downstream connection}
-\State queryReq = generate interval query
-\State inStream = send queryReq to conn
-\While{not at the end of the stream}
-\State inRecord = inStream.Recv()
-\State ProcessInputRecord(inRecord, null, qpState)
-\EndWhile
-\EndFunction
-\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}
-\caption{Secondary index QPU class query processing method}
-\label{algo:index_query_processing_func}
-\begin{algorithmic}
-\Function{ProcessQuery}{null, qpState, [downstreamConn], outputStream}
-\State conn = GetEndpoint([downstreamConn]) \Comment{we assume one downstream connection}
-\State inStream = forward queryReq to conn
-\While{not at end of this the stream}
-\State inRecord = inStream.Recv()
-\State result = ProcessInputRecord(update)
-\If{result is not empty}
-\State outStream.Send(result)
-\EndIf
-\EndWhile
-\EndFunction
-\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}
 \caption{Secondary index QPU class stream processor method}
 \label{algo:index_callback_func}
 \begin{algorithmic}
@@ -1403,6 +1379,34 @@ class using pseudocode.
 \State pState.Put(indexTerm, postingList')
 \EndIf
 \EndFor
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Secondary index QPU class initialization method}
+\label{algo:index_init_func}
+\begin{algorithmic}
+\Function{Init}{qpState, [downstreamConn]}
+\State conn = get endpoint from [downstreamConn] \Comment{We assume one downstream connection}
+\State queryReq = generate interval query
+\State inStream = send queryReq to conn
+\While{not at the end of the stream}
+\State inRecord = inStream.Recv()
+\State ProcessInputRecord(inRecord, null, qpState)
+\EndWhile
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Secondary index QPU class query processing method}
+\label{algo:index_query_processing_func}
+\begin{algorithmic}
+\Function{ProcessQuery}{queryReq, qpState, [downstreamConn], outputStream}
+\State [indexTermL, indexTermB = build terms for reading secondary index from queryReq
+\State result = qpState.Get(indexTermL, indexTermB)
+\State outStream.Send(result)
 \EndFunction
 \end{algorithmic}
 \end{algorithm}
@@ -1440,13 +1444,13 @@ TABLE Orders(OrderID, CustomerID, OrderStatus, OrderDate)
 \end{lstlisting}
 
 \begin{itemize}
-  \item $DB$ $driver_1$ can process queries with the form:
+  \item $Corpus$ $driver_1$ can process queries with the form:
   \begin{lstlisting}
   SELECT SelectExpression from Customers INTERVAL IntervalExpression
   \end{lstlisting}
   where $SelectExpression$ can contains one or more attributes of the $Customers$ table.
 
-\item $DB$ $driver_2$ can process queries with the form:
+\item $Corpus$ $driver_2$ can process queries with the form:
 \begin{lstlisting}
 SELECT SelectExpression FROM Orders INTERVAL IntervalExpression
 \end{lstlisting}
@@ -1491,10 +1495,9 @@ represented and used by other QPUs.
 
 \subsubsection{QPU-graph topology rules}
 \label{sec:graph_topology}
-Although the QPU model than guarantees that a query processing unit can communicate with any other QPU,
-a QPU DAG cannot have any arbitrary topology.
-This is because the functionality of facilitating of each QPU class entails some requirements about:
-(1) number of the QPU's downstream connections, and (2) the query interface domain of these downstream connection.
+A QPU DAG cannot have any arbitrary topology.
+This is because each QPU class has specific requirements about:
+(1) number of the QPU's downstream connections, and (2) the query interface domain of these downstream connections.
 From these \textit{class-specific topology requirements}, certain higher-level graph topology rules emerge:
 \begin{itemize}
   \item Any QPU graph mush have corpus driver QPUs as its leaf nodes.
@@ -1505,7 +1508,7 @@ From these \textit{class-specific topology requirements}, certain higher-level g
 
   \item A materialized view QPU must have a downstream connection that:
   \begin{itemize}
-    \item Can process the query the is the materialized view's definition.
+    \item Can process the query that is the view's definition.
     \item Supports \textit{interval queries} on that query.
   \end{itemize}
   This is because, the materialized view QPU needs to receive an input stream of updates that correspond to changes in
@@ -1518,15 +1521,11 @@ From these \textit{class-specific topology requirements}, certain higher-level g
 
   \item Similarly, a filter QPU can have a downstream connection to any QPU.
 
-  \item A partition manager QPU can have one or more downstream connections;
-  The connections must be to derived state QPUs that implement partitions of a derived state structure.
-  In more detail:
-  \begin{itemize}
-    \item All downstream connection of must be of the same QPU class.
-
-    \item They must be configured as partitions of a common logical derived structure, based on the same partitioning
-    scheme and partitioning key.
-  \end{itemize}
+  \item A partition manager QPU can have one or more downstream connections.
+  It is not a requirement that downstream connections are partitions of a derived state structure.
+  It is required that some combination of query interface domains of these connections result in the domain of the
+  partition manager QPU.
+  In practice, each connection is responsible for a distinct part of the partition manager QPU's domain.
 
   \item A load balancer QPU can have one or more downstream connections;
   The QPU is responsible for performing load balancing on the queries that belong in the \textit{intersection} of the
@@ -1620,13 +1619,13 @@ and produces itself an output stream.
 The output stream of $Q_0$ contains the results of the initial query, $q$.
 We call this type computation in a QPU DAG, \textit{query execution mode}.
 
-QPU-based query query processing systems execute a similar type of computations for incrementally updating
+QPU-based query processing systems execute a similar type of computations for incrementally updating
 secondary indexes and materialized views.
 We call this type computation in a QPU DAG, \textit{state maintenance mode}.
 There are the following differences between query execution and state maintenance mode:
 \begin{itemize}
   \item Query execution is performed in response to a client query (by the query processing method of the QPU that receives the query)
-  while state maintenance is performed in response to the initialization of a secondary index of materialized view QPU
+  while state maintenance is performed in response to the initialization of a secondary index or materialized view QPU
   (by the initialization method of the corresponding QPU).
   \item The goal of query execution is to process a client query,
   while the goal state maintenance is to establish a long running stream of notification for corpus updates that
