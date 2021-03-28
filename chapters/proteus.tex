@@ -214,7 +214,7 @@ and emits each received response as a stream record.
 
 The API Processor can process multiple requests concurrently.
 For each received request, it creates an output stream,
-and spawns an instance of the corresponding Processor method in a new thread.
+and spawns the corresponding Processor method in a new thread.
 
 \bigskip
 \noindent
@@ -226,7 +226,7 @@ a Constructor method, a Class Query Processor method, a Domain Processor method,
 and a Domain Response Processor method.
 In our prototype, we have implemented the following QPU classes:
 \begin{itemize}
-  \item \textbf{Selection, Secondary Index, Partition Manager, Join, and Materialized view} as defined in previous Chapters.
+  \item \textbf{Selection, Aggregation, Secondary Index, Partition Manager, Join, and Materialized view} as defined in previous Chapters.
 
   As an optimization, we have integrated the functionality of the Selection class to other classes,
   such as the Corpus Driver, Secondary Index and Cache.
@@ -236,6 +236,7 @@ In our prototype, we have implemented the following QPU classes:
 
   Furthermore, in our current implementation, a Secondary Index QPU service is responsible for a single attribute in a single
   continuous value interval, specified by its configuration.
+  A multi-attribute query is decomposed into a conjunction of multiple single attribute queries.
 
   \item \textbf{Cache}.
   We have implemented a Cache QPU class that stores query responses in an in-memory ordered map data structure.
