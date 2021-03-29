@@ -15,23 +15,23 @@ remote_client_rt = [92.05233333,80.67266667,80.84333333,70.45733333,65.49566667,
 f, ax = plt.subplots()
 
 # ax.plot(local_t, local_rt, color='steelblue', marker='+', label='local w95/5')
-ax.plot(local_t, local_rt, color='c', marker='o', label='replicated global index')
-ax.plot(remote_corpus_t, remote_corpus_rt, color='b', marker='x', label='partitioned index')
-ax.plot(remote_client_t, remote_client_rt, color='g', marker='+', label='partitioned index with cache')
+ax.plot(local_t, local_rt, color='c', marker='o', label='rg-index w50/50')
+ax.plot(remote_corpus_t, remote_corpus_rt, color='b', marker='x', label='p-index w50/50')
+ax.plot(remote_client_t, remote_client_rt, color='g', marker='+', label='p-index-cache w50/50')
 # ax.plot(remote_corpus_t, remote_corpus_rt, color='forestgreen', marker='x', label='remote-corpus w95/5')
 # ax.plot(remote_client_t, remote_client_rt, color='slateblue', linestyle='dotted', marker='o', label='remote-client w95/5')
 # ax.plot(cache_t, cache_rt, color='peru', linestyle='dotted', marker='s', label='remote-client-cache w95/5')
 
 
-# ax.set(xlabel='Throughput [operations/s]', ylabel='Queries that returned the most recent version [%]')
+ax.set(xlabel='Throughput [operations/s]', ylabel='Queries that returned the most recent version [%]')
 
 ax.grid(linestyle='dotted')
 
 ax.set_ylim(bottom=0)
 plt.ylim([0.0, 105.0])
 
-# handles, labels = ax.get_legend_handles_labels()
-# ax.legend(handles,labels=labels, loc='lower left')
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(handles,labels=labels, loc='lower left')
 
 plt.savefig('freshness_throughput_5050.png')
 plt.close()

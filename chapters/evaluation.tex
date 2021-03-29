@@ -542,8 +542,8 @@ most queries observe tha latest materialized view entries.
   \label{fig:readV_cdf_throughput}
 \end{figure}
 
-Figure~\ref{fig:readV_cdf_throughput} displays a CDF showing how stale a result of a front page request is
-(measured in number of versions),
+Figure~\ref{fig:readV_cdf_throughput} displays a cumulative distribution function (CDF) showing how stale a
+front page request result is (measured in number of versions),
 under a load of 4250 requests/second, for the Proteus/remote and Proteus/local deployments.
 Results show that:
 \begin{itemize}
@@ -776,9 +776,8 @@ We consider the following approaches for partitioning and placing a multi-cloud 
 \noindent
 \textbf{Workload types.}
 Overall, we consider a query-heavy application that requires the use of secondary indexes for query processing.
-We examine 3 workload types, each with a different mix of query and update operations:
-95\% queries - 5\% updates (w95/5), 80\% queries - 20\% update (w80/20),
-60\% queries - 40\% update (w60/40).
+We examine 2 workload types, each with a different mix of query and update operations:
+95\% queries - 5\% updates (w95/5) and 50\% queries - 50\% updates (w50/50).
 
 \bigskip
 \noindent
@@ -793,11 +792,10 @@ an object is represented by a MongoDB document, with document fields representin
 At the start of each experiment, we preload each storage location with with 33k objects,
 so that in total the system stores 100k objects.
 
-The Index QPU implements an in-memory B-tree secondary index.
-The Cache QPU implements a cache with a least recently used (LRU) eviction policy,
-and a time-to-live (TTL) based invalidation policy.
-We set the size of caches so that each cache can hold 50\% of the index entries it is responsible for,
-and configure the TLL value to 5 seconds.
+The index QPU implements an in-memory B-tree secondary index.
+The cache QPU implements a cache with a least recently used (LRU) eviction policy,
+and a notification based invalidation policy.
+We set the size of caches so that each cache can hold 50\% of the index entries it is responsible for.
 
 We configure the system so that there is an 80sm round trip time between storage locations in order to
 simulate a multi-cloud system deployed over distant geographic locations.
@@ -834,7 +832,7 @@ warmup period of 30 seconds.
 \centering
   \includegraphics[width=0.9\textwidth]{./figures/evaluation/ycsb_responseTime.png}
   \caption{Throughput vs query response time. Plots for the rg-index and p-index configuration show the 90th percentile response time;
-  Plots for the p-index-cache configuration show average response time in order to capture the effect of caching in reponse time.}
+  Plots for the p-index-cache configuration show average response time in order to capture the effect of caching in response time.}
   \label{fig:ycsb_responseTime}
 \end{figure}
 
@@ -845,20 +843,12 @@ We observe that:
   \item Response time in the p-index configuration is 80ms higher than in the rg-index configuration.
   This is because in p-index the query engine forwards queries to indexes across storage locations while
   in rg-index queries are served by the local index.
-  \item Average response time in the p-index-cache configuration is around 80ms when load is low,
-  and then decreases as load increases.
-  This effect is the result of caching:
-  In low load values, caches are not filled, and most queries result in cache misses;
-  As load increases, more queries are served from the cache, decreasing the average query response time.
   \item The p-index configuration achieves around 50\% throughput compared to rg-index.
   This can be attributed to the closed loop workload generation mechanism of YCSB:
   Given a certain number of client threads, in rg-index each query operation has a takes less than 25ms
   when the system is not saturated, while in p-index each query operation take 85-90ms because of the 80ms
   round trip time between storage locations.
   Therefore, in p-index each client thread cannot offer the same load as in rg-index.
-  \item The p-index-cache configuration achieves 21\% lower throughput (for the w95/5 workload).
-  This is expected as each cache miss adds an 80ms overhead to response time,
-  resulting in client threads being able to generate less load.
 \end{itemize}
 
 We conclude that the rg-index configuration is better-suited for achieving the best query processing performance.
@@ -934,166 +924,256 @@ Because of that, the freshness of p-index is determined by the freshness of the 
 Similarly, the freshness of p-index-cache is determined by the freshness of the remote-client-cache pattern
 (\ref{fig:ycsb_freshness_remote_client_cache}).
 
+% \begin{figure}[H]
+%   \begin{subfigure}{0.5\textwidth}
+%     \includegraphics[width=\linewidth]{./figures/evaluation/ycsb_update_latency_local.png}
+%     \caption{}
+%     \label{fig:ycsb_update_latency_local}
+%   \end{subfigure}%
+%   \hspace*{\fill}
+%   \begin{subfigure}{0.5\textwidth}
+%     \includegraphics[width=\linewidth]{./figures/evaluation/ycsb_update_latency_remote.png}
+%     \caption{}
+%     \label{fig:ycsb_update_latency_remote}
+%   \end{subfigure}%
+%   \caption{Throughput vs 95th percentile update latency for the Index QPU in the local (a) and remote-corpus (b) placement patterns.}
+%   \label{fig:ycsb_update_latency_local_local_remote}
+% \end{figure}
+
+% Figures~\ref{fig:ycsb_update_latency_local} and~\ref{fig:ycsb_update_latency_remote} show the 95th percentile update latency as throughput increases,
+% for local (\ref{fig:ycsb_update_latency_local}) and remote-corpus (\ref{fig:ycsb_update_latency_remote}) placement patterns.
+
+% We implement the storage tier's Subscribe API (\S\ref{sec:storage_tier_api}) using MongDB's change stream functionality \cite{mongo:changestreams}.
+% Our results show that, with the configuration used for these experiments, the change stream client receives a notification with a 50-60ms delay.
+% We indicate this as the baseline update latency in the plots (notification).
+
+% In addition, we note that our mechanism for measuring update latency includes in update latency
+% the response time of the update operation performed by the client.
+% Because update operation response time increases with load, part of the increase in update latency is due to the update operation response time.
+% Update operation response time is shown in Figure~\ref{fig:ycsb_write_latency}.
+
+% \begin{figure}[H]
+% \centering
+%   \includegraphics[width=0.7\textwidth]{./figures/evaluation/ycsb_write_latency.png}
+%   \caption{Throughput vs client update response time. Client updates are always local,
+%   as in all configurations clients write to the local MongoDB instance.}
+%   \label{fig:ycsb_write_latency}
+% \end{figure}
+
+% \noindent
+% For the update latency results in Fig.~\ref{fig:ycsb_update_latency_local_local_remote}, we observe that:
+% \begin{itemize}
+%   \item In remote-corpus, update latency is at least 40ms higher that the baseline
+%   due to the 40ms network latency between storage locations.
+
+%   \item Update latency increases with the ratio of updates.
+%   This is due to contention, as each update needs to acquire a write lock on the index.
+%   For both placement patterns, for the w80/20 and w60/40 workloads,
+%   update latency does not scale to loads larger than 13k operations/second.
+% \end{itemize}
+
+% The evaluation results shown in Figures~\ref{fig:ycsb_responseTime} and~\ref{fig:ycsb_update_latency_local_local_remote} demonstrate the trade-off between
+% query performance and query result freshness.
+% The rg-index configuration, in which queries are served locally, achieves better query processing performance at the expense of increased update latency;
+% The update latency overhead is determined by the network communication latency between storage locations.
+% Conversely, the p-index configuration ensures low update latency at the expense query processing performance.
 
 \begin{figure}[H]
   \begin{subfigure}{0.5\textwidth}
-    \includegraphics[width=\linewidth]{./figures/evaluation/ycsb_update_latency_local.png}
+    \includegraphics[width=\linewidth]{./figures/evaluation/freshness_throughput_9505.png}
     \caption{}
-    \label{fig:ycsb_update_latency_local}
+    \label{fig:freshness_throughput_9505}
   \end{subfigure}%
   \hspace*{\fill}
   \begin{subfigure}{0.5\textwidth}
-    \includegraphics[width=\linewidth]{./figures/evaluation/ycsb_update_latency_remote.png}
+    \includegraphics[width=\linewidth]{./figures/evaluation/freshness_throughput_5050.png}
     \caption{}
-    \label{fig:ycsb_update_latency_remote}
+    \label{fig:freshness_throughput_5050}
   \end{subfigure}%
-  \caption{Throughput vs 95th percentile update latency for the Index QPU in the local (a) and remote-corpus (b) placement patterns.}
-  \label{fig:ycsb_update_latency_local_local_remote}
-\end{figure}
-
-Figures~\ref{fig:ycsb_update_latency_local} and~\ref{fig:ycsb_update_latency_remote} show the 95th percentile update latency as throughput increases,
-for local (\ref{fig:ycsb_update_latency_local}) and remote-corpus (\ref{fig:ycsb_update_latency_remote}) placement patterns.
-
-We implement the storage tier's Subscribe API (\S\ref{sec:storage_tier_api}) using MongDB's change stream functionality \cite{mongo:changestreams}.
-Our results show that, with the configuration used for these experiments, the change stream client receives a notification with a 50-60ms delay.
-We indicate this as the baseline update latency in the plots (notification).
-
-In addition, we note that our mechanism for measuring update latency includes in update latency
-the response time of the update operation performed by the client.
-Because update operation response time increases with load, part of the increase in update latency is due to the update operation response time.
-Update operation response time is shown in Figure~\ref{fig:ycsb_write_latency}.
-
-\begin{figure}[H]
-\centering
-  \includegraphics[width=0.7\textwidth]{./figures/evaluation/ycsb_write_latency.png}
-  \caption{Throughput vs client update response time. Client updates are always local,
-  as in all configurations clients write to the local MongoDB instance.}
-  \label{fig:ycsb_write_latency}
-\end{figure}
-
-\noindent
-For the update latency results in Fig.~\ref{fig:ycsb_update_latency_local_local_remote}, we observe that:
-\begin{itemize}
-  \item In remote-corpus, update latency is at least 40ms higher that the baseline
-  due to the 40ms network latency between storage locations.
-
-  \item Update latency increases with the ratio of updates.
-  This is due to contention, as each update needs to acquire a write lock on the index.
-  For both placement patterns, for the w80/20 and w60/40 workloads,
-  update latency does not scale to loads larger than 13k operations/second.
-\end{itemize}
-
-The evaluation results shown in Figures~\ref{fig:ycsb_responseTime} and~\ref{fig:ycsb_update_latency_local_local_remote} demonstrate the trade-off betwee
-query performance and query result freshness.
-The rg-index configuration, in which queries are served locally, achieves better query processing performance at the expense of increased update latency;
-The update latency overhead is determined by the network communication latency between storage locations.
-Conversely, the p-index configuration ensures low update latency at the expense query processing performance.
-\begin{figure}[H]
-  \begin{subfigure}{0.5\textwidth}
-    \includegraphics[width=\linewidth]{./figures/evaluation/ycsb_readV_freshness_throughput_9505.png}
-    \caption{}
-    \label{fig:ycsb_readV_freshness_throughput_9505}
-  \end{subfigure}%
-  \hspace*{\fill}
-  \begin{subfigure}{0.5\textwidth}
-    \includegraphics[width=\linewidth]{./figures/evaluation/ycsb_readV_freshness_throughput_6040.png}
-    \caption{}
-    \label{fig:ycsb_readV_freshness_throughput_6040}
-  \end{subfigure}%
-  \caption{Throughput vs percentage of queries that returned the most recent version in the w95/5 (a) and w60/40 (b) workload.}
+  \caption{Throughput vs percentage of queries that returned the most recent version in the w95/5 (a) and w50/50 (b) workload.}
   \label{fig:ycsb_readV_freshness_throughput}
 \end{figure}
 
-Next, we examine how update latency affects query result freshness.
-Figures~\ref{fig:ycsb_readV_freshness_throughput_9505} and~\ref{fig:ycsb_readV_freshness_throughput_9505} show
+Figures~\ref{fig:freshness_throughput_9505} and~\ref{fig:freshness_throughput_5050} show
 the percentage of query operations that return the most recent version of an object as load increases,
-for the w95/5 and w60/40 workloads respectively.
-We observe that:
+for the w95/5 and w50/50 workloads respectively.
+We observe that load has an impact on query results freshness,
+and this impact is greater when there are more update operations.
+This is the result of the higher load of updates as well as lookup operations to the index, both of which need to acquire
+locks resulting in congestion.
+
+In addition, we observer that the difference in freshness between p-index and p-index-cache is small.
+Indeed, we expect the cache to have a small effect to freshness.
+This is because in the case of a cache miss the freshness of the query is equivalent to the freshness of the remote index.
+In the case of a hit, reading a stale result requires that the cache lookup occurs in the interval between the remote
+index being updated and the corresponding notification reaching (and invalidating) the cache, which in this case is 40ms.
+
+\bigskip
+\noindent
+While Figures~\ref{fig:freshness_throughput_9505} and~\ref{fig:freshness_throughput_5050} demonstrate the impact of
+load to freshness, they are not meaningful for comparing the freshness of the three configurations.
+In order to compare the freshness of the three configurations,
+we select for each configuration the ``nominal throughput'' using Figure~\ref{fig:ycsb_responseTime}:
+The nominal throughput is the ideal throughput at which each system can run.
+We define it as the higher measured throughput value in which query response
+time is close to the response time that the system can achieve at a low load.
+These throughput values are:
 \begin{itemize}
-  \item For the w95/5 workload, all patterns except remote-client-cache return fresh result for close to 100\% of queries.
-
-  \item For the w60/40 workload, local and remote-corpus return stale results for loads greater than 10k operations/second
-  (8\% and 23\% stale query results respectively).
-
-  \item For both workloads, the remote-client-cache pattern results in significantly more stale query results than the other
-  patters.
-  This is due to the time-based invalidation policy, and the TTL value of 5 seconds.
+  \item Rg-index: 22126 operations/second for w95/5 and 22196 operations/second for w50/50.
+  \item P-index 9511 operations/second for w95/5 and 9015 operations/second operations/second for w50/50.
+  \item P-index-cache 11633 operations/second for w95/5 and 7856 operations/second operations/second for w50/50.
 \end{itemize}
 
-We conclude that, for query-dominated workloads, all pattern exhibit high freshness.
-For workloads with higher update rations,
-caching with time-based invalidation offers a balance between memory resource overhead and query processing performance,
-at the expense of lower query result freshness.
+
+\begin{figure}[H]
+  \begin{subfigure}{0.5\textwidth}
+    \includegraphics[width=\linewidth]{./figures/evaluation/freshness_cdf_9505.png}
+    \caption{}
+    \label{fig:freshness_cdf_9505}
+  \end{subfigure}%
+  \hspace*{\fill}
+  \begin{subfigure}{0.5\textwidth}
+    \includegraphics[width=\linewidth]{./figures/evaluation/freshness_cdf_5050.png}
+    \caption{}
+    \label{fig:freshness_cdf_5050}
+  \end{subfigure}%
+  \caption{CDF of returned version in the w95/5 (a) and w50/50 (b) workload.}
+  \label{fig:ycsb_freshness_cdf}
+\end{figure}
+
+Figures Figure~\ref{fig:freshness_cdf_9505} and~\ref{fig:freshness_cdf_9505} show the CDFs of returned version for
+the measurements listed above.
+We observe that:
+
+\begin{itemize}
+  \item In w95/5, queries in all configurations retrieve at least the second most recent version.
+  \item In w50/50, queries retrieve up to 4-8 stale versions. This is because of the higher ratio of updates in the
+  workload.
+  \item  In w50/50, rg-index retrieves more stale results than p-index and p-index-cache.
+  This is expected due indexes receiving notifications from remote storage locations.
+\end{itemize}
+  % \item For the w50/50 workload, local and remote-corpus return stale results for loads greater than 10k operations/second
+  % (8\% and 23\% stale query results respectively).
+
+  % \item For both workloads, the remote-client-cache pattern results in significantly more stale query results than the other
+  % patters.
+  % This is due to the time-based invalidation policy, and the TTL value of 5 seconds.
+
+
+
+% \begin{itemize}
+  % \item For the w95/5 workload, all patterns except remote-client-cache return fresh result for close to 100\% of queries.
+
+  % \item For the w50/50 workload, local and remote-corpus return stale results for loads greater than 10k operations/second
+  % (8\% and 23\% stale query results respectively).
+
+  % \item For both workloads, the remote-client-cache pattern results in significantly more stale query results than the other
+  % patters.
+  % This is due to the time-based invalidation policy, and the TTL value of 5 seconds.
+% \end{itemize}
+
+% We conclude that, for query-dominated workloads, all pattern exhibit high freshness.
+% For workloads with higher update rations,
+% caching with time-based invalidation offers a balance between memory resource overhead and query processing performance,
+% at the expense of lower query result freshness.
 
 \subsection{Data transfer between storage locations}
 
-\begin{table}[H]
-\centering
-\begin{tabular}{|c||c|c|c|c||}
-\hline
-& \textbf{w95/5} & \textbf{w80/20} & \textbf{w60/40} & \textbf{w5/95}\\
-\hline
-\textbf{rg-index} & 64MB & 213MB & 467MB & 1.37GB \\
-\hline
-\textbf{p-index} & 18GB & 5.95GB & 5.85GB & 1.25GB \\
-\hline
-\textbf{p-index-cache} & 4.95GB & 5.58GB & 4.97GB & 947MB \\
-\hline
-\end{tabular}
-\caption{Amount of data transfer between sites for a 5 minute benchmark with 256 YCSB client treads at each storage location.}
-\label{tab:ycsb_data_transfer}
-\end{table}
+% \begin{table}[H]
+% \centering
+% \begin{tabular}{|c||c|c|c|c||}
+% \hline
+% & \textbf{w95/5} & \textbf{w80/20} & \textbf{w60/40} & \textbf{w5/95}\\
+% \hline
+% \textbf{rg-index} & 64MB & 213MB & 467MB & 1.37GB \\
+% \hline
+% \textbf{p-index} & 18GB & 5.95GB & 5.85GB & 1.25GB \\
+% \hline
+% \textbf{p-index-cache} & 4.95GB & 5.58GB & 4.97GB & 947MB \\
+% \hline
+% \end{tabular}
+% \caption{Amount of data transfer between sites for a 5 minute benchmark with 256 YCSB client treads at each storage location.}
+% \label{tab:ycsb_data_transfer}
+% \end{table}
 
-In this section, we measure the amount of data sent across storage location for different QPU graph configurations and
+\begin{figure}[H]
+  \centering
+    \includegraphics[scale=0.5]{./figures/evaluation/ycsb_datatransfer.png}
+  \caption{Monthly amount of data transfer between sites.}
+  \label{fig:ycsb_datatransfer}
+\end{figure}
+
+In this section, we examine the amount of data sent across storage location for the different QPU graph configurations and
 workload types.
 
 In the rg-index configuration, cross-location data transfer occurs for sending update notifications from the corpus
-to remote Index QPUs:
+to remote index QPUs:
 Each update operation generates three update notifications, one for each storage location.
-As a result, data transfer increases as update ratio increases.
+As a result, data transfer increases as the ratio of updates increases.
 
 In the p-index configuration, cross-location data transfer occurs for retrieving query results from remote Index QPUs.
 Partition Manager QPUs forward every query to all three storage locations, and retrieve the results.
-As a result, data transfer decreases as query ratio decreases.
+As a result, data transfer increases as query ratio increases.
 
 In the p-index-cache configuration, cross-location data transfer occurs on cache misses.
 When an index entry is not present in a cache, the Cache QPU forwards it to the corresponding Index QPU, and retrieves the
 results.
-Similarly to the case of p-index, data transfer decreases as query ratio decreases.
+As a result, data transfer increases as the ratio of cache misses increases.
+
+\bigskip
+\noindent
+We experimentally measure the amount of data transferred between storage locations for each workload - QPU graph configuration
+pair.
+We use the nominal throughput of each pair as the load offered to the system for each run.
+For each experiment, we measure the amount of data transfer between storage locations for the duration of the run (5 minutes),
+and use that measurement to extrapolate the monthly data transfer, as follows.
+From the amount of data transferred within 5 minutes we extrapolate the amount of data transferred in 2 hours by assuming
+that the average throughput for the 2 hours is that of the 5 minute benchmark.
+Then we extrapolate the data transfer in a day by assuming that those 2 hours are ``peak hours'',
+and contribute the 20\% of the total daily data transfer.
+Figure \ref{fig:ycsb_datatransfer} shows the results.
 
 These results demonstrate another aspect of the trade-off between the rg-index and p-index configurations.
-In general, p-index results in significantly higher data transfer than rg-index.
-Our results show that the rg-index configuration results in more data transfer than the p-index configuration for workloads with at least 95\% updates (w5/95).
-This because the size of an update notification is significantly smaller than the size of a query response.
-Given an update, the update notification contains the object's primary key, the updated attribute(s) and a timestamp;
-Given a query, the response contains the primary keys, attributes and timestamps of all objects that match the query predicate.
+P-index and p-index-cache use significantly higher data transfer than rg-index.
+% Our results show that the rg-index configuration results in more data transfer than the p-index configuration for workloads with at least 95\% updates (w5/95).
+This is because the size of an update notification (transferred in rg-index)
+is significantly smaller than the size of a query response (transferred in p-index and p-index-cache).
+For a given update, the update notification contains the object's primary key, the updated attribute(s) and a timestamp,
+while for a query, the response contains the primary keys, attributes and timestamps of all objects that match the query predicate.
 
-Furthermore, we observe that using a caching layer results in a 72\% data transfer reduction for the w95/5 workload.
+Furthermore, we observe that using a caching layer results in data transfer reduction for the both workloads, as expected.
+This reduction is more significant for w95/5 as the lower ratio of updates results in fewer cache misses due to invalidations.
 Therefore, using the p-index-cache configuration can result in significant data transfer cost reduction compared to
 the p-index configuration.
 
 \subsection{Conclusion}
 
-\begin{table}[H]
-\centering
-\begin{tabular}{|c||c|c|c||}
-\hline
-& \textbf{w95/5} & \textbf{w80/20} & \textbf{w60/40}\\
-\hline
-\textbf{Query processing performance} & rg-index & rg-index & rg-index \\
-\hline
-\textbf{Query result freshness} & p-index & p-index & p-index \\
-\hline
-\textbf{Data transfer cost} & rg-index & rg-index & rg-index \\
-\hline
-\end{tabular}
-\caption{Summary of experimental comparison between the three QPU graph configurations.}
-\label{tab:ycsb_summary}
-\end{table}
+% \begin{table}[H]
+% \centering
+% \begin{tabular}{|c||c|c|c||}
+% \hline
+% & \textbf{w95/5} & \textbf{w80/20} & \textbf{w60/40}\\
+% \hline
+% \textbf{Query processing performance} & rg-index & rg-index & rg-index \\
+% \hline
+% \textbf{Query result freshness} & p-index & p-index & p-index \\
+% \hline
+% \textbf{Data transfer cost} & rg-index & rg-index & rg-index \\
+% \hline
+% \end{tabular}
+% \caption{Summary of experimental comparison between the three QPU graph configurations.}
+% \label{tab:ycsb_summary}
+% \end{table}
 
-Table~\ref{tab:ycsb_summary} summarizes the evaluation results presented in this section
-by showing which QPU graph configuration is better-suited for each combination of target metric
-and workload type.
+% Table~\ref{tab:ycsb_summary} summarizes the evaluation results presented in this section
+% by showing which QPU graph configuration is better-suited for each combination of target metric
+% and workload type.
+
+Our evaluation results demonstrate that no single configuration is best-suited for
+all metrics:
+rg-index outperforms the other two in terms of query response time and provides the lower data transfer cost,
+while p-index and p-index-cache exhibit the best freshness when the workload contains
+a high number of updates.
 
 However, applications are rarely interested in optimizing a single metric,
 but rather finding the right balance in the trade-offs between metrics.
@@ -1101,10 +1181,9 @@ Our evaluation results indicate that, for query heavy workloads,
 the p-index-cache configuration offers a balance between query processing performance,
 freshness, and memory resource and data transfer overhead.
 
-The evaluation presented in this section demonstrates the trade-offs between
-different index and cache partitioning and placement approaches,
-and shows that Proteus can be efficiently used to tune the trade-offs between query processing
-performance, freshness and operational costs by controlling the query engine's architecture.
+The evaluation presented in this section demonstrates that Proteus can
+be efficiently used to tune the trade-offs between query processing performance,
+freshness and operational costs by controlling the query engine's architecture.
 
 \section{Conclusions}
 

@@ -33,18 +33,21 @@ ax.plot(p_index_cache_query_h_t, p_index_cache_query_h_rt, color='g', marker='+'
 # ax.plot(p_index_cache_balanced_t, p_index_cache_balanced_rt, color='g', marker='+', linestyle='dashed', label='p-index-cache w80/20')
 # ax.plot(p_index_cache_update_h_t, p_index_cache_update_h_rt, color='g', marker='+', linestyle='dotted', label='p-index-cache w60/40')
 
-# ax.set(xlabel='Throughput [operations/s]', ylabel='Query response time [ms]')
+ax.set(xlabel='Throughput [operations/s]', ylabel='CDF [%]')
 
 ax.grid(linestyle='dotted')
 
 handles, labels = ax.get_legend_handles_labels()
-# ax.legend(handles,labels=labels, loc='upper center', bbox_to_anchor=(0.5, 1.1), ncol=3, frameon=False)
+ax.legend(handles,labels=labels, loc='upper center', bbox_to_anchor=(0.5, 1.1), ncol=3, frameon=False)
 
 ax.set_xlim(left=1)
 plt.ylim([0.0, 105.0])
 ticks = [0 ,1, 2, 3, 4]
 labels = ["1", "2", "3-4", "4-8", ">8"]
 plt.xticks(ticks, labels)
+
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(handles,labels=labels, loc='lower right')
 
 plt.savefig('freshness_cdf_9505.png')
 
@@ -79,18 +82,18 @@ ax.plot(p_index_cache_query_h_t, p_index_cache_query_h_rt, color='g', marker='+'
 # ax.plot(p_index_cache_balanced_t, p_index_cache_balanced_rt, color='g', marker='+', linestyle='dashed', label='p-index-cache w80/20')
 # ax.plot(p_index_cache_update_h_t, p_index_cache_update_h_rt, color='g', marker='+', linestyle='dotted', label='p-index-cache w60/40')
 
-# ax.set(xlabel='Throughput [operations/s]', ylabel='Query response time [ms]')
+ax.set(xlabel='Throughput [operations/s]', ylabel='CDF [%]')
 
 ax.grid(linestyle='dotted')
-
-# handles, labels = ax.get_legend_handles_labels()
-# ax.legend(handles,labels=labels, loc='upper center', bbox_to_anchor=(0.5, 1.1), ncol=3, frameon=False)
 
 ax.set_xlim(left=1)
 plt.ylim([0.0, 105.0])
 ticks = [0 ,1, 2, 3, 4]
 labels = ["1", "2", "3-4", "4-8", ">8"]
 plt.xticks(ticks, labels)
+
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(handles,labels=labels, loc='lower right')
 
 plt.savefig('freshness_cdf_5050.png')
 plt.close()
