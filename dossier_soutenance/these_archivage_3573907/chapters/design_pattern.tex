@@ -28,7 +28,7 @@ An efficient geo-distributed query processing system should provide tunning mech
   communication latency within a site.
   The use of secondary indexes and materialized views in this context, involves a trade-off between the requirements
   of minimizing the inter-site communication in the read path, and in the write path.
-  We have have analyzed the implication of this trade-off in section~\ref{sec:topology_patterns}.
+  We have have analyzed the implication of this trade-off in Section~\ref{sec:topology_patterns}.
   Therefore, an efficient query processing system requires fine-grained control over the placement of derived state
   across the system.
 
@@ -40,7 +40,7 @@ An efficient geo-distributed query processing system should provide tunning mech
 
   \item \textit{State maintenance scheme.}
   Keeping derived state up-to-date with the corpus involves a trade-off between
-  the overhead incurred to write operations and the consistency between derived state and corpus data (section~\ref{sec:sync_async_maintenance}).
+  the overhead incurred to write operations and the consistency between derived state and corpus data (Section~\ref{sec:sync_async_maintenance}).
   Updating the derived state synchronously
   ensures that it is strongly consistent with the
   corpus, but introduces additional work to the write path --- potentially involving inter-site communication.
@@ -49,13 +49,13 @@ An efficient geo-distributed query processing system should provide tunning mech
   Which maintenance scheme is better suited to a specific use case depends on its workload characteristics (query or write-heavy), and consistency requirements.
 
   \item \textit{Index and materialized view selection.}
-  As we described in section~\ref{sec:read_write_path}, the choice of which secondary indexes and materialized views to
+  As we described in Section~\ref{sec:read_write_path}, the choice of which secondary indexes and materialized views to
   materialize involves a trade-off between work on the read path on the one side,
   and one the other side work on the write path as well as the resource required for maintaining derived state.
   Therefore, the query processing system needs to enable configurable index and materialized view selection.
 
   \item \textit{Caching.}
-  As we described in section~\ref{sec:read_write_path},
+  As we described in Section~\ref{sec:read_write_path},
   caching, similarly to materialized views, can be viewed as a point in the design space defined by the read and write
   work framework.
   Therefore, index and view selection mechanisms should also include decisions about caching.
@@ -317,7 +317,7 @@ Our forth observation is related to the \textit{input} required for each query p
 
   % For example, an secondary index provides methods for adding and removing data items from posting lists.
   % This interface can be viewed as a mechanism for receiving notifications for corpus updates as input.
-  % As we described in section~\ref{sec:sync_async_maintenance},
+  % As we described in Section~\ref{sec:sync_async_maintenance},
   % updating an index (or materialized view) to reflect an update to a data item $d$ consists of
   % (1) removing the information about the previous version of $d$ from the index, and
   % (2) adding the information about new current version.
@@ -701,13 +701,13 @@ results, for example in streaming join computations, maintain \textit{query proc
 \subsubsection{Initialization, query processing, and input stream processor methods.}
 The functionality of a query processing unit can be modeled using three methods:
 \begin{itemize}
-  \item The \textit{initialization method} (section~\ref{sec:initialization_func}), which is executed when the QPU is
+  \item The \textit{initialization method} (Section~\ref{sec:initialization_func}), which is executed when the QPU is
   initialized.
 
-  \item The \textit{query processing method} (section~\ref{sec:query_processing_func}), which is executed for each
+  \item The \textit{query processing method} (Section~\ref{sec:query_processing_func}), which is executed for each
   query request received by the QPU, and is responsible for processing the query and sending results to the response stream.
 
-  \item The \textit{input stream processor method} (stream processor method for short) (section~\ref{sec:callback_func}), which is executed for each record
+  \item The \textit{input stream processor method} (stream processor method for short) (Section~\ref{sec:callback_func}), which is executed for each record
   received through an input stream.
 
 \end{itemize}
@@ -1005,8 +1005,8 @@ according to the functionality supported by its class.
 For example, a QPU class that implements a join operator can perform a join over two input streams,
 but cannot evaluate a $PredicateExpression$, or perform an $SUM$ on an attribute of the join result.
 This can be achieved by connecting ``join'', ``filter'', and ``aggregator'' QPUs.
-We present in detail these QPU classes in section~\ref{sec:qpu_classes},
-and how they are composed to provide complex query processing functionalities in section~\ref{sec:query_processing_system}.
+We present in detail these QPU classes in Section~\ref{sec:qpu_classes},
+and how they are composed to provide complex query processing functionalities in Section~\ref{sec:query_processing_system}.
 
 Moreover, instances of a certain class may support different parts of the query language according to their
 configuration.
@@ -1099,7 +1099,7 @@ $ProcessQuery$ receives as arguments:
   \item $QPState$, which is a handler that enables $Init$ to read from and write to QPU's query processing state.
 
   \item A list of $DownstreamConn$, each consisting of the endpoint of a downstream connection and a data structure
-  representing the connection's query interface domain (section~\ref{sec:qpc_tree}).
+  representing the connection's query interface domain (Section~\ref{sec:qpc_tree}).
   $Init$ can therefore send downstream query requests.
 \end{itemize}
 
@@ -1179,7 +1179,7 @@ A synchronous send operation blocks until an acknowledgement for the data record
 \noindent
 Finally, we assume that stream connections do not drop, re-order, of duplicate messages;
 however messages may be arbitrarily delayed.
-These guarantees are not based on assumptions about the transport layer, but as we discuss in In chapter~\ref{ch:evaluation}
+These guarantees are not based on assumptions about the transport layer, but as we discuss in In Chapter~\ref{ch:evaluation}
 are implemented by query processing units on top of potentially unreliable connections.
 
 \subsection{QPU classes}
@@ -1196,7 +1196,7 @@ methods.
 
 In this section, we present a categorization of QPU classes according to their general characteristics,
 and demonstrate some examples of QPU classes.
-We present additional QPU classes in chapters~\ref{ch:case_studies}, \ref{ch:proteus}, \ref{ch:evaluation}.
+We present additional QPU classes in Chapters~\ref{ch:case_studies}, \ref{ch:proteus}, \ref{ch:evaluation}.
 
 We categorize QPU classes in three groups, according to their general characteristics:
 \begin{itemize}
@@ -1284,7 +1284,7 @@ We categorize QPU classes in three groups, according to their general characteri
   Classes in this group are responsible for connecting the QPU graph with the corpus.
   QPUs of these classes do not support downstream connections to other QPUs.
   Because of their functionality, corpus driver QPUs are only used as leaves of the QPU graph.
-  In fact, as we explain in section~\ref{sec:graph_topology}, every leaf node of the QPU can only be a corpus driver QPU.
+  In fact, as we explain in Section~\ref{sec:graph_topology}, every leaf node of the QPU can only be a corpus driver QPU.
 
   When a query request is received, the query processing method of a corpus driver QPU uses the interface and mechanisms
   of they corpus database in order to generate and emit the output stream that corresponds to the given query.
@@ -1484,9 +1484,9 @@ where $SelectExpression$ and $PredicateExpression$ contain attributes of both ta
 
 \end{itemize}
 
-In section~\ref{sec:computation_model} we describe how a query such as the aforementioned is processed by a QPU-based
+In Section~\ref{sec:computation_model} we describe how a query such as the aforementioned is processed by a QPU-based
 query processing system.
-Moreover, in section~\ref{sec:qpc_tree} we describe how the set of queries a query processing unit can process are
+Moreover, in Section~\ref{sec:qpc_tree} we describe how the set of queries a query processing unit can process are
 represented and used by other QPUs.
 
 \subsubsection{QPU-graph topology rules}
@@ -1646,7 +1646,7 @@ For a given query or state maintenance execution,
 query requests flow downwards through the QPU graph, defining an execution sub-graph.
 Response streams flow upwards through that sub-graph, each stream corresponding to an edge defined by a query request.
 
-Finally, as described in section~\ref{ref:specification}, a QPU can process multiple queries in parallel,
+Finally, as described in Section~\ref{ref:specification}, a QPU can process multiple queries in parallel,
 executing an instance of its query processing method and having an output stream for each query request being processed.
 Therefore, multiple different query execution and state maintenance sub-graph can co-exist in parallel in the same QPU DAG.
 
@@ -1893,7 +1893,7 @@ The goal of the QPU-based design pattern is to enable \textit{workload-driven de
 A QPU graph is designed based a predefined set of query patterns.
 As a result, a QPU graph does not support any ad-hoc query,
 but rather \textit{the set of queries it has been designed for}.
-More specifically, as described in section~\ref{sec:qpc_tree}, a QPU graph supports the set of queries represent by the domain trees of its root nodes.
+More specifically, as described in Section~\ref{sec:qpc_tree}, a QPU graph supports the set of queries represent by the domain trees of its root nodes.
 Supporting additional query patterns, not supported by a certain QPU graph requires designing and deploying a
 new QPU graph.
 
@@ -1965,7 +1965,7 @@ and described how it can be used as a building block for constructing query engi
 % - (each query establishes a sub-graph - actually a tree - to be used by that particular query);
 % - Updates (independently) also flow upwards
 
-% As described in the previous sections, query processing units can collaborate by invoking the query API of one another.
+% As described in the previous Sections, query processing units can collaborate by invoking the query API of one another.
 % QPUs can be composed in DAG hierarchies in which parent units can invoke the query API of their child units.
 % Query responses for both snapshot and persistent queries are streams of results.
 % Communication between QPUs thus uses a combination of the remote procedural call model (query API invocations) and the stream-processing model (query responses).
