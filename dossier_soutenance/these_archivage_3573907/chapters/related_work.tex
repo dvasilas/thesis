@@ -255,11 +255,11 @@ The authors present an algorithm for prioritizing cache entries to be refreshed 
 the age of the cached entry.
 
 Proteus supports both push and pull:
-In pull-based refreshing, the Cache QPU refreshes cache entries by sending query requests to the underlying query engine.
-In push-based refreshing, the Cache QPU, upon a cache miss issues a query request and additionally subscribes to
+In pull-based refreshing, the cache QPU refreshes cache entries by sending query requests to the underlying query engine.
+In push-based refreshing, the cache QPU, upon a cache miss issues a query request and additionally subscribes to
 notifications for the corresponding query results.
-In Proteus, the invalidation and refresh policy of a Cache QPU is controlled by a configuration parameter.
-In addition, the Cache QPU supports a hybrid approach in which it receives update notifications,
+In Proteus, the invalidation and refresh policy of a cache QPU is controlled by a configuration parameter.
+In addition, the cache QPU supports a hybrid approach in which it receives update notifications,
 and refreshes the cache entry when a threshold number of updates is crossed,
 by performing a query request.
 

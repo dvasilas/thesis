@@ -120,7 +120,7 @@ We configure 60\% of votes to target the 25 stories in the front page, and 40\% 
 \begin{figure}[H]
   \centering
     \includegraphics[scale=0.5]{./figures/evaluation/lobsters_architecture_eval.pdf}
-  \caption{QPU graph used for this evaluation. The Materialized view QPU computes the vote count for each story,
+  \caption{QPU graph used for this evaluation. The materialized view QPU computes the vote count for each story,
   and joins it with the corresponding record from the $stories$ stable.
   The ``GET /'' request indicates the front page operation, and the ``POST /stories/X/upvote'' request indicates the operation of voting up story X.}
   \label{fig:eval_lobsters_qpu_arch}
@@ -148,13 +148,13 @@ the vote operation does not need to explicitly update the vote count of the give
 is performed by the QPU graph,
 and the front page operation can be served from the materialized view.
 
-In the actual QPU graph deployed for the experiments, each Selection QPU is merged with its downstream connection,
+In the actual QPU graph deployed for the experiments, each selection QPU is merged with its downstream connection,
 in a single unit that performs both functionalities.
-In addition, the Materialized View is merged with the Join QPU.
+In addition, the materialized view is merged with the join QPU.
 
-The Materialized view QPU implementation used in these experiments stores its state in a MariaDB instance.
+The materialized view QPU implementation used in these experiments stores its state in a MariaDB instance.
 This is a separate instance from the one that is used the Lobsters database.
-It is deployed alongside and only accessible by the Materialized view QPU.
+It is deployed alongside and only accessible by the materialized view QPU.
 The choice of using the same database both as the baseline and for storing the materialized view is aimed at eliminating
 the effect of the database performance from the evaluation results,
 providing a comparison that isolates the effects of placement.
@@ -173,7 +173,7 @@ and clients are located in Europe \cite{pbailis:hats}, or vice versa.
 
 Our experiments  make use of the ability to place QPUs strategically in the system topology.
 We use two placement schemes:
-One in which the Materialized view QPU is placed at the server site, and one in which it is placed at
+One in which the materialized view QPU is placed at the server site, and one in which it is placed at
 the client site.
 We evaluate the effects and trade-offs of materialized view placement by comparing these two placement schemes.
 
@@ -233,10 +233,10 @@ increase because the delay caused by waiting for available threads is outside of
 
 \bigskip
 \noindent
-\textbf{Freshness.} The materialized state maintained by the Materialized view QPU updated asynchronously.
+\textbf{Freshness.} The materialized state maintained by the materialized view QPU updated asynchronously.
 As a result, queries served from the materialized view might reflect state that is stale relative to the database state.
 The staleness of the materialized state is impacted by its placement:
-Placing the Materialized view QPU at the client side entails a minimum 40 ms communication latency to the materialized view
+Placing the materialized view QPU at the client side entails a minimum 40 ms communication latency to the materialized view
 (80 ms round-trip time between sites).
 Throughout the rest of this chapter, we consider the terms freshness and staleness equivalent and use them interchangeably.
 
@@ -253,12 +253,12 @@ using the following metrics:
 We collect these metrics as follows.
 For each vote operation, the Lobsters database logs the timestamp at which the corresponding transaction commits;
 the database then includes the commit timestamp the update record that it publishes to the QPU graph.
-When the update record reaches the Materialized view QPU, the QPU stores the commit timestamp in an
+When the update record reaches the materialized view QPU, the QPU stores the commit timestamp in an
 ``update log'' table.
-Moreover, the Materialized view QPU logs the timestamp of each view update in the update log,
+Moreover, the materialized view QPU logs the timestamp of each view update in the update log,
 and the timestamp at the start of each query, in a ``query log''.
 
-At the end of a benchmark run, the Materialized view QPU performs a post mortem analysis:
+At the end of a benchmark run, the materialized view QPU performs a post mortem analysis:
 The update latency for each vote is computed by subtracting the update timestamp from the commit timestamp.
 The returned version for each front page story is computed by comparing the update and query logs.
 
@@ -283,9 +283,9 @@ Each server consists of 2 Intel Xeon E5645 CPUs, each with 6 cores, 64 GB RAM, a
 The average ping latency between machines in the cluster is less than 1ms.
 We simulate the two geographically distant sites by using the Linux tc utility \cite{tc} to add delay to outgoing packets.
 
-For response time measurements, the Lobsters MariaDB instance and the QPUs, except the Materialized view QPU are deployed
+For response time measurements, the Lobsters MariaDB instance and the QPUs, except the materialized view QPU are deployed
 on a single server on the server site, and the workload generator is on a server in the client site.
-The Materialized view QPU is deployed on a separate dedicated server, either on the application or the client site,
+The materialized view QPU is deployed on a separate dedicated server, either on the application or the client site,
 according on the placement scheme being tested.
 As described above, for the freshness measurements, all components are deployed on a single server.
 
@@ -337,12 +337,12 @@ it pre-computes and stores vote counts in a column of the Lobsters $stories$ tab
 This serves as the baseline approach.
 \textbf{Proteus/remote} (Fig.~\ref{fig:deployments_proteus_remote}) consists of the QPU graph shown in Figure~\ref{fig:eval_lobsters_qpu_arch},
 deployed on the server site.
-In \textbf{Proteus/local} (Fig.~\ref{fig:deployments_proteus_local}),the Materialized view QPU is deployed on the client site.
+In \textbf{Proteus/local} (Fig.~\ref{fig:deployments_proteus_local}),the materialized view QPU is deployed on the client site.
 This is intended to evaluate the effect of placing the materialized view close the client.
 We also compare with a deployment (\textbf{Materialized-view-internal}, Fig~\ref{fig:deployments_mv_internal}) in which the workload generator
-directly issues request to the Materialized view QPU's state, bypassing the QPU's gRPC server
+directly issues request to the materialized view QPU's state, bypassing the QPU's gRPC server
 (the workload generator and materialized view are co-located on the same server).
-This aims at providing an indication of the best performance the Materialized view QPU can achieve,
+This aims at providing an indication of the best performance the materialized view QPU can achieve,
 without taking into account its gRPC server (which we have identified as a performance bottleneck).
 
 \begin{figure}[H]
@@ -361,7 +361,7 @@ After that point, the system cannot achieve additional throughput, and response 
 
 Materialized-view-internal scales up to 9800 requests/second,
 outperforming both Proteus deployments.
-This deployment is intended to evaluate the performance of the core functionality of the Materialized view QPU,
+This deployment is intended to evaluate the performance of the core functionality of the materialized view QPU,
 by directly translating front page and vote operations to accesses to the QPU's state using a thread pool,
 bypassing the client-server gRPC communication.
 Because of that, we conclude that the gRPC communication incurs a significant overhead in the throughout that
@@ -372,12 +372,12 @@ which scales to 5500 requests/second.
 Both those deployments eventually read and write state to a MariaDB instance.
 The difference is how they translate requests to database accesses.
 The adapter used in the Baseline/remote deployment uses a simple logic that translates vote and front page request to database transactions.
-Conversely, the Materialized view QPU used in the Proteus/remote deployment contains more complex logic,
+Conversely, the materialized view QPU used in the Proteus/remote deployment contains more complex logic,
 such as parsing received queries in SQL form, and receiving records from its input stream and updating the materialized view.
 We attribute the observed 24\% overhead to the more complex logic.
 
 In the Proteus/local deployment, query response time is significantly lower.
-This is achieved because moving the Materialized view QPU to the client site removes the need for a costly round-trip to
+This is achieved because moving the materialized view QPU to the client site removes the need for a costly round-trip to
 the server site, and thus removes the 80 ms lower bound.
 In addition, Proteus/local achieves a 28\% increase in achieved throughput compared to the Baseline/remote deployment
 (we consider the maximum achieved throughput for which response time does not exceed 20ms and 100ms respectively).
@@ -445,7 +445,7 @@ The Proteus/remote setup exhibits a higher update latency:
 For 4250 requests/second, the update latency in Proteus/remote is 88\% higher than in Proteus/local,
 relative to the lower bound.
 This can be attributed to the same reasons as the scalability difference between the two deployments:
-The Materialized view QPU in Proteus/remote is more loaded because more connections are concurrently ongoing
+The materialized view QPU in Proteus/remote is more loaded because more connections are concurrently ongoing
 for the same load value, compared to Proteus/local,
 leading to increased latency for applying updates to the view.
 
@@ -458,7 +458,7 @@ leading to increased latency for applying updates to the view.
 \end{figure}
 
 Each vote committed in the database triggers a record that flows through the QPU graph, and eventually updates the corresponding
-vote count in the Materialized view QPU.
+vote count in the materialized view QPU.
 Figure~\ref{fig:fr_latency_throughput_breakdown} shows a breakdown of the update latency in the Proteus/local
 deployment.
 It depicts the delay at each step that vote records follow through the QPU graph.
@@ -467,30 +467,30 @@ A vote record's path consists of the following steps:
 \begin{enumerate}
   \item When the transaction that inserts a vote record into the Lobsters database commits,
   a trigger sends a message to the notification server (Section~\ref{sec:implementation}).
-  The notification server then constructs an update record and sends it to the Corpus Driver QPU through a gRPC stream.
+  The notification server then constructs an update record and sends it to the corpus driver QPU through a gRPC stream.
   The duration of this step is shown as \textbf{notification server} in Figure~\ref{fig:fr_latency_throughput_breakdown}.
 
-  \item The Corpus driver receives an update record, and forwards it to the Sum QPU (\textbf{corpus driver}).
+  \item The Corpus driver receives an update record, and forwards it to the sum QPU (\textbf{corpus driver}).
 
-  \item The Sum QPU receives an update record, computes an updated vote count,
-  and sends a corresponding record to the Join QPU (\textbf{sum}).
+  \item The sum QPU receives an update record, computes an updated vote count,
+  and sends a corresponding record to the join QPU (\textbf{sum}).
 
   \item \textbf{Cross-site communication} in Figure~\ref{fig:fr_latency_throughput_breakdown} corresponds to the delay for
-  sending an update record from the Sum QPU, located at the server site, to the Join QPU, located at the client site.
+  sending an update record from the sum QPU, located at the server site, to the join QPU, located at the client site.
 
-  \item Finally, the Join QPU receives a record and updates the materialized view accordingly (\textbf{join-MV}).
+  \item Finally, the join QPU receives a record and updates the materialized view accordingly (\textbf{join-MV}).
 
 \end{enumerate}
 
 We observe that:
 \begin{itemize}
   \item Update latency is dominated by cross-site communication  (up to 89\%).
-  \item Latency at the Corpus driver and Sum QPUs is low: 2ms and 6ms at most.
-  This is expected: the Corpus driver simply forwards records upstream;
-  The Sum QPU, for each record, updates a vote count stored in memory, and sends a record upstream.
-  \item Latency at the notification server and Materialized View QPU increases as the offered load increases.
+  \item Latency at the corpus driver and sum QPUs is low: 2ms and 6ms at most.
+  This is expected: the corpus driver simply forwards records upstream;
+  The sum QPU, for each record, updates a vote count stored in memory, and sends a record upstream.
+  \item Latency at the notification server and materialized view QPU increases as the offered load increases.
   However, both scale well as the load increases.
-  For the Materialized view QPU this is due to the increasing load in the database that stores the materialized view.
+  For the materialized view QPU this is due to the increasing load in the database that stores the materialized view.
   The latency increase in the notification server can be attributed to the increased load in the database,
   resulting in more triggers being executed concurrently.
 \end{itemize}
@@ -647,8 +647,8 @@ If the system is deployed on a public cloud platform this incurs an additional c
 because data transfer between data centers is part of public clouds' pricing models.
 For example, on AWS EC2, data transfer costs \$0.02 per GB \cite{aws:pricing}.
 
-In the scenario used for these experiments, placing the Materialized view QPU at the client site entails that
-update records from the Sum to the Materialized view QPU are sent between sites.
+In the scenario used for these experiments, placing the materialized view QPU at the client site entails that
+update records from the Sum to the materialized view QPU are sent between sites.
 
 To measure the amount of inter-site data transfer,
 we have implemented a mechanism for measuring and aggregating the size of outgoing messages at each QPU.
@@ -793,8 +793,8 @@ an object is represented by a MongoDB document, with document fields representin
 At the start of each experiment, we preload each storage location with with 33k objects,
 so that in total the system stores 100k objects.
 
-The Index QPU implements an in-memory B-tree secondary index.
-The Cache QPU implements a cache with a least recently used (LRU) eviction policy,
+The index QPU implements an in-memory B-tree secondary index.
+The cache QPU implements a cache with a least recently used (LRU) eviction policy,
 and a time-to-live (TTL) based invalidation policy.
 We set the size of caches so that each cache can hold 50\% of the index entries it is responsible for,
 and configure the TLL value to 5 seconds.
@@ -815,7 +815,7 @@ the measured latency percentiles.
 We have modified YCSB's MongoDB driver to send query operations to Proteus.
 We deploy a YCSB instance on each storage location.
 On each location, YCSB client threads send update operations to the local MongoDB instance,
-and query operations to the local Partition Manager QPU.
+and query operations to the local partition manager QPU.
 At the end of an experiment, we gather and aggregate measurements from all three storage locations,
 and compute the total achieved throughput and latency percentiles.
 
@@ -926,7 +926,7 @@ $\square$ $\blacksquare$ indicated that only the pattern with $\blacksquare$ con
 Table \ref{tab:placement_patterns} shows the placement patterns used for each QPU graph configuration.
 In rg-index, each index is connected to both local (\ref{fig:ycsb_freshness_local}) and remote (\ref{fig:ycsb_freshness_remote_corpus}) corpus.
 As a result, query result freshness is affected by the freshness characteristics of both patterns.
-In p-index, each Partition Manager QPU is connected to the the local index (\ref{fig:ycsb_freshness_local}),
+In p-index, each partition manager QPU is connected to the the local index (\ref{fig:ycsb_freshness_local}),
 and two remote indexes (\ref{fig:ycsb_freshness_remote_client}).
 The Partition Manager forwards a given query to all three indexes and waits to receive all responses before responding to
 the client.
@@ -947,7 +947,7 @@ Similarly, the freshness of p-index-cache is determined by the freshness of the 
     \caption{}
     \label{fig:ycsb_update_latency_remote}
   \end{subfigure}%
-  \caption{Throughput vs 95th percentile update latency for the Index QPU in the local (a) and remote-corpus (b) placement patterns.}
+  \caption{Throughput vs 95th percentile update latency for the index QPU in the local (a) and remote-corpus (b) placement patterns.}
   \label{fig:ycsb_update_latency_local_local_remote}
 \end{figure}
 
@@ -1048,16 +1048,16 @@ In this section, we measure the amount of data sent across storage location for 
 workload types.
 
 In the rg-index configuration, cross-location data transfer occurs for sending update notifications from the corpus
-to remote Index QPUs:
+to remote index QPUs:
 Each update operation generates three update notifications, one for each storage location.
 As a result, data transfer increases as update ratio increases.
 
-In the p-index configuration, cross-location data transfer occurs for retrieving query results from remote Index QPUs.
-Partition Manager QPUs forward every query to all three storage locations, and retrieve the results.
+In the p-index configuration, cross-location data transfer occurs for retrieving query results from remote index QPUs.
+partition manager QPUs forward every query to all three storage locations, and retrieve the results.
 As a result, data transfer decreases as query ratio decreases.
 
 In the p-index-cache configuration, cross-location data transfer occurs on cache misses.
-When an index entry is not present in a cache, the Cache QPU forwards it to the corresponding Index QPU, and retrieves the
+When an index entry is not present in a cache, the cache QPU forwards it to the corresponding index QPU, and retrieves the
 results.
 Similarly to the case of p-index, data transfer decreases as query ratio decreases.
 

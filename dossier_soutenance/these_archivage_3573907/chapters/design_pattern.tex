@@ -1211,7 +1211,7 @@ We categorize QPU classes in three groups, according to their general characteri
   Examples of QPU classes in this group are:
   \begin{itemize}
     \item \textbf{Filter:}
-    A filter QPU receives records from an input stream, and  emits at its output those records satisfy a given condition.
+    A selection QPU receives records from an input stream, and  emits at its output those records satisfy a given condition.
 
     \item \textbf{Join}:
     A join QPU encapsulates a streaming join operator.
@@ -1305,7 +1305,7 @@ We categorize QPU classes in three groups, according to their general characteri
 \textbf{Filter}
 
 Algorithms~\ref{algo:filter_query_processing_func} and~\ref{algo:filter_algorithm_func} show the query processing and
-stream processor methods respectively for the filter QPU class using pseudocode.
+stream processor methods respectively for the selection QPU class using pseudocode.
 
 
 \begin{algorithm}
@@ -1516,7 +1516,7 @@ From these \textit{class-specific topology requirements}, certain higher-level g
 
   \item A cache QPU must have a single downstream connection, which can be any other QPU.
 
-  \item Similarly, a filter QPU can have a downstream connection to any QPU.
+  \item Similarly, a selection QPU can have a downstream connection to any QPU.
 
   \item A partition manager QPU can have one or more downstream connections;
   The connections must be to derived state QPUs that implement partitions of a derived state structure.
@@ -1728,7 +1728,7 @@ This algorithm is specific to each QPU class:
   downstream connection, according to the attributes in the SelectExpression node
   (Figures~\ref{fig:qpt_filter_customers} and~\ref{fig:qpt_filter_orders})
 
-  \item A Join QPU merges the two domain trees of its connections as follows.
+  \item A join QPU merges the two domain trees of its connections as follows.
   It creates a new TableExpression subtree, using the TableExpressions node of the input domain trees, and the
   join syntax rule (Listing~\ref{lst:query_language}),
   and merges the PredicateExpression subtrees of the the input domain trees using a straightforward tree merge algorithm

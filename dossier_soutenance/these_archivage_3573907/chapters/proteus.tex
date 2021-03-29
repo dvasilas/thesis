@@ -97,7 +97,7 @@ in order to simplify the process of configuring and deploying a QPU architecture
 Thanks to this mechanism, the configuration of a query processing unit consists of ``local'' configuration
 (configuration about that specific unit), as well as the endpoints of its downstream connections.
 The QPU can then use the domain interface of its connections to obtain information about them.
-For example, a Partition Manager connected to a number of Index QPU instances requires only the endpoints of its
+For example, a Partition Manager connected to a number of index QPU instances requires only the endpoints of its
 connections as configuration.
 
 \begin{figure}
@@ -183,7 +183,7 @@ The Query Processing Domain component provides two interfaces:
 \noindent
 The \textbf{State} component is responsible for the QPU service's internal state.
 It provides a key-value interface which other components use for storing and retrieving state entries.
-The State component is used by derived state QPU classes, such as the Index and Materialized View classes,
+The State component is used by derived state QPU classes, such as the index and materialized view classes,
 for storing their derived state structures.
 
 We have defined a key-value interface for the State component,
@@ -234,20 +234,20 @@ In our prototype, we have implemented the following QPU classes:
   By integrating the selection functionality with these classes, we simplify QPU architectures
   and reduce the overhead of message serialization and de-serialization.
 
-  Furthermore, in our current implementation, a Secondary Index QPU service is responsible for a single attribute in a single
+  Furthermore, in our current implementation, a secondary index QPU service is responsible for a single attribute in a single
   continuous value interval, specified by its configuration.
 
   \item \textbf{Cache}.
-  We have implemented a Cache QPU class that stores query responses in an in-memory ordered map data structure.
+  We have implemented a cache QPU class that stores query responses in an in-memory ordered map data structure.
   It uses a Least Recently Used eviction policy.
   Moreover, we defined the cache size in terms of \textit{query result records}.
   That is, a query result that contains $N$ data items occupies $N$ units of cache size.
 
   Moreover, we have implemented a time-based and an notification-based invalidation policy.
   In the time-based policy, cache entries are invalidated after an amount of time specified by the QPU's configuration.
-  In the notification-based policy, the Cache QPU performs, for each query,
+  In the notification-based policy, the cache QPU performs, for each query,
   a downstream persistent query to subscribe to notifications for updates that modify the query result;
-  When a query result changes, the Cache QPU invalidates the corresponding cache entry.
+  When a query result changes, the cache QPU invalidates the corresponding cache entry.
   The invalidation policy is controlled by a configuration parameter.
 
   \item \textbf{Aggregator.}
@@ -265,7 +265,7 @@ In our prototype, we have implemented the following QPU classes:
 
   \item \textbf{Network.}
   We have defined and implemented an additional class, called Network.
-  A Network QPU has a single downstream connection.
+  A network QPU has a single downstream connection.
   It forwards every received query request to that connection, and then forwards the input stream as its output stream.
   Moreover, it can be configured to delay, re-order or drop stream records, based on a specified distribution.
   The goal of this class is to simulate various network conditions for testing purposes.
@@ -486,8 +486,8 @@ available, performing the operation, and returning the connection to the pool.
 Overall, query processing units maintain state either in memory, or persistently in AntidoteDB \cite{antidotedb:docs} or
 MariaDB (v.10.3.27) \cite{mariadb:docs}.
 However, currently not all QPU implementations support all three state backends.
-For example, our Index QPU implementation supports both in memory and AntidoteDB,
-while the Aggregator and Join QPU implementations support only MariaDB.
+For example, our index QPU implementation supports both in memory and AntidoteDB,
+while the Aggregator and join QPU implementations support only MariaDB.
 For QPU implementations that support more that one backends,
 the backend by a QPU instance is specified by a configuration parameter.
 
@@ -513,7 +513,7 @@ For each MySQL table associated with Proteus, we install triggers that call a us
 the table.
 For each record that is inserted or updated, the user-defined function encodes and sends a message to the notification
 server through a socket connection.
-Corpus Driver QPUs can subscribe to this update stream using the notification server's gRPC service.
+corpus driver QPUs can subscribe to this update stream using the notification server's gRPC service.
 The notification server is schema-agnostic; however, making a table available to Proteus requires installing the corresponding
 triggers for that invoke the user-defined function.
 
@@ -524,7 +524,7 @@ Our implementation consists of 300 lines of Node.js.
 The source code is available at \url{https://github.com/dvasilas/cloudserver/tree/proto/proteus}.
 
 \textbf{AntidoteDB}
-Similarly to CloudServer, we have modified AntidoteDB adding a simple notification service that can be used by Corpus Driver QPUs.
+Similarly to CloudServer, we have modified AntidoteDB adding a simple notification service that can be used by corpus driver QPUs.
 The source code is available at \url{https://github.com/dvasilas/antidote/tree/proteus/log_propagation}.
 
 \bigskip
