@@ -1,1 +1,0 @@
-traitement de requêtes; systèmes répartis; géo-distribution; bases de données; systèmes de stockage; architecture modulaire
