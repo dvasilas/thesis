@@ -5,8 +5,6 @@
 .DS_STORE
 .vscode
 
-thesis.pdf
-
 ### LaTeX ###
 ## Core latex/pdflatex auxiliary files:
 *.aux
